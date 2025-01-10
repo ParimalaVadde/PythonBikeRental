@@ -1,1 +1,137 @@
 
+Enable AWS Backups tool for your Non-CPOF applications
+
+What is the request?
+Enable backups tags or documented backup waivers on AWS Backups Service in your Production account in AWS.
+
+*Check this Link "Non-CPOF App List" to review Applications Deployments impacted and Assets Details.
+
+1) Why is it needed, what is the driver of the request?
+Core Issue associated to this findings has been raised and remediation have to be done as soon as possible (Issue ID: 607062).
+
+
+2) What is the impact to the LOB Application Teams of not completing this by the requested date?
+Failure to provide proper backups in production could lead to a disruption to business processes that rely on such data (and potential economic, regulatory or reputational loss).  
+
+3)What is the impact to the firm of not completing this by the requested date?
+Potential economic, regulatory or reputational loss
+
+How do I as an application owner, tech lead, product owner etc. complete this work?
+How to use AWS Backups Service using tags? 
+How to enable AWS Backups Service for existing resources? 
+If Required you must Upgrade Terraform version of the module to the required version in order to use AWS Backups Service
+More Info
+
+
+***************************************************************************************************************************************************************
+
+AWS Backup for AWS RDS:
+If the RDS database is hosted on AWS, you can enable backups using the AWS Backup service. Here’s how:
+
+Steps to Enable AWS Backup for RDS:
+Set Up AWS Backup:
+
+In the AWS Management Console, go to the AWS Backup service.
+Ensure you have an AWS Backup vault set up, which will store your backup data. You can use an existing vault or create a new one.
+Enable Backup Plans:
+
+Create a Backup Plan in AWS Backup that specifies the frequency (daily, weekly, etc.) and retention rules for your backups.
+Use the AWS Backup Dashboard to create and assign backup plans.
+Tag Resources for Backup:
+
+To automate backup selection, you can use tags. Tagging your RDS instances will allow AWS Backup to find and back up those resources based on the tags you define.
+Example tags:
+Environment: Production
+Application: <App_Name>
+Backup: Enabled
+Assign Backup Plans to Resources:
+
+Apply the backup plan to the relevant RDS instance(s) by tagging them accordingly or selecting the resources directly.
+Check and Verify Backups:
+
+After the backup plan is applied, monitor your backups in the AWS Backup console to ensure that they are running as expected.
+Enabling Backup with AWS Backup via Terraform (if applicable):
+If your infrastructure is managed using Terraform, you might need to upgrade your Terraform module to support AWS Backup. Here’s a basic Terraform snippet for enabling backup for an RDS instance:
+hcl
+Copy code
+resource "aws_backup_plan" "rds_backup_plan" {
+  name = "RDSBackupPlan"
+
+  rule {
+    rule_name         = "DailyBackup"
+    target_vault_name = "Default"
+    schedule          = "cron(0 12 * * ? *)"
+    lifecycle {
+      cold_storage_after = 30
+    }
+  }
+}
+
+resource "aws_backup_selection" "rds_backup_selection" {
+  name         = "RDSBackupSelection"
+  plan_id      = aws_backup_plan.rds_backup_plan.id
+  resources    = [aws_db_instance.example.id]
+}
+Make sure to replace aws_db_instance.example.id with your actual RDS instance ID.
+****************************************************************************************************************************************************************
+
+Key Steps to Proceed:
+Review the "Non-CPOF App List": This list likely contains information on which applications need backup enabled. Cross-reference this with your RDS or on-prem database.
+Enable AWS Backups:
+For RDS: Follow the AWS Backup steps to enable backup for your RDS instances.
+For on-prem: Consider integrating your database with AWS S3 or using a Storage Gateway.
+Review Backup Waivers: If there are any documented waivers for certain applications, ensure they are noted and handled according to policy.
+Use Tags: Tag your AWS resources properly to ensure that AWS Backup can identify and back up your resources.
+Ensure Compliance: As part of the remediation of Issue ID 607062, make sure to adhere to all compliance and retention requirements outlined for backups.
+5. Next Steps:
+Verify if Terraform needs an upgrade to support AWS Backup for your infrastructure.
+Test the backup process to ensure that it’s running as expected.
+Monitor and audit the backup jobs regularly.
+Additional Resources:
+AWS Backup Documentation
+https://docs.aws.amazon.com/aws-backup/latest/devguide/what-is-aws-backup.html
+RDS Backup and Restore
+https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/BackupRestore.html
+AWS Backup and Tags
+https://docs.aws.amazon.com/aws-backup/latest/devguide/working-with-tags.html
+
+****************************************************************************************************************************************
+
+
+If you’re working with AWS RDS and need to use the **AWS Backup service**, you'll first need to create an **AWS Backup Vault**. The Backup Vault is where your backup data is stored in AWS Backup. You’ll need to create one to configure backups for your RDS instances.
+
+### What is an AWS Backup Vault?
+An **AWS Backup Vault** is a container for backup data. When you use the AWS Backup service, all backups (whether for RDS, EC2, or other resources) are stored within a vault. This vault allows you to manage backup data, including setting retention policies, ensuring backup integrity, and auditing backup activity.
+
+### Steps to Create an AWS Backup Vault:
+
+1. **Open AWS Backup Console**:
+   - Go to the [AWS Backup Console](https://console.aws.amazon.com/backup).
+
+2. **Create a Backup Vault**:
+   - In the **AWS Backup console**, look for the **Backup Vaults** section in the left-hand navigation pane.
+   - Click **Create backup vault**.
+
+3. **Configure Backup Vault**:
+   - **Vault Name**: Provide a name for the backup vault (e.g., `MyRDSBackupVault`).
+   - **Encryption**: AWS Backup allows you to specify encryption settings. You can use the default AWS-managed key or select a custom KMS key for encryption.
+   - **Create Vault**: Click the **Create** button to create the backup vault.
+
+4. **Verify Backup Vault**:
+   - After creation, you should be able to see your newly created backup vault listed under the **Backup Vaults** section.
+
+### Video Resources for Guidance:
+Here are some helpful YouTube videos to guide you through creating and configuring AWS Backup Vaults:
+
+1. **[AWS Backup Service Overview and How to Set Up](https://www.youtube.com/watch?v=LFV7V6MLj2Q)** – This video provides a good overview of AWS Backup and how to configure it for your AWS resources.
+   
+2. **[Creating and Managing AWS Backup Vaults](https://www.youtube.com/watch?v=9kqfmmoyXJQ)** – This video walks you through the creation of a backup vault and how to manage your backups in AWS.
+
+### After Creating a Backup Vault:
+Once the vault is created, you can proceed to:
+
+1. **Create a Backup Plan**: Define the schedule and retention policies for your backups (e.g., daily backups for your RDS).
+2. **Assign Resources to Backup Plan**: Assign your RDS instances (or any other resources) to the backup plan using tags or resource selection.
+3. **Monitor Backups**: Keep an eye on backup statuses and ensure everything is working as expected.
+
+Let me know if you need more assistance or clarification on any of these steps!
