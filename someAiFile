@@ -181,5 +181,11 @@ PITR BACKUP - point-in-time-restore enabled through resource based policies.
 SNAPBACKUP – Snapshot backups enabled through resource based policies.
 
 NOBACKUP - choose if you do not want to enable backup.
+************************************************************************************************************************************************************************************************************************
+
+
+
+How can the individual(s) completing the work confirm that they have properly completed this work?
+Verification : go/V12 can be searched by ARN to show the “CORE_BACKUPS_RETENTION” tag value for that asset. When there is a valid value for that resource in that tag, that asset has been remediated. The tag should have one of the valid values: Storage Devices 35DAYS,70DAYS,100DAYS,400DAYS,NOBACKUP,PITR_35DAYS  / Database Services=PITR BACKUP,SNAPBACKUP,NOBACKUP,PITRANDSNAPBKP. Once this is done, the backup information will be available in Brews.
 
 PITRANDSNAPBKP - tag is attached to DB instance if PITR and Snapshot backup are both enabled.
