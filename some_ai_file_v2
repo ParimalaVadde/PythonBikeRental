@@ -113,3 +113,45 @@ S3
 January 5, 2025, 11:00:00 (UTC+05:30)
 January 5, 2025, 12:00:00 (UTC+05:30)
 
+*************************************************************************************************************************************************************************************************************************
+
+
+now in very simple term you explain like to enable backup for rds instance 
+
+existing backup valut locks in dev :
+core-immutable
+core-immutable-MFS
+
+Backup plans :
+core-backups-100
+core-backups-35
+core-backups-70
+core-backups-400
+core-backups-pitr
+
+in core-backups-100 need to assign rds instance = doesn't have permissions
+
+
+added tag
+CORE_BACKUPS_RETENTION = 35 days
+in the following 2 db instances of dev
+
+
+in dev :
+1)aurora-cluster-ywoeyfwg
+  - aurora-cluster-node-0-ywoeyfwg
+  - aurora-reader-node-1-ywoeyfwg
+
+2)rdsapg86a8-auroratdb-v1-cluster
+  - rdsapg86a8-auroratdb-v1-node-0
+  - rdsapg86a8-auroratdb-v1-node-1
+
+
+
+in prod :
+
+rds instance name 
+
+1) rdsapg86a8-auroratsdb-v1-cluster
+     - rdsapg86a8-auroratsdb-v1-node-0
+     - rdsapg86a8-auroratsdb-v1-node-1
