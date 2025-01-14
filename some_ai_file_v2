@@ -19,3 +19,97 @@ Creation time
 retention
 arn:aws:iam::484862117635:role/core-backups-job-runner
 April 22, 2024, 15:09:57 (UTC+05:30)
+
+
+*****************************************************************************************************************************************************************************
+
+
+Backup job ID
+Status
+Resource name
+Message category
+Resource ID
+Resource type
+Creation time
+Start by
+1BAAC905-9E97-1DFD-1D07-356A5C85B2B6
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 14, 2025, 11:00:00 (UTC+05:30)
+January 14, 2025, 12:00:00 (UTC+05:30)
+AE084053-7B47-27A2-568F-66BE226B9FE0
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 13, 2025, 11:00:00 (UTC+05:30)
+January 13, 2025, 12:00:00 (UTC+05:30)
+6E72D0DD-F234-62AD-C880-59C15C857562
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 12, 2025, 11:00:00 (UTC+05:30)
+January 12, 2025, 12:00:00 (UTC+05:30)
+850FE0E9-F2C2-8F0F-50FA-35E424D4EAB4
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 11, 2025, 11:00:00 (UTC+05:30)
+January 11, 2025, 12:00:00 (UTC+05:30)
+A0CD5F29-E446-9298-FCB2-30C18ED33CB4
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 10, 2025, 11:00:00 (UTC+05:30)
+January 10, 2025, 12:00:00 (UTC+05:30)
+61D47E7D-4BDF-9C60-E0B6-3B87FD329D18
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 9, 2025, 11:00:00 (UTC+05:30)
+January 9, 2025, 12:00:00 (UTC+05:30)
+8EADD05E-7FC9-FB6D-3E82-AC0171ED1C7F
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 8, 2025, 11:00:00 (UTC+05:30)
+January 8, 2025, 12:00:00 (UTC+05:30)
+BC25B9D0-0426-1AFC-3F40-229D12CF3178
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 7, 2025, 11:00:00 (UTC+05:30)
+January 7, 2025, 12:00:00 (UTC+05:30)
+1959C6F7-7012-6EA0-33F7-14F600BD532D
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 6, 2025, 11:00:00 (UTC+05:30)
+January 6, 2025, 12:00:00 (UTC+05:30)
+DB2F5DE0-9493-421B-8AA9-8FBE223E162F
+Completed
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+Success
+app-id-111597-dep-id-114116-uu-id-82vq2b32j6ew
+S3
+January 5, 2025, 11:00:00 (UTC+05:30)
+January 5, 2025, 12:00:00 (UTC+05:30)
+
