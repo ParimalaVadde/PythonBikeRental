@@ -1,0 +1,21 @@
+the arn of my rds instance where i haved added CORE_BACKUPS_RETENTION
+35 DAYS in its tags section
+arn:aws:rds:us-east-1:484862117635:cluster:rdsapg86a8-auroratdb-v1-cluster
+
+
+wat i see in core-backups-35 
+Resource assignments (1)
+Delete
+Assign resources
+Resource assignments specify which resources will be backed up by this Backup plan.
+
+
+1
+
+
+Name
+IAM role ARN
+Creation time
+retention
+arn:aws:iam::484862117635:role/core-backups-job-runner
+April 22, 2024, 15:09:57 (UTC+05:30)
