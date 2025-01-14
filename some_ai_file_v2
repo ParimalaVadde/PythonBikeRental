@@ -155,3 +155,30 @@ rds instance name
 1) rdsapg86a8-auroratsdb-v1-cluster
      - rdsapg86a8-auroratsdb-v1-node-0
      - rdsapg86a8-auroratsdb-v1-node-1
+
+**************************************************************************************************************************************************************************************************
+
+Summary
+Backup rule name
+core-immutable
+Frequency
+Daily
+At 05:30 AM Etc/UTC (UTC+00:00)
+Start within
+1 hour
+Complete within
+30 days
+Transition to cold storage
+Not enabled
+Archive Amazon EBS snapshots
+Not enabled
+Total retention period
+5 weeks
+Backup vault
+core-immutable
+Continuous backup
+Disabled
+Tags added to recovery points - optional
+–
+Backup indexes
+Not indexed
