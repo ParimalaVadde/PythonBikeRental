@@ -135,3 +135,51 @@ Once the vault is created, you can proceed to:
 3. **Monitor Backups**: Keep an eye on backup statuses and ensure everything is working as expected.
 
 Let me know if you need more assistance or clarification on any of these steps!
+
+
+
+************************************************************************************************************************************************************************************************************************
+
+
+How to backup ?
+This document explains how to backup data using AWS backup.
+
+Provisioning
+We have created Vaults, Identity and Access Management role and Encryption keys in all the beta & Gold accounts. Application teams are required to add the backup tags to their storage resources to enabling the backups.
+
+Tag-based backup policy for storage services
+You can use AWS Backup to apply backup plans to your AWS resources in a wide variety of ways, including tagging them. Tagging makes it easier to implement your backup strategy across all your applications and to ensure that all your AWS storage resources are backed up and protected. AWS tags are a great way to organize and classify your AWS resources. Integration with AWS tags enable you to quickly apply a backup plan to a group of AWS storage resources, so that they are backed up in a consistent and compliant manner.
+
+Application team requiring backups for their storage resources need to add the following tags using terraform module to their resources. Storage teams have updated their terraform module to include backup tags as a mandatory.
+
+You need to be careful while deciding the retention since the backups are Immutable. No one will be able to delete the backups or change the expiration date including AWS.
+TAG-KEY	VALUE
+CORE_BACKUPS_RETENTION	35DAYS
+CORE_BACKUPS_RETENTION	70DAYS
+CORE_BACKUPS_RETENTION	100DAYS
+CORE_BACKUPS_RETENTION	400DAYS
+CORE_BACKUPS_RETENTION	NOBACKUP
+CORE_BACKUPS_RETENTION_PITR	PITR_35DAYS
+Days mentioned here refer to the number of days backups will be retained.
+
+For example, if you choose 35DAYS then the backups will be retained for 35DAYS.
+
+If you don’t want backup, then add the "NOBACKUP" tag. This will be used in tracking the backup waiver.
+
+Point in time Restore - Currently, AWS Backup supports PITR only for RDS, Aurora and S3.
+
+Resource-based backup policy for Database services
+Database team depend on enabling immutable backup plan to configure centralized backup. This backup plan is a mandatory option in their updated terraform modules. For example to activate the back plan for Aurora Postgres, set the enable_immutable_backups parameter within the provisioning terraform module to true. The following tags are attached to keep inventory of DB resources having the centralized backup enabled.
+
+TAG-KEY	VALUE
+CORE_BACKUPS_RETENTION	PITR BACKUP
+CORE_BACKUPS_RETENTION	SNAPBACKUP
+CORE_BACKUPS_RETENTION	NOBACKUP
+CORE_BACKUPS_RETENTION	PITRANDSNAPBKP
+PITR BACKUP - point-in-time-restore enabled through resource based policies.
+
+SNAPBACKUP – Snapshot backups enabled through resource based policies.
+
+NOBACKUP - choose if you do not want to enable backup.
+
+PITRANDSNAPBKP - tag is attached to DB instance if PITR and Snapshot backup are both enabled.
