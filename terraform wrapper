@@ -1,105 +1,104 @@
-# yaml-language-server: $schema=schema/aupodat_deployment_schema.json
 apiVersion: deployment/v1
 kind: Deployment
 metadata:
-    name: "auroratdb"
+    name: auroratdb
     sealID: "111597"
     model:
-        name: "xbsddbts"
-        version: "v5"
+        name: xbsddbts
+        version: v5
 spec:
     modulepack:
-        name: "default"
-        version: "0.9.2"
+        name: default
+        version: 0.9.2
     environment:
         awsAccountID: "484862117635"
-        awsRegion: "us-east-1"
-        tfeOrganization: "111597-114116-DEV"
+        awsRegion: us-east-1
+        tfeOrganization: 111597-114116-DEV
     components:
         - type: KMS
-          name: "rdstestkms"
-          action: "apply"
+          name: rdstestkms
+          action: apply
           properties:
-            key_alias: "rdsdevkms"
+            key_alias: rdsdevkms
             tags: 
-                CIB-CMEE-ARCHETYPE-NAME: "CIB-CMEE-DATA-ARCHETYPE"
-                CIB-CMEE-ARCHETYPE-VERSION: "0.1.0-PREVIEW"
+                CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
+                CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
         
         - type: LightSwitch
-          name: "lswitch"
-          action: "apply"
+          name: lswitch
+          action: apply
           properties:
             lightswitch_enabled: true
             tags:
-                CIB-CMEE-ARCHETYPE-NAME: "CIB-CMEE-DATA-ARCHETYPE"
-                CIB-CMEE-ARCHETYPE-VERSION: "0.1.0-PREVIEW"
+                CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
+                CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
         
         - type: S3
-          name: "bucket"
-          action: "apply"
+          name: bucket
+          action: apply
           properties:                                   
-            core_backups_retention: "35DAYS"
-            enable_bucket_versioning: "Enabled"
+            core_backups_retention: 35DAYS
+            enable_bucket_versioning: Enabled
             # enable_object_locking: true
             lifecycle_rules:
-                - id: "default"
+                - id: default
                   filter:
                     prefix: ""
                   expiration:
                     - expired_object_delete_marker: true
             tags:
-                CIB-CMEE-ARCHETYPE-NAME: "CIB-CMEE-DATA-ARCHETYPE"
-                CIB-CMEE-ARCHETYPE-VERSION: "0.1.0-PREVIEW"
+                CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
+                CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
         
         - type: RDSAuroraPostgres
-          name: "xbsdtestdb"
-          action: "apply"
+          name: xbsdtestdb
+          action: apply
           connectsTo:
             - type: KMS
-              name: "rdstestkms"
+              name: rdstestkms
             - type: LightSwitch
-              name: "lswitch"
+              name: lswitch
           dependsOn:
             - type: PrivateVPCEndpoints
-              name: "vpce"
+              name: vpce
           properties:
             is_serverless: true
-            serverless_db_type: "db.serverless"
-            db_instance_type: "db.r6g.large"
-            database_name: "xbsddevdb"
-            aurora_cluster_postgres_db_parameter_group_family: "aurora-postgresql15"
-            aurora_instance_postgres_db_parameter_group_family: "aurora-postgresql15"
+            serverless_db_type: db.serverless
+            db_instance_type: db.r6g.large
+            database_name: xbsddevdb
+            aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
+            aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
             db_backup_retention_days: 35
-            core_backups_retention: "35DAYS"
+            core_backups_retention: 35DAYS
             enable_immutable_backups: true
             skip_final_snapshot: false
             deletion_protection: true
-            identifier_prefix: "xbsddevdb"
+            identifier_prefix: xbsddevdb
             enable_continuous_backup: true
             enable_point_in_time_recovery: true
-            backup_target: "outposts"
-            preferred_backup_window: "21:00-22:00"
+            backup_target: outposts
+            preferred_backup_window: 21:00-22:00
             monitoring_interval: "5"
             min_capacity: 1
             max_capacity: 8
             performance_insights_enabled: true
             performance_insights_retention_period: 7
-            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
+            preferred_maintenance_window: Sun:22:00-Sun:23:00
             replica_count: 1
-            ca_cert_identifier: "rds-ca-rsa2048-g1"
+            ca_cert_identifier: rds-ca-rsa2048-g1
             enable_nlb_connectivity: true
             rds_proxy: true
             engine_version: "15.3"
             healthcheck_enabled: true
             copy_tags_to_snapshot: true
             subnets:
-              - "PrivateSubnet01"
-              - "PrivateSubnet02"
+              - PrivateSubnet01
+              - PrivateSubnet02
             tags:
-                CIB-CMEE-ARCHETYPE-NAME: "CIB-CMEE-DATA-ARCHETYPE"
-                CIB-CMEE-ARCHETYPE-VERSION: "0.1.0-PREVIEW"
+                CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
+                CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
             custom_db_names:
-                - "custom"
+                - custom
             lightswitch_config:
                 enabled: true
                 start_action:
@@ -108,123 +107,37 @@ spec:
                     schedule: "cron(00 20 ? * MON-FRI *)"
         
         - type: CloudWatch
-          name: "dbcwalms"
-          action: "apply"
+          name: dbcwalms
+          action: apply
           properties:
             alarms:
-                - alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "AuroraReplicaLagMaximum"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
+              - actions_enabled: true
+                    alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
+                    alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
+                    comparison_operator: GreaterThanThreshold
+                    datapoints_to_alarm: 3
+                    evaluation_periods: 3
+                    insufficient_data_actions: []
+                    metric_name: AuroraReplicaLagMaximum
+                    namespace: AWS/RDS
+                    period: 300
+                    statistic: Average
+                    threshold: 1000000
+                    treat_missing_data: notBreaching
                 
-                - alarm_name: "Aurora Postgres: Connection Attempts"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "ConnectionAttempts"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 90
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Connection Attempts alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                
-                - alarm_name: "Aurora Postgres: Deadlocks"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "Deadlocks"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 5
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Deadlocks alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                
-                - alarm_name: "Aurora Postgres: Read IOPS"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "ReadIOPS"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Read IOPS alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                
-                - alarm_name: "Aurora Postgres: Read Throughput"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "ReadThroughput"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Read Throughput alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                
-                - alarm_name: "Aurora Postgres: Write IOPS"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "WriteIOPS"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Write IOPS alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                
-                - alarm_name: "Aurora Postgres: Write Throughput"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "WriteThroughput"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Write Throughput alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-            tags:
-                CIB-CMEE-ARCHETYPE-NAME: "CIB-CMEE-DATA-ARCHETYPE"
-                CIB-CMEE-ARCHETYPE-VERSION: "0.1.0-PREVIEW"
         
         - type: PrivateVPCEndpoints
-          name: "vpce"
-          action: "skip"
+          name: vpce
+          action: skip
           properties:
             tags:
-                name: "privatevpc"
+                name: privatevpc
 
         - type: RDSProxy
-          name: "proxy"
-          action: "apply"
+          name: proxy
+          action: apply
           connectsTo:
             - type: RDSAuroraPostgres
-              name: "xbsdtestdb"
+              name: xbsdtestdb
           properties: 
             interactive_reader_endpoint: true
