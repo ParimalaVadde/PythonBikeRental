@@ -182,3 +182,7 @@ Tags added to recovery points - optional
 –
 Backup indexes
 Not indexed
+
+*************************************************************************************************************************************************************************************************
+
+[ERROR_DEPLOYMENT_VALIDATION]: [assertion violation AWSBackup the component does not exist in the modulepack]
