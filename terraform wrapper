@@ -66,6 +66,8 @@ spec:
         database_name: xbsddevdb
         db_backup_retention_days: 35
         core_backups_retention: 35DAYS
+        backup_plan_name: core-backups-35
+        backup_vault_name: core-immutable
         db_instance_type: db.r6g.large
         deletion_protection: true
         enable_immutable_backups: true
