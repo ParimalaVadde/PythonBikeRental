@@ -186,3 +186,25 @@ Not indexed
 *************************************************************************************************************************************************************************************************
 
 [ERROR_DEPLOYMENT_VALIDATION]: [assertion violation AWSBackup the component does not exist in the modulepack]
+
+
+********************************************************************************************************************************************************************************
+
+
+
+Recovery point ID
+Status
+Resource name
+Resource ID
+Resource type
+Backup type
+Creation time
+Index status
+Source account ID
+Retention period
+Transition to cold storage
+app-id-111597-dep-id-114116-uu-id-xjc1jp-20241217055445-5c05154f
+Completed
+app-id-111597-dep-id-114116-uu-id-xjc1jpz9pvhv
+app-id-111597-dep-id-114116-uu-id-xjc1jpz9pvhv
+S3
