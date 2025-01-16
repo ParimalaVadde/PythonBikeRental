@@ -65,7 +65,7 @@ spec:
           - custom
         database_name: xbsddevdb
         db_backup_retention_days: 35
-        core_backups_retention: "35DAYS"
+        core_backups_retention: 35DAYS
         db_instance_type: db.r6g.large
         deletion_protection: true
         enable_immutable_backups: true
@@ -86,10 +86,6 @@ spec:
         performance_insights_enabled: true
         performance_insights_retention_period: 7
         preferred_backup_window: 21:00-22:00
-        enable_continuous_backup: true
-        enable_point_in_time_recovery: true
-        backup_target: "outposts"
-        copy_tags_to_snapshot: true
         preferred_maintenance_window: Sun:22:00-Sun:23:00
         rds_proxy: true
         replica_count: 1
