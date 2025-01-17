@@ -1,18 +1,9 @@
-How can the individual(s) completing the work confirm that they have properly completed this work?
+Here’s a more refined version of your questions:
 
-Verification : go/V12 can be searched by ARN to show the “CORE_BACKUPS_RETENTION” tag value for that asset. When there is a valid value for that resource in that tag, that asset has been remediated. The tag should have one of the valid values: Storage Devices 35DAYS,70DAYS,100DAYS,400DAYS,NOBACKUP,PITR_35DAYS  / Database Services=PITR BACKUP,SNAPBACKUP,NOBACKUP,PITRANDSNAPBKP. Once this is done, the backup information will be available in Brews.
+---
 
+I have the following questions:
 
+1) We are using EAC instead of Terraform for deployment. Currently, the version is "9.0.0". Do we need to upgrade to "11.0.0"?
 
-so currently for s3 bucket "app-id-111597-dep-id-114116-uu-id-xjc1jpz9pvhv" i see backup is been setup. where data is geetting backed up in aws backup valut (core-immutable) with back up plan of "core-backups-35"
-
-So my question is if add "CORE_BACKUPS_RETENTION" as 35DAYS for postgress RDS , will the job be done as mentioned in verification part of user story
-
-or eac(terraform) deployment file do we have actually make modification to take backup in in aws backup valut (core-immutable) with back up plan of CORE_BACKUPS_RETENTION to PITR BACKUP
-
-
-
-we are using eac instead of terraform. currently i see version as version: 0.9.2 in eac do we have upgrade it to 11.0.0
-
-
-only by adding tag to rdspostgress resource CORE_BACKUPS_RETENTION : "PITR BACKUP" will it meet the requirement?
+2) If I add the tag "CORE_BACKUPS_RETENTION: PITR BACKUP" to the PostgreSQL RDS, will that satisfy the verification requirement?
