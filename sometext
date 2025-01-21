@@ -1,9 +1,38 @@
-Here’s a more refined version of your questions:
+Identify the vulnerability
 
----
 
-I have the following questions:
+Identify the type of vulnerability present in the code. Code blocks that are vulnerable are marked with warning icons (). Additional code blocks that may give context may be marked with lightbulb icons ().
 
-1) We are using EAC instead of Terraform for deployment. Currently, the version is "9.0.0". Do we need to upgrade to "11.0.0"?
+    def load_roles(self, filename='roles.json'):
 
-2) If I add the tag "CORE_BACKUPS_RETENTION: PITR BACKUP" to the PostgreSQL RDS, will that satisfy the verification requirement?
+        result = None
+
+        conn = Connect()
+        try:
+            with open(Path(BASE_DIR, filename), 'r') as file:
+                roles = json.load(file)
+
+Select Vulnerability Category
+Unvalidated Redirects and Forwards
+
+Unvalidated Redirects and Forwards
+
+Denial of Service
+
+Routing
+
+Improper Assets Management
+
+Improper Assets Management
+
+Insecure Cryptography
+
+Insufficiently Protected Credentials
+
+Access Control
+
+Insecure Direct Object Reference
+
+Side Channel Vulnerability
+
+Timing Attack
