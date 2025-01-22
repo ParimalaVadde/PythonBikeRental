@@ -1,7 +1,9 @@
-The eCAB Approver is the control authority that allows an emergency change to be executed.  For a forward planned emergency change, the eCAB Approver must approve the emergency change before the emergency change can proceed. 
+In the change record, there are plans that always need to be documented.  Make the proper selection.
 Select the best answer.
 
-
-True
-
-False
+A.
+Pre-implementation testing, Implementation, Back-out, Post Validation Plan
+B.
+Back-out Plan and Post Validation Plan     
+C.
+Pre-implementation testing, Implementation Plan, Post Validation Plan 
