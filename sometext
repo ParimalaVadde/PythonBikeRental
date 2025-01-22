@@ -1,7 +1,11 @@
-A ServiceNow Risk Rating is automatically calculated based on information contained in the change record, but you can lower the risk rating of your change if you don’t agree with the risk rating.  
+Potential collisions can be discovered in your change record.  Make the proper selection.
 Select the best answer.
 
-
-True
-
-False
+A.
+Risk Calculation Tab
+B.
+Conflicts Tab
+C.
+Metrics Tab
+D.
+Notes Tab
