@@ -1,38 +1,14 @@
-Identify the vulnerability
+Enable AWS Backups for AWS-RDS-DBCluster
+To enable  backups for the storage resources, need to follow below steps:
 
+1) Need to add the following tag, CORE_BACKUPS_RETENTION : PITR BACKUP -- added
 
-Identify the type of vulnerability present in the code. Code blocks that are vulnerable are marked with warning icons (). Additional code blocks that may give context may be marked with lightbulb icons ().
+2) Next we need to set the enable_immutable_backups parameter to true  -- set flag to true
 
-    def load_roles(self, filename='roles.json'):
+3) Required terraform version
 
-        result = None
+Resource/Storage	Terraform version
+rds-postgres	11.0.0
 
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, filename), 'r') as file:
-                roles = json.load(file)
+Following up with EAC team to know the required eac version to enable back for rds
 
-Select Vulnerability Category
-Unvalidated Redirects and Forwards
-
-Unvalidated Redirects and Forwards
-
-Denial of Service
-
-Routing
-
-Improper Assets Management
-
-Improper Assets Management
-
-Insecure Cryptography
-
-Insufficiently Protected Credentials
-
-Access Control
-
-Insecure Direct Object Reference
-
-Side Channel Vulnerability
-
-Timing Attack
