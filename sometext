@@ -1,7 +1,13 @@
-Emergency changes can be raised for situations where remediation of a condition or incident must be executed quickly to avoid an outage or impact. It can also be used to perform changes that you want to deploy quickly to avoid gathering multiple approvals. 
+The Change Approver must review the full contents of the change to validate the appropriateness of the change. 
 Select the best answer.
 
-
-True
-
-False
+A.
+Implementation Plans is clear and complete
+B.
+Backout and post validation Plan is defined
+C.
+The defined impact or outage can be supported
+D.
+Definition of the change is clear and concise
+E.
+All the above
