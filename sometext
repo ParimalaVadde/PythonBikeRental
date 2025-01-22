@@ -1,13 +1,7 @@
-The Change Approver must review the full contents of the change to validate the appropriateness of the change. 
+Normal changes have established lead times based on risk.  
 Select the best answer.
 
-A.
-Implementation Plans is clear and complete
-B.
-Backout and post validation Plan is defined
-C.
-The defined impact or outage can be supported
-D.
-Definition of the change is clear and concise
-E.
-All the above
+
+True
+
+False
