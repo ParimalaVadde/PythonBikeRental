@@ -1,46 +1,7 @@
-Enable AWS Backups for AWS-RDS-DBCluster
-To enable  backups for the storage resources, need to follow below steps:
+The eCAB Approver is the control authority that allows an emergency change to be executed.  For a forward planned emergency change, the eCAB Approver must approve the emergency change before the emergency change can proceed. 
+Select the best answer.
 
-1) Need to add the following tag, CORE_BACKUPS_RETENTION : PITR BACKUP -- added
 
-2) Next we need to set the enable_immutable_backups parameter to true  -- set flag to true
+True
 
-3) Required terraform version
-
-Resource/Storage	Terraform version
-rds-postgres	11.0.0
-
-Following up with EAC team to know the required eac version to enable back for rds
-
-For enabling AWS backups for RDS:
- 
-Added the required tag: CORE_BACKUPS_RETENTION: PITR BACKUP.
-Set the enable_immutable_backups variable to true.
-After enabling above 2 changes. we dont see data is getting backed up in aws backup console(core-immutable)
-The Terraform version required, as per documentation, is 11.0.0.
-The equivalent EAC version for 11.0.0 is not known; following up with the EAC team for clarification.
-We require your assistance to understand if any other additional changes required
-
-and also
-currently we are using eac modulepack version: 0.10.0
-
-when we tried to upgrade to later version ,the later version post 10 are not allowing to add tag CORE_BACKUPS_RETENTION: PITR BACKUP
-
-getting following error:
-on variables.tf line 581:
-41│ 581: variable "tags" {
-42│ ├────────────────
-43│ │ var.tags is map of string with 3 elements
-44│
-45│ CORE_BACKUPS_RETENTION is a reserved tag used by Data Protection team to
-46│ enable/disable backups. Users are prohibited from using this tag.
-47│
-48│ This was checked by the validation rule at variables.tf:585,3-13.
-49╵
-50Operation failed: failed running terraform plan (exit 1) 
-
-knowledge source:
-Help Guide:
--	How to use AWS Backups Service using tags? Here
--	How to enable AWS Backups Service for existing resources? Here
--	go/backupinfo
+False
