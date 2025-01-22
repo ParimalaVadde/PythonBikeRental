@@ -1,11 +1,7 @@
-Potential collisions can be discovered in your change record.  Make the proper selection.
+A change will be marked as potentially unauthorized if it is implemented outside the scheduled window.   True or False?
 Select the best answer.
 
-A.
-Metrics Tab
-B.
-Notes Tab
-C.
-Conflicts Tab
-D.
-Risk Calculation Tab
+
+True
+
+False
