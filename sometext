@@ -1,9 +1,7 @@
-In the change record, there are plans that always need to be documented.  Make the proper selection.
+Emergency changes can be raised for situations where remediation of a condition or incident must be executed quickly to avoid an outage or impact. It can also be used to perform changes that you want to deploy quickly to avoid gathering multiple approvals. 
 Select the best answer.
 
-A.
-Pre-implementation testing, Implementation, Back-out, Post Validation Plan
-B.
-Back-out Plan and Post Validation Plan     
-C.
-Pre-implementation testing, Implementation Plan, Post Validation Plan 
+
+True
+
+False
