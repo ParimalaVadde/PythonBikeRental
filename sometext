@@ -1,14 +1,6 @@
-Enable AWS Backups for AWS-RDS-DBCluster
-To enable  backups for the storage resources, need to follow below steps:
+For enabling AWS backups for RDS:
 
-1) Need to add the following tag, CORE_BACKUPS_RETENTION : PITR BACKUP -- added
-
-2) Next we need to set the enable_immutable_backups parameter to true  -- set flag to true
-
-3) Required terraform version
-
-Resource/Storage	Terraform version
-rds-postgres	11.0.0
-
-Following up with EAC team to know the required eac version to enable back for rds
-
+Added the required tag: CORE_BACKUPS_RETENTION: PITR BACKUP.
+Set the enable_immutable_backups variable to true.
+The Terraform version required, as per documentation, is 11.0.0.
+The equivalent EAC version for 11.0.0 is not yet confirmed; following up with the EAC team for clarification.
