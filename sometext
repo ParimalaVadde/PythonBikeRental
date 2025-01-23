@@ -1,45 +1,116 @@
-Here’s a revised version of your message with clearer phrasing:
+Enable AWS Backups tool for your Non-CPOF applications IN PROGRESS
 
----
+B2B Payables X-Business Supplier Directory Services - (111597)
 
-**Subject:** AWS Backup Setup for RDS DBCluster – Need Guidance on Next Steps
+Status:In Progress 
 
-Hi Rohit,
+LOB Category: RC1 - Regulatory/Controls: OC commitment, Regulatory, or audit mandate
 
-I wanted to update you on the progress of enabling AWS backups for the AWS-RDS-DBCluster. We have followed the required steps as outlined below:
+Provide a score from 1-5, based on how relevant the task is to your application, and the accuracy and clarity of the information provided.
+I1:U1
+High Importance
+High Urgency
+Impact Rating Info 
+January
+30
+2025
 
-1. **Tag Addition**: Added the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`.
-2. **Immutable Backups**: Set the `enable_immutable_backups` parameter to true.
+Was Jan 31st, 2025
+Program Acceptance Date:Sep 18, 2024
+Expected Start Date:Jan 1, 2025
+Estimated Completion Date:Jan 31, 2025
+T-Shirt effort estimate: Medium: 2 to 6 weeks
+Driver: Other
+Secondary Driver:
+Requester: Antunez Perez,Gustavo Adolfo
+Requesting LOB:
+Line General Manager/Sponsor: Patel,Rooshir
+Product Line: Data Protection & Recovery
+Product: Cloud Data Protection
+Product Owner: Chandrasekaran,Ashok Kumar
+Overall Program Owner: Apte,Makarand Ramchandra; Pathan,Abdul; Chinta,Veerendra; Palacios,Florencia; Antunez Perez,Gustavo Adolfo; Deviprasad,Bharaneedharan
+LoB Program Owner:
+Application Impact: Application disruption (usage)
+Firm Impact:CORE Issue remediation commitment at risk|Failed audit / failure to resolve audit finding
+Program Management Option Manual Tracking
+Program Management Dashboard URL:
+Is this request on the product's roadmap?: No
+Product Road Map Link:
+Original Impact Rating: I1:U3
+Third Party Engagement: Don't know
+Impacted Environments: DEV;UAT;TEST;PROD/DR
+1 attachment(s)
+3 Comment(s)
+No Jira(s)
+Audit
+Previous Due Dates
+Oct 31st, 2024Nov 30th, 2024Nov 29th, 2024Nov 30th, 2024Jan 31st, 2025Jan 30th, 2025
+What is the request?
+Enable backups tags or documented backup waivers on AWS Backups Service in your Production account in AWS.
 
-However, after implementing these changes, we are not seeing the data backed up in the AWS Backup console (core-immutable). According to the documentation, the required Terraform version for this setup is 11.0.0. The issue we are facing is that we are using EAC, and the equivalent EAC version for 11.0.0 is currently unknown to us.
+*Check this Link "Non-CPOF App List" to review Applications Deployments impacted and Assets Details.
 
-We are currently on EAC module pack version 0.10.0. When attempting to upgrade to a later version (post 0.10.0), we encounter the following error related to the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`:
+Why is it needed, what is the driver of the request?
+Core Issue associated to this findings has been raised and remediation have to be done as soon as possible (Issue ID: 607062).
 
-```
-on variables.tf line 581:
-41│ 581: variable "tags" {
-42│ ├────────────────
-43│ │ var.tags is map of string with 3 elements
-44│
-45│ CORE_BACKUPS_RETENTION is a reserved tag used by the Data Protection team to enable/disable backups. Users are prohibited from using this tag.
-46│
-47│ This was checked by the validation rule at variables.tf:585,3-13.
-48╵
-50 Operation failed: failed running terraform plan (exit 1)
-```
+What is the impact to the LOB Application Teams of not completing this by the requested date?
+Failure to provide proper backups in production could lead to a disruption to business processes that rely on such data (and potential economic, regulatory or reputational loss).  
 
-This error indicates that the higher version does not allow users to add the `CORE_BACKUPS_RETENTION: PITR BACKUP` tag, which is essential for backup functionality.
+What is the impact to the firm of not completing this by the requested date?
+Potential economic, regulatory or reputational loss
 
-We’ve raised a support ticket with the EAC team to clarify the required version and how to proceed. In the meantime, with the 25th being the deadline for this task and the need to deploy to production, I would appreciate your guidance on how we should move forward:
+How do I as an application owner, tech lead, product owner etc. complete this work?
+How to use AWS Backups Service using tags? 
+How to enable AWS Backups Service for existing resources? 
+If Required you must Upgrade Terraform version of the module to the required version in order to use AWS Backups Service
+More Info
+How can the individual(s) completing the work confirm that they have properly completed this work?
+Verification : go/V12 can be searched by ARN to show the “CORE_BACKUPS_RETENTION” tag value for that asset. When there is a valid value for that resource in that tag, that asset has been remediated. The tag should have one of the valid values: Storage Devices 35DAYS,70DAYS,100DAYS,400DAYS,NOBACKUP,PITR_35DAYS  / Database Services=PITR BACKUP,SNAPBACKUP,NOBACKUP,PITRANDSNAPBKP. Once this is done, the backup information will be available in Brews.
 
-- Should we proceed with raising a change request to add the tags in the EAC production environment for Postgres, even if the backup functionality isn't fully operational yet?
-- Or should we wait for the EAC team’s response before making any changes?
+Links
+Attachments
+ ao-comms-seal-template.csv
 
-Looking forward to your advice.
+Comments:
+Chinta,Veerendra on 11/05/2024 10:48
+This is a Friendly reminder for AWS Backup remediation for your application.
 
-Best regards,  
-[Your Name]
+Please acknowledge and update the Estimated Time in AOCOMMS as a priority. 
 
----
+If remediation already completed, mark it as "Completed" in AOCOMMS. If work has started, mark it as "In Progress."
 
-This version aims for clear communication, especially around the error and next steps. Let me know if it looks good!
+Keep in mind that the CORE issue remediation due date is January 31, 2025. We request your support to complete it before this deadline.
+
+Kindly reach out to Veerendra (E910451)/ Bharanee (R729462) and Gustavo (E915649) in case any clarification requird.
+
+ 
+
+Note: Please ignore if you already completed the task.
+
+
+Chinta,Veerendra on 12/13/2024 05:40
+This is a Friendly reminder for AWS Backup remediation for your application.
+
+Please acknowledge and update the ETA in AOCOMMS as a priority. 
+
+If it's already completed, mark it as "Completed" in AOCOMMS. If work has started, mark it as "In Progress." and provide the ETA.
+
+Keep in mind that the CORE issue remediation due date is January 31, 2025. We request your support to complete it before this deadline.
+
+ 
+
+Kindly reach out to Veerendra (E920451)/ Bharanee (R729462) and Gustavo (E915649) in case any clarification requird.
+
+
+Chinta,Veerendra on 01/20/2025 09:41
+Hi Team,
+
+ 
+
+Friendly reminder that we are 2 weeks away to complete the AWS Backup remediation.  
+
+Keep in mind that the CORE issue remediation due date is January 31, 2025. We request your support to complete it before this deadline.
+
+ 
+
+Kindly reach out to Veerendra (E920451)/ Bharanee (R729462) /Gustavo (E915649) in case any clarification requird.
