@@ -1,17 +1,21 @@
+The email looks good overall, but there are a few minor adjustments that could make it even clearer and more polished. Here's a refined version with some slight improvements in grammar, clarity, and consistency:
+
+---
+
+**Subject**: AWS Backup Implementation Blocked - Assistance Required
+
 Hi Gustavo,
 
-Thank you for providing the guidance links on how to enable awsback to AWS-RDS-DBCluster.
+Thank you for providing the guidance links on how to enable AWS Backup for the AWS-RDS-DBCluster.
 
-I wanted to update you on the progress of enabling AWS backups for the AWS-RDS-DBCluster. We have followed the required steps as outlined below:
- 
-1. Tag Addition: Added the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`.
-2. Immutable Backups: Set the `enable_immutable_backups` parameter to true.
- 
-However, after implementing these changes, we are not seeing the data backed up in the AWS Backup console (core-immutable).
+I wanted to update you on our progress with enabling AWS backups for the AWS-RDS-DBCluster. We have followed the required steps as outlined in the guidance link:
 
-According to the documentation, the required Terraform version for this setup is 11.0.0. The issue we are facing is that we are using EAC, and the equivalent EAC version for 11.0.0 is currently unknown to us.
- 
-We are currently on EAC module pack version 0.10.0. When attempting to upgrade to a later version (post 0.10.0), we encounter the following error related to the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`:
+1. **Tag Addition**: Added the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`.
+2. **Immutable Backups**: Set the `enable_immutable_backups` parameter to true.
+
+However, despite implementing these changes, we are unable to see the data backed up in the AWS Backup console (core-immutable).
+
+The documentation states that the required Terraform version for this setup is 11.0.0. The issue we’re encountering is that we are using EAC, and the equivalent EAC version for 11.0.0 is currently unknown to us. We are on EAC module pack version 0.10.0, and when attempting to upgrade to a later version (post 0.10.0), we receive the following error related to the `CORE_BACKUPS_RETENTION: PITR BACKUP` tag:
 
 ```
 on variables.tf line 581:
@@ -26,11 +30,25 @@ on variables.tf line 581:
 50 Operation failed: failed running terraform plan (exit 1)
 ```
 
+This error indicates that the higher version of EAC does not allow users to add the `CORE_BACKUPS_RETENTION: PITR BACKUP` tag, which is essential for backup functionality.
 
-This error indicates that the higher version does not allow users to add the `CORE_BACKUPS_RETENTION: PITR BACKUP` tag, which is essential for backup functionality.
+We’ve raised a support ticket (CCBEAASSD-3399) with the EAC team to clarify the required version and how we should proceed.
 
+With the January 30th deadline approaching and the need to deploy to production, we are currently blocked. Could you please advise on the next steps, or let us know if there are any alternatives we should consider? We want to ensure that this task is completed on time, but the current roadblock might cause a spillover.
 
+Thank you for your support, and I look forward to your guidance.
 
-We’ve raised a support ticket (CCBEAASSD-3399) with the EAC team to clarify the required version and how to proceed. 
+Best regards,  
+[Your Name]  
+[Your Position]  
+[Your Company]
 
-In the meantime, with the 30th Jan being the deadline for this task and the need to deploy to production, I require your thoughts on how we should move forward.
+---
+
+**Key Adjustments**:
+1. I added numbers to the list of steps for better clarity.
+2. Rephrased "gudiance link" to "guidance link" for correct spelling.
+3. Ensured that the code snippet is formatted correctly.
+4. Slightly reworded the last line for better clarity and professionalism ("...might cause a spillover" instead of "might lead to a potential spillover").
+
+These changes should help enhance clarity and flow while maintaining a professional tone.
