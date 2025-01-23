@@ -1,54 +1,44 @@
-The email looks good overall, but there are a few minor adjustments that could make it even clearer and more polished. Here's a refined version with some slight improvements in grammar, clarity, and consistency:
-
----
-
-**Subject**: AWS Backup Implementation Blocked - Assistance Required
-
-Hi Gustavo,
-
-Thank you for providing the guidance links on how to enable AWS Backup for the AWS-RDS-DBCluster.
-
-I wanted to update you on our progress with enabling AWS backups for the AWS-RDS-DBCluster. We have followed the required steps as outlined in the guidance link:
-
-1. **Tag Addition**: Added the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`.
-2. **Immutable Backups**: Set the `enable_immutable_backups` parameter to true.
-
-However, despite implementing these changes, we are unable to see the data backed up in the AWS Backup console (core-immutable).
-
-The documentation states that the required Terraform version for this setup is 11.0.0. The issue we’re encountering is that we are using EAC, and the equivalent EAC version for 11.0.0 is currently unknown to us. We are on EAC module pack version 0.10.0, and when attempting to upgrade to a later version (post 0.10.0), we receive the following error related to the `CORE_BACKUPS_RETENTION: PITR BACKUP` tag:
-
-```
-on variables.tf line 581:
-41│ 581: variable "tags" {
-42│ ├────────────────
-43│ │ var.tags is map of string with 3 elements
-44│
-45│ CORE_BACKUPS_RETENTION is a reserved tag used by the Data Protection team to enable/disable backups. Users are prohibited from using this tag.
-46│
-47│ This was checked by the validation rule at variables.tf:585,3-13.
-48╵
-50 Operation failed: failed running terraform plan (exit 1)
-```
-
-This error indicates that the higher version of EAC does not allow users to add the `CORE_BACKUPS_RETENTION: PITR BACKUP` tag, which is essential for backup functionality.
-
-We’ve raised a support ticket (CCBEAASSD-3399) with the EAC team to clarify the required version and how we should proceed.
-
-With the January 30th deadline approaching and the need to deploy to production, we are currently blocked. Could you please advise on the next steps, or let us know if there are any alternatives we should consider? We want to ensure that this task is completed on time, but the current roadblock might cause a spillover.
-
-Thank you for your support, and I look forward to your guidance.
-
-Best regards,  
-[Your Name]  
-[Your Position]  
-[Your Company]
-
----
-
-**Key Adjustments**:
-1. I added numbers to the list of steps for better clarity.
-2. Rephrased "gudiance link" to "guidance link" for correct spelling.
-3. Ensured that the code snippet is formatted correctly.
-4. Slightly reworded the last line for better clarity and professionalism ("...might cause a spillover" instead of "might lead to a potential spillover").
-
-These changes should help enhance clarity and flow while maintaining a professional tone.
+- type: RDSAuroraPostgres
+          name: xbsdtestdb
+          action: apply
+          connectsTo:
+            - type: KMS
+              name: rdstestkms
+            - type: LightSwitch
+              name: lswitch
+          dependsOn:
+            - type: PrivateVPCEndpoints
+              name: vpce
+          properties:
+            #####Graviton Enabled#####
+            is_serverless: true
+            serverless_db_type: db.serverless
+            db_instance_type: "db.r6g.large"
+            database_name: "xbsddevdb"
+            aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
+            aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
+            #####Backup Enabled#####
+            db_backup_retention_days: 7
+            skip_final_snapshot: false
+            deletion_protection: "false"
+            identifier_prefix: xbsddevdb
+            enable_immutable_backups: true
+            preferred_backup_window: "21:00-22:00"
+            monitoring_interval: "5"
+            #####Auto Scaling Enabled#####        
+            min_capacity: 1
+            max_capacity: 8
+            #####Performance Enabled#####                
+            performance_insights_enabled: true
+            performance_insights_retention_period: 7
+            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
+            replica_count: 1
+            ca_cert_identifier: "rds-ca-rsa2048-g1"
+            enable_nlb_connectivity: true
+            rds_proxy: true
+            engine_version: "15.3"
+            healthcheck_enabled: true
+            subnets:
+              - "PrivateSubnet01"
+              - "PrivateSubnet02"
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW,CORE_BACKUPS_RETENTION: PITR BACKUP}
