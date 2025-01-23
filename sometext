@@ -1,7 +1,51 @@
-Emergency changes can be raised for situations where remediation of a condition or incident must be executed quickly to avoid an outage or impact. It can also be used to perform changes that you want to deploy quickly to avoid gathering multiple approvals. 
-Select the best answer.
+The email you've written is clear and communicates the issue well, but there are a few tweaks for readability and clarity. Here's a slightly refined version:
 
+---
 
-True
+**Subject:** Assistance Required with Enabling AWS Backups for RDS DBCluster
 
-False
+Hi EAC Team,
+
+We are in the process of enabling AWS backups for our AWS-RDS-DBCluster and have followed the steps outlined below:
+
+1. **Tag Addition**: Added the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`.
+2. **Immutable Backups**: Set the `enable_immutable_backups` parameter to true.
+
+After implementing these changes, we are not seeing the data being backed up in the AWS Backup console (core-immutable).
+
+As per the documentation, the required Terraform version for this setup is 11.0.0. However, we are using EAC, and we are unsure of the equivalent EAC version for 11.0.0. Could you please confirm the necessary EAC version?
+
+Additionally, when we attempt to upgrade our EAC module pack to a version later than 0.10.0, we encounter the following error related to the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`:
+
+```
+on variables.tf line 581:
+41│ 581: variable "tags" {
+42│ ├────────────────
+43│ │ var.tags is map of string with 3 elements
+44│
+45│ CORE_BACKUPS_RETENTION is a reserved tag used by the Data Protection team to enable/disable backups. Users are prohibited from using this tag.
+46│
+47│ This was checked by the validation rule at variables.tf:585,3-13.
+48╵
+50 Operation failed: failed running terraform plan (exit 1)
+```
+
+**Knowledge Sources**:
+- [How to use AWS Backup Service with tags](<URL>)
+- [How to enable AWS Backup Service for existing resources](<URL>)
+- [Backup Info Guide](<URL>)
+
+We would appreciate your guidance on resolving this matter and any additional steps we need to take to properly enable backups.
+
+Best regards,  
+[Your Name]  
+
+---
+
+**Key adjustments made:**
+1. **Subject line added**: It helps provide context for the reader immediately.
+2. **Sentence structure adjustments**: Made small changes to improve readability, such as breaking up some longer sentences for easier comprehension.
+3. **Clarified the tag issue**: Reworded the explanation to make it a little clearer.
+4. **Consistent formatting**: Ensured the issue with the Terraform error was presented in a more uniform way.
+
+I hope this helps! Does this version work for you?
