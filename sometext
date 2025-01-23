@@ -1,21 +1,19 @@
-The email you've written is clear and communicates the issue well, but there are a few tweaks for readability and clarity. Here's a slightly refined version:
+Sure! Here's a more formal and clear version of your message that you can send to your manager, Rohit:
 
 ---
 
-**Subject:** Assistance Required with Enabling AWS Backups for RDS DBCluster
+**Subject:** AWS Backup Setup for RDS DBCluster – Need Guidance on Next Steps
 
-Hi EAC Team,
+Hi Rohit,
 
-We are in the process of enabling AWS backups for our AWS-RDS-DBCluster and have followed the steps outlined below:
+I wanted to update you on the progress of enabling AWS backups for the AWS-RDS-DBCluster. We’ve followed the required steps as outlined below:
 
 1. **Tag Addition**: Added the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`.
 2. **Immutable Backups**: Set the `enable_immutable_backups` parameter to true.
 
-After implementing these changes, we are not seeing the data being backed up in the AWS Backup console (core-immutable).
+However, after implementing these changes, we are not seeing the data backed up in the AWS Backup console (core-immutable). According to the documentation, the required Terraform version for this setup is 11.0.0. The challenge we are facing is that we are using EAC, and the equivalent EAC version for 11.0.0 is currently unknown to us.
 
-As per the documentation, the required Terraform version for this setup is 11.0.0. However, we are using EAC, and we are unsure of the equivalent EAC version for 11.0.0. Could you please confirm the necessary EAC version?
-
-Additionally, when we attempt to upgrade our EAC module pack to a version later than 0.10.0, we encounter the following error related to the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`:
+We are currently on EAC module pack version 0.10.0. When we attempt to upgrade to a later version (post 0.10.0), we encounter the following error related to the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`:
 
 ```
 on variables.tf line 581:
@@ -30,22 +28,16 @@ on variables.tf line 581:
 50 Operation failed: failed running terraform plan (exit 1)
 ```
 
-**Knowledge Sources**:
-- [How to use AWS Backup Service with tags](<URL>)
-- [How to enable AWS Backup Service for existing resources](<URL>)
-- [Backup Info Guide](<URL>)
+We’ve raised a support ticket with the EAC team to clarify the required version and how to proceed. In the meantime, given that the 25th is the deadline for this task and we also need to deploy it to production, I’d appreciate your suggestion on how we should proceed:
 
-We would appreciate your guidance on resolving this matter and any additional steps we need to take to properly enable backups.
+- Should we go ahead and raise a change request to add the tags in the EAC production environment for Postgres, even if the backup isn’t fully functional yet?
+- Or should we wait for the EAC team’s response before making any changes?
+
+Looking forward to your guidance.
 
 Best regards,  
-[Your Name]  
+[Your Name]
 
 ---
 
-**Key adjustments made:**
-1. **Subject line added**: It helps provide context for the reader immediately.
-2. **Sentence structure adjustments**: Made small changes to improve readability, such as breaking up some longer sentences for easier comprehension.
-3. **Clarified the tag issue**: Reworded the explanation to make it a little clearer.
-4. **Consistent formatting**: Ensured the issue with the Terraform error was presented in a more uniform way.
-
-I hope this helps! Does this version work for you?
+This version aims to provide a clear overview of the situation, your current status, and the specific question you need help with. Let me know if you need further adjustments!
