@@ -13,7 +13,11 @@ I wanted to update you on the progress of enabling AWS backups for the AWS-RDS-D
 
 However, after implementing these changes, we are not seeing the data backed up in the AWS Backup console (core-immutable). According to the documentation, the required Terraform version for this setup is 11.0.0. The challenge we are facing is that we are using EAC, and the equivalent EAC version for 11.0.0 is currently unknown to us.
 
-We are currently on EAC module pack version 0.10.0. When we attempt to upgrade to a later version (post 0.10.0), we encounter the following error related to the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`:
+We are currently on EAC module pack version 0.10.0. When we attempt to upgrade to a later version (post 0.10.0), we encounter the following error related to the tag
+
+The below error indicate that higher version doesn't provide previledges to users for adding aws backup tag. which is required 
+
+ `CORE_BACKUPS_RETENTION: PITR BACKUP`:
 
 ```
 on variables.tf line 581:
