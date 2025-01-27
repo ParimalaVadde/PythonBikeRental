@@ -1,79 +1,670 @@
-core-backups-pitr
-Delete
-View JSON
-Global backup plan
-Backup plans created from AWS Organizations policies are not allowed to be deleted or edited.
-Summary
-Backup plan name
-core-backups-pitr
-Backup plan ID
-orgs/85a3cba5-3577-3d5e-a0a1-63725525ad57
-Version ID
-OGEwZTM3M2QtYTdmNC00ZWE3LTlhZmUtYmM0MmM5MWVmM2U0
-Last modified
-April 22, 2024, 15:09:57 (UTC+05:30)
-Last runtime
-January 27, 2025, 11:02:02 (UTC+05:30)
-Backup rules (1)
-Edit
-Delete
-Add backup rule
-Backup rules specify the backup schedule, backup window, and lifecycle rules.
+1. core-support-roles-BackupsCreationPolicy-ScUbHx9khwRA
 
-Select backup rule	
-Name
-Backup vault
-Destination Backup vault
-core-immutable
-core-immutable
-–
-Resource assignments (1)
-Delete
-Assign resources
-Resource assignments specify which resources will be backed up by this Backup plan.
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "rds:AddTagsToResource",
+                "rds:CopyDBClusterSnapshot",
+                "rds:CopyDBSnapshot",
+                "rds:CreateDBClusterSnapshot",
+                "rds:CreateDBSnapshot",
+                "rds:DescribeDB*",
+                "rds:ListTagsForResource",
+                "rds:ModifyDBCluster"
+            ],
+            "Resource": [
+                "arn:aws:rds:*:484862117635:cluster:*",
+                "arn:aws:rds:*:484862117635:cluster-endpoint:*",
+                "arn:aws:rds:*:484862117635:cluster-snapshot:*",
+                "arn:aws:rds:*:484862117635:db:*",
+                "arn:aws:rds:*:484862117635:global-cluster:*",
+                "arn:aws:rds:*:484862117635:og:*",
+                "arn:aws:rds:*:484862117635:pg:*",
+                "arn:aws:rds:*:484862117635:secgrp:*",
+                "arn:aws:rds:*:484862117635:snapshot:*",
+                "arn:aws:rds:*:484862117635:cluster-auto-backup:*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "rds:ModifyDBInstance"
+            ],
+            "Resource": [
+                "arn:aws:rds:*:484862117635:db:*",
+                "arn:aws:rds:*:484862117635:og:*",
+                "arn:aws:rds:*:484862117635:pg:*",
+                "arn:aws:rds:*:484862117635:secgrp:*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "rds:DeleteDBSnapshot",
+                "rds:ModifyDBSnapshotAttribute"
+            ],
+            "Resource": [
+                "arn:aws:rds:*:484862117635:snapshot:awsbackup:*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "kms:DescribeKey"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "rds:DeleteDBClusterSnapshot",
+                "rds:ModifyDBClusterSnapshotAttribute"
+            ],
+            "Resource": [
+                "arn:aws:rds:*:484862117635:cluster-snapshot:awsbackup:*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "backup:DescribeBackupVault"
+            ],
+            "Resource": [
+                "arn:aws:backup:*:484862117635:backup-vault:*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "tag:GetResources"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "backup:CopyFromBackupVault",
+                "backup:CopyIntoBackupVault"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "elasticfilesystem:Backup",
+                "elasticfilesystem:DescribeTags"
+            ],
+            "Resource": [
+                "arn:aws:elasticfilesystem:*:484862117635:file-system/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ec2:CreateTags",
+                "ec2:CreateSnapshot",
+                "ec2:DeleteSnapshot",
+                "ec2:CopySnapshot"
+            ],
+            "Resource": [
+                "arn:aws:ec2:*::snapshot/*",
+                "arn:aws:ec2:*:484862117635:volume/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ec2:DescribeVolumes",
+                "ec2:DescribeSnapshots",
+                "ec2:DescribeTags"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "tag:GetResources"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": "fsx:DescribeBackups",
+            "Resource": "arn:aws:fsx:*:*:backup/*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": "fsx:CreateBackup",
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:file-system/*",
+                "arn:aws:fsx:*:484862117635:backup/*",
+                "arn:aws:fsx:*:484862117635:volume/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": "fsx:DescribeFileSystems",
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:file-system/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": "fsx:DescribeVolumes",
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:volume/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": "fsx:ListTagsForResource",
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:file-system/*",
+                "arn:aws:fsx:*:484862117635:volume/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": "fsx:DeleteBackup",
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:backup/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "fsx:ListTagsForResource",
+                "fsx:ManageBackupPrincipalAssociations",
+                "fsx:CopyBackup",
+                "fsx:TagResource"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:backup/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "s3:ResourceAccount": [
+                        "484862117635"
+                    ]
+                }
+            },
+            "Action": [
+                "s3:GetInventoryConfiguration",
+                "s3:PutInventoryConfiguration",
+                "s3:ListBucketVersions",
+                "s3:ListBucket",
+                "s3:GetBucketVersioning",
+                "s3:GetBucketNotification",
+                "s3:PutBucketNotification",
+                "s3:GetBucketLocation",
+                "s3:GetBucketTagging",
+                "s3:GetBucketAcl"
+            ],
+            "Resource": [
+                "arn:aws:s3:::*"
+            ],
+            "Effect": "Allow",
+            "Sid": "S3BucketBackupPermissions"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "s3:ResourceAccount": [
+                        "484862117635"
+                    ]
+                }
+            },
+            "Action": [
+                "s3:GetObjectAcl",
+                "s3:GetObject",
+                "s3:GetObjectVersionTagging",
+                "s3:GetObjectVersionAcl",
+                "s3:GetObjectTagging",
+                "s3:GetObjectVersion"
+            ],
+            "Resource": [
+                "arn:aws:s3:::*/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "S3ObjectBackupPermissions"
+        },
+        {
+            "Action": [
+                "s3:ListAllMyBuckets"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "S3GlobalPermissions"
+        },
+        {
+            "Condition": {
+                "StringLike": {
+                    "kms:ViaService": "s3.*.amazonaws.com"
+                }
+            },
+            "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "S3KMSPermissions"
+        },
+        {
+            "Action": [
+                "events:DescribeRule",
+                "events:EnableRule",
+                "events:PutRule",
+                "events:DeleteRule",
+                "events:PutTargets",
+                "events:RemoveTargets",
+                "events:ListTargetsByRule",
+                "events:DisableRule"
+            ],
+            "Resource": [
+                "arn:aws:events:*:484862117635:rule/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "EventsPermissions"
+        },
+        {
+            "Action": [
+                "cloudwatch:GetMetricData",
+                "events:ListRules"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "EventsMetricsGlobalPermissions"
+        },
+        {
+            "Action": [
+                "dynamodb:DescribeTable",
+                "dynamodb:CreateBackup"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:*:484862117635:table/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "dynamodb:DescribeBackup",
+                "dynamodb:DeleteBackup"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:*:484862117635:table/*/backup/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "dynamodb:StartAwsBackupJob",
+                "dynamodb:ListTagsOfResource"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:*:484862117635:table/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "redshift:CreateClusterSnapshot",
+                "redshift:DescribeClusters",
+                "redshift:DescribeClusterSnapshots",
+                "redshift:DescribeTags",
+                "redshift:DeleteClusterSnapshot",
+                "redshift:CreateTags"
+            ],
+            "Resource": [
+                "arn:aws:redshift:*:484862117635:snapshot:*/*",
+                "arn:aws:redshift:*:484862117635:cluster:*"
+            ],
+            "Effect": "Allow",
+            "Sid": "RedshiftBackupPermissions"
+        }
+    ]
+}
 
 
-1
+2.core-support-roles-BackupsRestorationPolicy-8W8RDfvswGPX
 
-
-Name
-IAM role ARN
-Creation time
-retention
-arn:aws:iam::484862117635:role/core-backups-job-runner
-April 22, 2024, 15:09:57 (UTC+05:30)
-Backup jobs (0) Info
-
-Records of your scheduled or on-demand backups in the last 30 days.
-
-
-1
-
-
-Backup job ID
-Status
-Resource name
-Message category
-Resource ID
-Resource type
-Creation time
-Start by
-Empty resources
-No Backup jobs to display
-
-Backup plan tags (0)
-Manage tags
-
-1
-
-
-Tag key
-Value
-No tags
-You haven't added any tags to this resource.
-
-Manage tags
-Advanced backup settings
-Edit
-Windows VSS
-Disabled
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "elasticfilesystem:CreateFilesystem"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "elasticfilesystem:DeleteFilesystem",
+                "elasticfilesystem:DescribeFilesystems",
+                "elasticfilesystem:Restore"
+            ],
+            "Resource": [
+                "arn:aws:elasticfilesystem:*:484862117635:file-system/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "rds:AddTagsToResource",
+                "rds:DeleteDBCluster",
+                "rds:DeleteDBInstance",
+                "rds:DescribeDB*",
+                "rds:ListTagsForResource",
+                "rds:RestoreDBClusterFromSnapshot",
+                "rds:RestoreDBInstanceFromDBSnapshot",
+                "rds:RestoreDBInstanceToPointInTime",
+                "rds:RestoreDBClusterToPointInTime",
+                "rds:DeleteDBClusterAutomatedBackup"
+            ],
+            "Resource": [
+                "arn:aws:rds:*:484862117635:cluster:*",
+                "arn:aws:rds:*:484862117635:db:*",
+                "arn:aws:rds:*:484862117635:cluster-endpoint:*",
+                "arn:aws:rds:*:484862117635:cluster-snapshot:*",
+                "arn:aws:rds:*:484862117635:secgrp:*",
+                "arn:aws:rds:*:484862117635:pg:*",
+                "arn:aws:rds:*:484862117635:og:*",
+                "arn:aws:rds:*:484862117635:snapshot:*",
+                "arn:aws:rds:*:484862117635:es:*",
+                "arn:aws:rds:*:484862117635:subgrp:*",
+                "arn:aws:rds:*:484862117635:cluster-pg:*",
+                "arn:aws:rds:*:484862117635:cluster-auto-backup:*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "rds.amazonaws.com"
+                }
+            },
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::484862117635:role/rds-database-sql-server-active-directory-role-*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ec2:CreateVolume",
+                "ec2:DeleteVolume"
+            ],
+            "Resource": [
+                "arn:aws:ec2:*::snapshot/*",
+                "arn:aws:ec2:*:484862117635:volume/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ec2:DescribeSnapshots",
+                "ec2:DescribeVolumes"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "s3:ResourceAccount": [
+                        "484862117635"
+                    ]
+                }
+            },
+            "Action": [
+                "s3:CreateBucket",
+                "s3:ListBucketVersions",
+                "s3:ListBucket",
+                "s3:GetBucketVersioning",
+                "s3:GetBucketLocation",
+                "s3:PutBucketVersioning",
+                "s3:GetBucketOwnershipControls"
+            ],
+            "Resource": [
+                "arn:aws:s3:::*"
+            ],
+            "Effect": "Allow",
+            "Sid": "S3BucketRestorePermissions"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "s3:ResourceAccount": [
+                        "484862117635"
+                    ]
+                }
+            },
+            "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:DeleteObject",
+                "s3:PutObjectVersionAcl",
+                "s3:GetObjectVersionAcl",
+                "s3:GetObjectTagging",
+                "s3:PutObjectTagging",
+                "s3:GetObjectAcl",
+                "s3:PutObjectAcl",
+                "s3:PutObject",
+                "s3:ListMultipartUploadParts"
+            ],
+            "Resource": [
+                "arn:aws:s3:::*/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "S3ObjectRestorePermissions"
+        },
+        {
+            "Action": "dynamodb:RestoreTableFromAwsBackup",
+            "Resource": "arn:aws:dynamodb:*:484862117635:table/*",
+            "Effect": "Allow",
+            "Sid": "DynamoDBRestorePermissions"
+        },
+        {
+            "Action": [
+                "fsx:DescribeVolumes"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:volume/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "ForAllValues:StringEquals": {
+                    "aws:TagKeys": [
+                        "aws:backup:source-resource"
+                    ]
+                }
+            },
+            "Action": [
+                "fsx:CreateVolumeFromBackup",
+                "fsx:TagResource"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:volume/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "fsx:CreateVolumeFromBackup"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:storage-virtual-machine/*",
+                "arn:aws:fsx:*:484862117635:backup/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "fsx:DeleteVolume",
+                "fsx:UntagResource"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:volume/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "fsx:CreateFileSystemFromBackup"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:file-system/*",
+                "arn:aws:fsx:*:484862117635:backup/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": "fsx:DescribeFileSystems",
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:file-system/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": "fsx:DescribeBackups",
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:backup/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "Null": {
+                    "aws:ResourceTag/aws:backup:source-resource": "false"
+                }
+            },
+            "Action": [
+                "fsx:DeleteFileSystem",
+                "fsx:UntagResource"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:file-system/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": "ds:DescribeDirectories",
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "StringLike": {
+                    "kms:ViaService": [
+                        "elasticfilesystem.*.amazonaws.com",
+                        "rds.*.amazonaws.com",
+                        "s3.*.amazonaws.com",
+                        "dynamodb.*.amazonaws.com",
+                        "ec2.*.amazonaws.com",
+                        "redshift.*.amazonaws.com"
+                    ]
+                }
+            },
+            "Action": [
+                "kms:Decrypt",
+                "kms:Encrypt",
+                "kms:GenerateDataKey",
+                "kms:ReEncrypt*",
+                "kms:DescribeKey"
+            ],
+            "Resource": [
+                "arn:aws:kms:*:484862117635:key/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "Bool": {
+                    "kms:GrantIsForAWSResource": "true"
+                }
+            },
+            "Action": [
+                "kms:CreateGrant",
+                "kms:RetireGrant"
+            ],
+            "Resource": [
+                "arn:aws:kms:*:484862117635:key/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "RedshiftRestorePermissions"
+        },
+        {
+            "Action": [
+                "redshift:RestoreFromClusterSnapshot",
+                "redshift:RestoreTableFromClusterSnapshot"
+            ],
+            "Resource": [
+                "arn:aws:redshift:*:484862117635:snapshot:*/*",
+                "arn:aws:redshift:*:484862117635:cluster:*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": "redshift:DescribeTableRestoreStatus",
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ec2:Describe*"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "redshift.amazonaws.com"
+                }
+            },
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::484862117635:role/service-role/AmazonRedshift-CommandsAccessRole-*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "backup:UpdateGlobalSettings"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "kms:GenerateDataKeyWithoutPlaintext"
+            ],
+            "Resource": "arn:aws:kms:*:484862117635:key/*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "fsx:CreateVolumeFromBackup"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:backup/*",
+                "arn:aws:fsx:*:484862117635:storage-virtual-machine/*/*",
+                "arn:aws:fsx:*:484862117635:volume/*/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "fsx:TagResource"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:484862117635:*"
+            ],
+            "Effect": "Allow"
+        }
+    ]
+}
