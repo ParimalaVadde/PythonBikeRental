@@ -1,68 +1,98 @@
-Overview
-Using this documentation you can enable immutable backup being taken based on the cron schedule you provide. You may ask, We have this facility already, what's new? Earlier your backups were stored in the vault you created and the max retention was 7 days but now your backup will be Centralized i.e. they will be going to a core vault which is centrally governed,observed and would be immutable thus satisfying the Cyber Resiliency requirement for protection against Cyber/Malware attacks. By default, Immutable backups is Point in time recovery(PITR) backup but with a hard retention date of 35 days. This is an incremental backup and no performance impacts. You will be able to opt for snapshot backups(Optional) as well which will be taken as per the cron schedule you provide and will have a retention period of either 35,70,100 or 400 days.
-
-What do Centralized Backup mean?
-Aurora Database backup responsibilities will be taken by AWS Backups.
-These backups will be governed and observed by the centralized Data Protection Team.
-Backup plan(if exists) will be destroyed. New backup plan will be created and "core-immutable" centralized vault will be used to store backups.
-Separate backup rules will be created for both PITR and SNAPSHOT backup under the new backup plan.
-In AWS Console, Customers will NOT see the details of the Backup in "Backup Section" under Maintenance and Backup Tab. Instead, they will need to refer "AWS Backup" service in aws console.
-Even if the cluster is destroyed, the backups will still persist until the retention period is exhausted.
-Availability Version
-Immutable backups for Aurora Postgres was supported by all versions but this new feature where your backups are going to be stored in core immutable vault will be available in Aurora Postgres module version 7.0.0
-
-Limitations
-Daily Immutable Backups: The earlier setup would result in backups created depending on the cron schedule frequency you defined. With this new change your backups will be mandated daily as per the schedule configured
-Automated Backups: With this feature, we are integrating AWS Backup for Aurora’s PITR. Automatic Backups with retention 2-35 days will be replaced with PITR backups in AWS Backups with 35 days retention.
-Best Practices
-If you have a backup plan with multiple rules and the time frames of the two rules overlap, AWS Backup optimizes the backup and takes a backup for the rule with the longer retention time. The optimization takes into account the full start window, not just when the daily backup is taken. This essentially means that if you have two backup rules in your Backup Plan and they both have the same start time and other backup windows configurations then the backup rule which creates a backup with the longest retention period is triggered. Please refer the 'Note' under the 'Backup rules' section for more insights on this. : https://docs.aws.amazon.com/aws-backup/latest/devguide/creating-a-backup-plan.html#plan-options-and-configuration
-
-Existing Vs New Backup Resources/Parameter Differences
-Parameters/Resources affecting Backup	Type	Existing Backup Setup	New Standardized AWS Backup
-aws_backup_vault	Resource	Created per DB Cluster and backup was stored in this vault	It will be staying intact(if exists). If you are enabling backups for the first time it will not be created.
-aws_backup_plan	Resource	Created per DB Cluster	This will not be created and if already created, it will be destroyed.
-aws_backup_selection	Resource	Created per DB Cluster	This will not be created and if already created, it will be destroyed.
-enable_immutable_backups	Parameter	Default = true (In PROD)	This parameter was used to enable the old backup solution which is now discontinued. This will still be used ONLY in case you have old backup solution implemented
-db_backup_retention_days	Parameter	Parameter is exposed and you can provide a number of retention days	This parameter is mandated to 35 for centralized backups,as new PITR backups in centralized vault will have retention of 35 days
-preferred_backup_window	Parameter	Parameter was exposed and you can provide a window for automatic backups	This parameter is no more used and hence removed. Instead schedule for PITR backup will be configured using new parameter centralized_backup_pitr_schedule
-immutable_backup_schedule	Parameter	Parameter was exposed and you can provide a cron schedule for backup to go to own vault,
-defaulted to "cron(0 23 ? * * *)"	This parameter is no more used and hence removed
-Parameters/Resources affecting Backup	Type	New Backup Setup	New Standardized AWS Backup
-centralized_backup	Parameter	Default = "PITRBACKUP"	Possible values are "PITRBACKUP", "PITRANDSNAPBKP". If it is set to "PITRBACKUP", PITRBACKUP will be set for ""CORE_BACKUP_RETENTION""." In case you opt for SNAPSHOT backup as well PITRANDSNAPBKP will be set for ""CORE_BACKUP_RETENTION"".
-centralized_backup_pitr_schedule	Parameter	Frequency is mandated to daily	Parameter is exposed and you can provide a cron schedule for backup to go to core vault,
-defaulted to "cron(0 23 ? * * *)"
-centralized_backup_snap_schedule	Parameter	Frequency is mandated to daily	Parameter is exposed and you can provide a cron schedule for backup to go to core vault,
-defaulted to "cron(0 23 ? * * *)"
-centralized_snap_retention_days	Parameter	Default = "35"	Parameter is exposed and you can set this to either of values "35","70","100","400"
-Setup Instructions
-In your main.tf, set the following parameters to your rds-aurora-postgres module:
-
-For only PITR backups:
-
-centralized_backup = "PITRBACKUP"
-centralized_backup_pitr_schedule = "cron(0 23 ? * * *)" # specify your own cron schedule.
-For both PITR and SNAPSHOT backups:
-
-centralized_backup = "PITRANDSNAPBKP"
-centralized_backup_pitr_schedule = "cron(0 23 ? * * *)" # specify your own cron schedule.
-centralized_backup_snap_schedule = "cron(0 23 ? * * *)" # specify your own cron schedule.
-centralized_snap_retention_days= "35" # specify your retention period for SNAPSHOT.
-The above provided configuration is enough if you are implementing backups for the first time.
-
-If you already have immutable backup setup in place, please do the following:
-
-Remove the immutable_backup_schedule and preferred_backup_window parameter from your configuration as it is no more in use.
-Set var.db_backup_retention_days to 35 (if not already set to 35) as new PITR backups in centralized vault will have retention of 35 days
-Keep the enable_immutable_backups set as true. Do not change it. As if you do that now, your tfl apply will fail as turning it to false it will try to delete the vault. Which cannot be deleted as it has immutable backup which will persist till the retention period. Once the new solution is place backups will stop going to this vault, instead will go to the core immutable vault. Thus backups within this vault will expire after set retention period.
-Recommendations:
-
-If you are enabling snapshot backups as well, choose your snapshot retention period wisely. You also have automatic snapshots that are taken everyday by default by AWS. Also, we recommend considering the frequency of snapshot backups.
-Set cron schedules for both PITR and Snapshot at different times. We have noticed that if you provide same cron schedule for both snapshot and PITR backup one of the job fails, though this failed job is retried in sometime and the backup succeeds.
-Now run the following commands in dev shell to provision/repave your rds database:
-
-pcl aws login --role-arn arn:aws:iam::<gold-dev-account>:role/tfe-module-pave --sid <fid/sid details>
-tfl login
-tfl configure
-tfl apply
-Test backup was successfully taken
-As per the configuration provided, AWS Backup Plan will be created for centralized core-immutable vault. You can view your backup plan in the aws console: go/awsconsole --> AWS Backup --> Backup Plan
+# yaml-language-server: $schema=schema/aupodat_deployment_schema.json
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+    name: "auroratdb"
+    sealID: "111597"
+    model:
+        name: xbsddbts
+        version: v5
+spec:
+    modulepack:
+        name: default
+        version: 0.13.0
+    environment:
+        awsAccountID: "484862117635"
+        awsRegion: us-east-1
+        tfeOrganization: 111597-114116-DEV
+    components:
+        - type: KMS
+          name: rdstestkms
+          action: apply
+          properties:
+            key_alias: rdsdevkms
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+        - type: LightSwitch
+          name: lswitch
+          action: apply
+          properties:
+            lightswitch_enabled: true
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+        - type: S3
+          name: bucket
+          action: apply
+          properties:
+            #####BACKUP Enabled#####                                        
+            core_backups_retention: "70DAYS"
+            enable_bucket_versioning: "Enabled"
+#            enable_object_locking: true
+            lifecycle_rules:
+                - id: "default"
+                  filter:
+                    prefix: ""
+                  expiration:
+                    - expired_object_delete_marker: true
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+        - type: RDSAuroraPostgres
+          name: xbsdtestdb
+          action: apply
+          connectsTo:
+            - type: KMS
+              name: rdstestkms
+            - type: LightSwitch
+              name: lswitch
+          dependsOn:
+            - type: PrivateVPCEndpoints
+              name: vpce
+          properties:
+            #####Graviton Enabled#####
+            is_serverless: true
+            serverless_db_type: db.serverless
+            db_instance_type: "db.r6g.large"
+            database_name: "xbsddevdb"
+            aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
+            aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
+            #####Backup Enabled#####
+            db_backup_retention_days: 35
+            skip_final_snapshot: false
+            deletion_protection: "false"
+            identifier_prefix: xbsddevdb
+            enable_immutable_backups: true
+            preferred_backup_window: "21:00-22:00"
+            monitoring_interval: "5"
+            #####Auto Scaling Enabled#####        
+            min_capacity: 1
+            max_capacity: 8
+            #####Performance Enabled#####                
+            performance_insights_enabled: true
+            performance_insights_retention_period: 7
+            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
+            replica_count: 1
+            ca_cert_identifier: "rds-ca-rsa2048-g1"
+            enable_nlb_connectivity: true
+            rds_proxy: true
+            engine_version: "15.3"
+            healthcheck_enabled: true
+            subnets:
+              - "PrivateSubnet01"
+              - "PrivateSubnet02"
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+            custom_db_names:
+                - "custom"
+                #####LightSwitch Enabled#####                        
+            #lightswitch_config:
+            #    enabled: true
+            #    start_action:
+            #        schedule: "cron(00 7 ? * MON-FRI *)" ###5pm UTC
+            #    stop_action:
+            #        schedule: "cron(00 20 ? * MON-FRI *)"
