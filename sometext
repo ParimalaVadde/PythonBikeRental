@@ -1,98 +1,20 @@
-# yaml-language-server: $schema=schema/aupodat_deployment_schema.json
-apiVersion: deployment/v1
-kind: Deployment
-metadata:
-    name: "auroratdb"
-    sealID: "111597"
-    model:
-        name: xbsddbts
-        version: v5
-spec:
-    modulepack:
-        name: default
-        version: 0.13.0
-    environment:
-        awsAccountID: "484862117635"
-        awsRegion: us-east-1
-        tfeOrganization: 111597-114116-DEV
-    components:
-        - type: KMS
-          name: rdstestkms
-          action: apply
-          properties:
-            key_alias: rdsdevkms
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: LightSwitch
-          name: lswitch
-          action: apply
-          properties:
-            lightswitch_enabled: true
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: S3
-          name: bucket
-          action: apply
-          properties:
-            #####BACKUP Enabled#####                                        
-            core_backups_retention: "70DAYS"
-            enable_bucket_versioning: "Enabled"
-#            enable_object_locking: true
-            lifecycle_rules:
-                - id: "default"
-                  filter:
-                    prefix: ""
-                  expiration:
-                    - expired_object_delete_marker: true
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: RDSAuroraPostgres
-          name: xbsdtestdb
-          action: apply
-          connectsTo:
-            - type: KMS
-              name: rdstestkms
-            - type: LightSwitch
-              name: lswitch
-          dependsOn:
-            - type: PrivateVPCEndpoints
-              name: vpce
-          properties:
-            #####Graviton Enabled#####
-            is_serverless: true
-            serverless_db_type: db.serverless
-            db_instance_type: "db.r6g.large"
-            database_name: "xbsddevdb"
-            aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
-            aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
-            #####Backup Enabled#####
-            db_backup_retention_days: 35
-            skip_final_snapshot: false
-            deletion_protection: "false"
-            identifier_prefix: xbsddevdb
-            enable_immutable_backups: true
-            preferred_backup_window: "21:00-22:00"
-            monitoring_interval: "5"
-            #####Auto Scaling Enabled#####        
-            min_capacity: 1
-            max_capacity: 8
-            #####Performance Enabled#####                
-            performance_insights_enabled: true
-            performance_insights_retention_period: 7
-            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
-            replica_count: 1
-            ca_cert_identifier: "rds-ca-rsa2048-g1"
-            enable_nlb_connectivity: true
-            rds_proxy: true
-            engine_version: "15.3"
-            healthcheck_enabled: true
-            subnets:
-              - "PrivateSubnet01"
-              - "PrivateSubnet02"
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-            custom_db_names:
-                - "custom"
-                #####LightSwitch Enabled#####                        
-            #lightswitch_config:
-            #    enabled: true
-            #    start_action:
-            #        schedule: "cron(00 7 ? * MON-FRI *)" ###5pm UTC
-            #    stop_action:
-            #        schedule: "cron(00 20 ? * MON-FRI *)"
+core-immutable == aws back up valut name
+
+
+existing backup plans
+
+core-backups-100
+January 27, 2025, 11:17:47 (UTC+05:30)
+April 22, 2024, 15:09:57 (UTC+05:30)
+core-backups-35
+January 27, 2025, 11:14:52 (UTC+05:30)
+April 22, 2024, 15:09:57 (UTC+05:30)
+core-backups-70
+January 27, 2025, 11:13:06 (UTC+05:30)
+April 22, 2024, 15:09:57 (UTC+05:30)
+core-backups-400
+January 27, 2025, 11:04:02 (UTC+05:30)
+April 22, 2024, 15:09:57 (UTC+05:30)
+core-backups-pitr
+January 27, 2025, 11:02:02 (UTC+05:30)
+April 22, 2024, 15:09:57 (UTC+05:30)
