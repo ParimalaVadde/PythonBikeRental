@@ -1,20 +1,79 @@
-core-immutable == aws back up valut name
-
-
-existing backup plans
-
-core-backups-100
-January 27, 2025, 11:17:47 (UTC+05:30)
-April 22, 2024, 15:09:57 (UTC+05:30)
-core-backups-35
-January 27, 2025, 11:14:52 (UTC+05:30)
-April 22, 2024, 15:09:57 (UTC+05:30)
-core-backups-70
-January 27, 2025, 11:13:06 (UTC+05:30)
-April 22, 2024, 15:09:57 (UTC+05:30)
-core-backups-400
-January 27, 2025, 11:04:02 (UTC+05:30)
-April 22, 2024, 15:09:57 (UTC+05:30)
 core-backups-pitr
-January 27, 2025, 11:02:02 (UTC+05:30)
+Delete
+View JSON
+Global backup plan
+Backup plans created from AWS Organizations policies are not allowed to be deleted or edited.
+Summary
+Backup plan name
+core-backups-pitr
+Backup plan ID
+orgs/85a3cba5-3577-3d5e-a0a1-63725525ad57
+Version ID
+OGEwZTM3M2QtYTdmNC00ZWE3LTlhZmUtYmM0MmM5MWVmM2U0
+Last modified
 April 22, 2024, 15:09:57 (UTC+05:30)
+Last runtime
+January 27, 2025, 11:02:02 (UTC+05:30)
+Backup rules (1)
+Edit
+Delete
+Add backup rule
+Backup rules specify the backup schedule, backup window, and lifecycle rules.
+
+Select backup rule	
+Name
+Backup vault
+Destination Backup vault
+core-immutable
+core-immutable
+–
+Resource assignments (1)
+Delete
+Assign resources
+Resource assignments specify which resources will be backed up by this Backup plan.
+
+
+1
+
+
+Name
+IAM role ARN
+Creation time
+retention
+arn:aws:iam::484862117635:role/core-backups-job-runner
+April 22, 2024, 15:09:57 (UTC+05:30)
+Backup jobs (0) Info
+
+Records of your scheduled or on-demand backups in the last 30 days.
+
+
+1
+
+
+Backup job ID
+Status
+Resource name
+Message category
+Resource ID
+Resource type
+Creation time
+Start by
+Empty resources
+No Backup jobs to display
+
+Backup plan tags (0)
+Manage tags
+
+1
+
+
+Tag key
+Value
+No tags
+You haven't added any tags to this resource.
+
+Manage tags
+Advanced backup settings
+Edit
+Windows VSS
+Disabled
