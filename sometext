@@ -8,3 +8,8 @@
 48│ This was checked by the validation rule at variables.tf:797,3-13.
 49╵
 50Operation failed: failed running terraform plan (exit 1)
+
+
+
+centralized_backup: "PITRBACKUP"
+centralized_backup_pitr_schedule: "cron(15 13 ? * *)"
