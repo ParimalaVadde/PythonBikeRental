@@ -1,2 +1,2 @@
 centralized_backup: "PITRBACKUP" 
-centralized_backup_pitr_schedule: "cron(0 9 ? * * *)"
+centralized_backup_pitr_schedule: "cron(30 9 ? * * *)"
