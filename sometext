@@ -13,3 +13,6 @@
 
 centralized_backup: "PITRBACKUP"
 centralized_backup_pitr_schedule: "cron(15 13 ? * *)"
+
+centralized_backup: "PITRBACKUP"
+centralized_backup_pitr_schedule: "cron(30 13 ? * *)"
