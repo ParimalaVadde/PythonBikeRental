@@ -39,3 +39,49 @@ db_backup_retention_days: 35
             monitoring_interval: "5"
             centralized_backup: "PITRBACKUP"
             centralized_backup_pitr_schedule: "cron(0 7 ? * * *)"
+
+
+Recovery points (36) Info
+
+Deselect all
+Actions
+
+1
+2
+3
+4
+
+
+Recovery point ID
+Status
+Resource name
+Resource ID
+Resource type
+Backup type
+Creation time
+Index status
+Source account ID
+Retention period
+Transition to cold storage
+app-id-111597-dep-id-114116-uu-id-xjc1jp-20250129054939-d1e52532
+Completed
+app-id-111597-dep-id-114116-uu-id-xjc1jpz9pvhv
+app-id-111597-dep-id-114116-uu-id-xjc1jpz9pvhv
+S3
+Snapshot
+January 29, 2025, 11:00:00 (UTC+05:30)
+Not indexed
+–
+70 days
+Never
+continuous:cluster-ydz4a7sp6e4reakcv6iillzt5u-ab72dba7
+Available
+rdsapg86a8-auroratdb-v1-cluster
+rdsapg86a8-auroratdb-v1-cluster
+Aurora
+Continuous
+January 28, 2025, 15:00:00 (UTC+05:30)
+–
+–
+35 days
+Never
