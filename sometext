@@ -16,3 +16,14 @@ centralized_backup_pitr_schedule: "cron(15 13 ? * *)"
 
 centralized_backup: "PITRBACKUP"
 centralized_backup_pitr_schedule: "cron(30 13 ? * *)"
+
+
+            db_backup_retention_days: 35
+            skip_final_snapshot: false
+            deletion_protection: "false"
+            identifier_prefix: xbsddevdb
+            enable_immutable_backups: true
+            preferred_backup_window: "21:00-22:00"
+            monitoring_interval: "5"
+            centralized_backup: "PITRBACKUP"
+            centralized_backup_pitr_schedule: "cron(30 4 ? * * *)"
