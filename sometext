@@ -1,145 +1,103 @@
-Community
-Community Tools
-Environment-as-Code (EaC)
-EaC
-Guides
-Component Guides
-v0.13.x
-AWS Lightswitch
-
-
-AWS Lightswitch
-Overview and Details for provisioning an AWS Lightswitch using EaC.
-
-Last Updated:
-2024-11-27
-Overview
-Lightswitch is a tool that enables users to save money by defining schedules to automatically stop their Atlas Products when not required and restart them again when needed. E.g. At weekends and out of week day work time hours and over public holiday periods.
-
-Component Name: lightswitch
-Model Component Type: LightSwitch
-
-Prerequisites
-None
-
-Configurable Properties
-Name	Description	Type	Default	Required
-attribution_enabled	n/a	bool	false	no
-lightswitch_enabled	Light Switch Enable	bool	true	no
-lightswitch_regions	List of AWS regions for enabling lightswitch	list(string)	[]	no
-tags	n/a	map(string)	{}	no
-Outputs
-Name	Description
-lightswitch_job	n/a
-Examples
-We recommend that you do not copy and paste and leverage our Model and Deployment Schema to populate your files.
-EaC gives you ability to auto populate your model file leveraging our model schema.
-Model Schema will help users create a model file with an Auto-complete feature in IDE (VS-Code recommended with 'YAML' extension install ). This will help assist and avoid manual errors that may come up while writing a model file from scratch.
-Press CTRL-SPACE for model autocompletion and assistance.
-Runtime Model Configuration:
-Runtime model configuration specifying a Lightswitch
-
-apiVersion: model/v1
-kind: Model
+# yaml-language-server: $schema=schema/aupodat_deployment_schema.json
+apiVersion: deployment/v1
+kind: Deployment
 metadata:
-  type: InfraModel
-  name:  '<a-name-for-your-model>'
-  version: "v1" # Version for your model Eg. v1 or v2
-  sealID: "<your-seal-id>"
-  mutable: <Select true or false>
-  patternName: "<select-a-pattern>"
+    name: "auroratdb"
+    sealID: "111597"
+    model:
+        name: xbsddbts
+        version: v5
 spec:
-  components:
-    - type: LightSwitch
-      name: light
-F.A.Q
-Is LightSwitch a base component?
-A: Yes. LightSwitch is a REGION scoped component which means that it needs to be applied only once per region. Similar to other REGION scoped components, this gets deployed in a special TFE workspace base-AWS_Account_Number-AWS_Region-LightSwitch e.g. base-123412341234-us-east-1-LightSwitch
-Can LightSwitch stop and start Global RDS Aurora Clusters?
-A: No. LightSwitch can only stop and start regional RDS Aurora clusters. This is due to a known AWS limitation. Please refer to Amazon Aurora Official Documentation for more details.
-References
-Atlas Modules Bundled
-Atlas Module	Version	Documentation	TF Bundle Requirements
-lightswitch-job	3.1.0	Terraform Module: LightSwitch Job	1.0.8-20240112-JPMC
-
-
-
-Change Log
-ModulePack 0.13.0
-11/7/2024
-
-CCBEAAS-18367 Upgraded LightSwitch to version 5.0.0
-
-
-
-Community
-AWS Lightswitch for RDS Databases
-
-
-Provisioning Lightswitch for RDS Databases
-Overview and Details for provisioning lightswitch for RDS Databases using EaC
-
-Last Updated:
-2025-01-02
-Overview
-Lightswitch is a tool that enables users to save cost by defining schedules to automatically stop their Atlas Products when not required and restart them again when needed.
-E.g. At weekends and out of week day work time hours.
-
-
-Name	Description	Type	Default	Required
-holiday_schedule_expressions	List of holidays schedules to configure prolonged periods of downtime. This is ONLY for use with the Lightswitch Module and for START actions	list	""	Yes
-Prerequisites
-If you want RDSAurora Postgres or RDSAurora MySQL or RDS Oracle to have LightSwitch functionality enabled, you need to enable LightSwitch component in model and deployment files and then add lightswitch in connectsTo block of RDS components.
-
-In most common cases, the LightSwitch component would already be deployed in your account. Therefore, you will still include LightSwitch component in your model and deployment files but the action property should be set skip.
-
-Note: Lightswitch does not work with Global Databases. LightSwitch can only stop and start regional RDS Aurora clusters. This is due to a known AWS limitation. Please refer to Amazon Aurora Official Documentation for more details.
-
-Configurable Properties
-Runtime Model
-Currently, the runtime model file does not configure any properties of this module.
-
-Runtime Model Configuration:
-Below are model and deployment files for enabling LightSwitch on various RDS Database components.
-
-apiVersion: model/v1
-kind: Model
-metadata:
-  type: InfraModel
-  name:  <a-name-for-your-model>
-  version: "v1" # Version for your model Eg. v1 or v2
-  sealID: <your-seal-id>
-  mutable: <Select true or false>
-  patternName: <select-a-pattern>
-spec:
-  components:
-    - type: LightSwitch
-      name: light
-    - type: RDSAuroraPostgres
-      name: postgres
-      connectsTo:
+    modulepack:
+        name: default
+        version: 0.13.0
+    environment:
+        awsAccountID: "484862117635"
+        awsRegion: us-east-1
+        tfeOrganization: 111597-114116-DEV
+    components:
         - type: KMS
-          name: kms
+          name: rdstestkms
+          action: apply
+          properties:
+            key_alias: rdsdevkms
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
         - type: LightSwitch
-          name: light
-    - type: RDSAuroraMySQL
-      name: mysql
-      connectsTo:
-        - type: KMS
-          name: kms
-        - type: LightSwitch
-          name: light
-    - type: RDSOracle
-      name: oracle
-      connectsTo:
-        - type: KMS
-          name: kms
-        - type: LightSwitch
-          name: light
-
-
-
-ModulePack 0.13.1
-12/12/2024
-
-CCBEAAS-19484 updated newely added parameter holiday_schedule_expressions for LightSwitch
+          name: lswitch
+          action: apply
+          properties:
+            lightswitch_enabled: true
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+        - type: S3
+          name: bucket
+          action: apply
+          properties:
+            #####BACKUP Enabled#####                                        
+            core_backups_retention: "70DAYS"
+            enable_bucket_versioning: "Enabled"
+#            enable_object_locking: true
+            lifecycle_rules:
+                - id: "default"
+                  filter:
+                    prefix: ""
+                  expiration:
+                    - expired_object_delete_marker: true
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+        - type: RDSAuroraPostgres
+          name: xbsdtestdb
+          action: apply
+          connectsTo:
+            - type: KMS
+              name: rdstestkms
+            - type: LightSwitch
+              name: lswitch
+          dependsOn:
+            - type: PrivateVPCEndpoints
+              name: vpce
+          properties:
+            #####Graviton Enabled#####
+            is_serverless: true
+            serverless_db_type: db.serverless
+            db_instance_type: "db.r6g.large"
+            database_name: "xbsddevdb"
+            aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
+            aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
+            #####Backup Enabled#####
+            db_backup_retention_days: 35
+            skip_final_snapshot: false
+            deletion_protection: "false"
+            identifier_prefix: xbsddevdb
+            enable_immutable_backups: true
+            #preferred_backup_window: "21:00-22:00"
+            monitoring_interval: "5"
+            centralized_backup: "PITRBACKUP"
+            #centralized_backup: "PITRANDSNAPBKP"
+            centralized_backup_pitr_schedule: "cron(30 15 ? * * *)"
+            #centralized_backup_snap_schedule: "cron(30 15 ? * * *)"
+            #centralized_snap_retention_days: 35
+            #####Auto Scaling Enabled#####        
+            min_capacity: 1
+            max_capacity: 8
+            #####Performance Enabled#####                
+            performance_insights_enabled: true
+            performance_insights_retention_period: 7
+            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
+            replica_count: 1
+            ca_cert_identifier: "rds-ca-rsa2048-g1"
+            enable_nlb_connectivity: true
+            rds_proxy: true
+            engine_version: "15.3"
+            healthcheck_enabled: true
+            subnets:
+              - "PrivateSubnet01"
+              - "PrivateSubnet02"
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+            custom_db_names:
+                - "custom"
+                #####LightSwitch Enabled#####                        
+            lightswitch_config:
+                enabled: true
+                start_action:
+                    schedule: "cron(00 7 ? * MON-FRI *)" ###5pm UTC
+                stop_action:
+                    schedule: "cron(00 20 ? * MON-FRI *)"
