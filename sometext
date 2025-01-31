@@ -13,3 +13,7 @@ Error: Invalid value for input variable
 48│ required.
 49╵
 50Operation failed: failed running terraform plan (exit 1)
+
+
+
+holiday_schedule_expressions: []
