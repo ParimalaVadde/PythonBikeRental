@@ -11,3 +11,21 @@ Fast-forward
  spinnaker-trigger.yml         |  17 +
  2 files changed, 377 insertions(+), 350 deletions(-)
  create mode 100644 spinnaker-trigger.yml
+
+
+W619378@WH-1AB5C35118 I:\ds\xbsd-aurora-postgresql
+$ git push origin release/aurora20
+Enumerating objects: 6, done.
+Counting objects: 100% (6/6), done.
+Delta compression using up to 6 threads
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 2.14 KiB | 547.00 KiB/s, done.
+Total 4 (delta 2), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Warning: No Jira URL is configured in hook configuration, please update valid Jira URL (with https://) in hook configuration.
+remote: Cannot push changes to master or develop or main or release or regex defined branches. Please remove them as part of the push
+remote: This individual commit : 'XBSD-898 enabling backup to aurora rds postgress' is against a blocked branch
+remote: JPMCRejectPush blocked this push.
+remote: Please follow the instructions above to amend your commit(s).
+To ssh://bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-aurora-postgresql.git
+ ! [remote rejected] release/aurora20 -> release/aurora20 (pre-receive hook declined)
+error: failed to push some refs to 'ssh://bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-aurora-postgresql.git'
