@@ -54,5 +54,34 @@ eac deployment apply -f aurora-Infra_Deploy_Test.yaml -g XBSD-898 --pr --pr-bran
 
 
 
+Applying aurora-Infra_Deploy_Test.yaml to release/aurora20 in repo ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-aurora-postgresql.git
 
+Enumerating objects: 62, done.
+Counting objects: 100% (62/62), done.
+Compressing objects: 100% (61/61), done.
+Total 62 (delta 28), reused 0 (delta 0), pack-reused 0
+
+Existing branch release/aurora20 will be used
+
+
+Checked out branch refs/heads/release/aurora20
+
+Hash of GIT deployment file aurora-Infra_Deploy_Test.yaml: 27ee5947e39f3d953e8d5d2b32ef34086b15a1a457c8a6cf02fab4c35bb83987
+Hash of NEW deployment file aurora-Infra_Deploy_Test.yaml: d3afb99be0334c4f2bacad4901f504eae7297ac84e33e7e1064d2c97ca7f883a
+
+Writing JenkinsFile default content
+
+Creating spinnaker trigger at: spinnaker-trigger.yml
+Created no-op jules build visit the following url to view.
+Jules Pipeline: https://jules.jpmchase.net/111597/job/xbsd/job/xbsd-aurora-postgresql/job/release%2Faurora20
+The spinnaker pipeline will be triggered from jules. To view visit the following url.
+Spinnaker Pipeline: https://spinnaker.prod.aws.jpmchase.net/#/applications/111597_xbsd-aurora-postgresql/executions?pipeline=xbsddbts-v5-auroratsdb-apply
+Warning: No Jira URL is configured in hook configuration, please update valid Jira URL (with https://) in hook configuration.
+Cannot push changes to master or develop or main or release or regex defined branches. Please remove them as part of the push
+This individual commit : '<XBSD-898> Deploying Infra with EaC, Enabling AWS Backups tool for rds aurora postgress' is against a blocked branch
+JPMCRejectPush blocked this push.
+Please follow the instructions above to amend your commit(s).
+ERRO[0095] eac deployment apply: unable to push branch 'release/aurora20' to remote 'origin'
+
+dev shell : 2.3.31 : default profile
 
