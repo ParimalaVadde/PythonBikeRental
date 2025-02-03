@@ -1,211 +1,150 @@
-### 1. **Install EaC CLI**
-If you're using **Dev Shell**:
-- Install the EaC CLI with the command:
-  ```bash
-  ds tool install eac-cli
-  ```
-
-- To verify it's installed, run:
-  ```bash
-  eac
-  ```
-
-### 2. **Install Visual Studio Code (VS CODE)**
-
-- Install VS CODE from the official site: [https://code.visualstudio.com/](https://code.visualstudio.com/).
-- Make sure to add the **YAML Extension by Redhat** in VS CODE for autocompletion with EaC configuration files.
-
-### 3. **Request Access**
-- To request access for your SID, run:
-  ```bash
-  eac access request
-  ```
-
-### 4. **Register SID/FID**
-- Register your SID or FID to EaC using this command:
-  ```bash
-  eac user register -d <DOMAIN> -u <SID>
-  ```
-  For example:
-  ```bash
-  eac user register -d ASIAPAC -u N652959
-  ```
-
-### 5. **Show EaC Configuration**
-- To see the current configuration, run:
-  ```bash
-  eac config show
-  ```
-
-### 6. **Configure EaC CLI**
-- Fetch the latest modulepack version:
-  ```bash
-  eac modulepack list
-  ```
-  
-- Set your configuration values:
-  ```bash
-  eac config set -c "<REPLACE_JIRA_ID> Deploying Infra with EaC"
-  eac config set -v "<X.X.X> (replace with the version from the previous command)"
-  eac config set -r ssh://git@<REPLACE_BITBUCKET_CLUSTER>:7999/<REPLACE_PROJECT_NAME>/<REPLACE_REPO_NAME>.git
-  eac config set -f develop
-  eac config set -b feature/eac-setup-tech-primer
-  
-  
-  
-  eac config set -c "<XBSD-898> Deploying Infra with EaC, Enabling AWS Backups tool for rds aurora postgress"
-  eac config set -v "<0.13.0>"
-  eac config set -r ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-aurora-postgresql.git
-  eac config set -f release
-  eac config set -b release/aurora20
-  
-  
-  eac config show
-  
-  
-  cd I:\ds\xbsd-aurora-postgresql
-  
-  
-  
-  Follow the below steps:-
-1. Open Dev Shell 
-cd <provide the path of git clone on local>
-cd I:\ds\xbsd-aurora-postgresql
-
-
-2. Run the preflight on the deployment file using the command -   
-eac deployment preflight -f ecs-aurora-InfraDeploy.yaml
-
-example:
-eac deployment preflight -f aurora-Infra_Deploy_Test.yaml
-
-3. Run the Plan on the deployment file using the command - 
-eac deployment plan -f ecs-aurora-InfraDeploy.yaml
-
-example:
-eac deployment plan -f aurora-Infra_Deploy_Test.yaml
-
-
-4. Run the apply on the deployment file using the command - 
-eac deployment apply -f ecs-aurora-InfraDeploy.yaml -g <CHG_RECORD> --pr --pr-branch master
-
-initialize the brach
-eac deployment pipeline init -f aurora-Infra_Deploy_Test.yaml
-example:
-eac deployment apply -f aurora-Infra_Deploy_Test.yaml -g XBSD-898 --pr --pr-branch release
-
-
-5. Confirm the deployment of infrastructure by clicking on 'yes'
-6. Provide the your SID and credentials for the authentication when asked during pull request creation
-7. A pull request with necessary changes has been raised, get pull request details from devshell log
-8. Get the pull request Approved and merged to master on the bitbucket by an authorised person
-9. Once Pull request is approved jules build will trigger automatically.
-
-***************************************************************************************
-
-
-Yes, it's okay to execute the commands in the path **`I:\ds\xbsd-aurora-postgresql`** as long as this is the root directory of your Git repository and where the repository has been cloned locally.
-
-Here’s why:
-- The Git repository is located in this directory (`I:\ds\xbsd-aurora-postgresql`), so any Git-related commands (like creating a new branch or committing changes) will apply to the files in this repository.
-- The `eac deployment apply` command and other EaC-related commands will also work within this directory, as long as you have the correct `aurora-Infra_Deploy_Test.yaml` deployment file and your repository is set up correctly.
-
-### To summarize, follow these steps in the current directory:
-
-1. **Create and switch to a new branch**:
-   Run these commands to create a new branch from `release/aurora20` (or the branch you're working from):
-   ```bash
-   git checkout release/aurora20  # Make sure you're on the latest release/aurora20 branch
-   git pull origin release/aurora20  # Ensure the branch is up-to-date
-   git checkout -b feature/your-branch-name  # Create a new branch
-   ```
-
-2. **Make your changes** (e.g., modify `aurora-Infra_Deploy_Test.yaml`).
-
-3. **Stage, commit, and push the changes**:
-   ```bash
-   git add aurora-Infra_Deploy_Test.yaml  # Stage the file you changed
-   git commit -m "<XBSD-898> Deploying Infra with EaC, Enabling AWS Backups tool for rds aurora postgress"  # Commit the changes
-   git push origin feature/your-branch-name  # Push the new branch to the remote repo
-   ```
-
-4. **Create a Pull Request (PR)** on Bitbucket from `feature/your-branch-name` to `release/aurora20`.
-
-Once the PR is approved and merged, the changes will be applied to the `release/aurora20` branch as part of the deployment.
-
-### Conclusion:
-Yes, it’s fine to execute these commands in the **`I:\ds\xbsd-aurora-postgresql`** directory as long as it’s your local Git repository, and the necessary files (like the `aurora-Infra_Deploy_Test.yaml`) are located there.
-
-
-Great! Since you have your changes in the **feature branch** locally and you now want to push those changes to the **release branch**, here’s how you can go about it:
-
-### Steps to Push Your Feature Branch Changes to the Release Branch:
-
-1. **Ensure Your Feature Branch Is Up to Date**:
-   Before you push your changes, you want to make sure that your feature branch is up to date with the latest changes from the `release` branch (in case any changes have been made there). 
-
-   First, fetch the latest changes from the remote:
-
-   ```bash
-   git fetch origin
-   ```
-
-2. **Rebase or Merge Your Feature Branch onto the Release Branch**:
-   Now, you have two main options to integrate the latest changes from the `release` branch into your feature branch. You can either **merge** or **rebase**.
-
-   - **Option 1: Rebase** (Recommended for a cleaner history):
-     This will replay your feature branch changes on top of the latest `release` branch changes.
-
-     ```bash
-     git checkout feature/xbsd-aurora-postgresql-backup
-     git rebase origin/release/aurora20
-     ```
-
-     Resolve any merge conflicts if necessary, then continue the rebase process by running:
-
-     ```bash
-     git rebase --continue
-     ```
-
-     Once the rebase is complete, your feature branch will be updated with the latest changes from `release`.
-
-   - **Option 2: Merge** (Alternatively):
-     If you prefer merging instead of rebasing, you can switch to the `release` branch and merge your feature branch into it.
-
-     ```bash
-     git checkout release/aurora20
-     git merge feature/xbsd-aurora-postgresql-backup
-     ```
-
-     Again, resolve any merge conflicts, then commit the changes.
-
-3. **Push the Changes to the Remote Release Branch**:
-   
-   Once your feature branch has been integrated with the latest `release` branch changes, it's time to push it to the remote.
-
-   If you're pushing a **rebase**-updated feature branch:
-
-   ```bash
-   git push origin feature/xbsd-aurora-postgresql-backup
-   ```
-
-   If you merged the feature branch into the `release` branch locally, push the changes to the `release` branch on the remote:
-
-   ```bash
-   git push origin release/aurora20
-   ```
-
-4. **Create a Pull Request (PR)**:
-   After pushing the changes to the remote `release` branch, go to **Bitbucket** (or your Git hosting platform), and create a **Pull Request (PR)** from the feature branch (`feature/xbsd-aurora-postgresql-backup`) to the `release/aurora20` branch.
+Sure! Here's a **simple** guide for basic Git commands that you’ll use during development:
 
 ---
 
-### Summary of Steps:
-1. **Fetch the latest changes** from the remote repository using `git fetch`.
-2. **Rebase** (or **merge**) your feature branch onto the `release/aurora20` branch.
-3. **Push the feature branch** changes to the remote repository.
-4. **Create a Pull Request (PR)** from your feature branch to the `release/aurora20` branch.
+### 1. **Install and Set Up Git** (if not done already)
+You can follow these steps to install and configure Git on your machine:
+- Download and install Git from [here](https://git-scm.com/).
+- Configure Git with your name and email:
+  
+  ```bash
+  git config --global user.name "Your Name"
+  git config --global user.email "your.email@example.com"
+  ```
 
-Once your PR is approved and merged, your changes will be integrated into the `release` branch.
+---
 
-Let me know if you need more help with any of the steps!
+### 2. **Clone a Repository**
+To clone a repository to your local machine:
+
+```bash
+git clone <repository-url>
+```
+
+For example:
+
+```bash
+git clone ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-aurora-postgresql.git
+```
+
+---
+
+### 3. **Create a New Feature Branch**
+Once you've cloned the repository and are inside the project directory:
+
+1. Make sure you're on the correct base branch (usually `release/aurora20` or `develop`):
+   
+   ```bash
+   git checkout release/aurora20  # Or whatever the base branch is
+   ```
+
+2. Create and switch to your **new feature branch**:
+   
+   ```bash
+   git checkout -b feature/your-feature-branch-name
+   ```
+
+---
+
+### 4. **Make Changes Locally**
+Now, you can edit files locally (e.g., edit `aurora-Infra_Deploy_Test.yaml`). These changes are only local at this point.
+
+---
+
+### 5. **Stage and Commit Changes**
+After making changes, you need to **stage** and **commit** them:
+
+1. **Stage the changes**:
+   
+   ```bash
+   git add .  # This stages all the changed files
+   ```
+
+2. **Commit the changes** with a message:
+
+   ```bash
+   git commit -m "Description of the changes, e.g., <XBSD-898> Deploying Infra with EaC"
+   ```
+
+---
+
+### 6. **Push the Feature Branch to Remote**
+To push your feature branch to the remote repository:
+
+```bash
+git push origin feature/your-feature-branch-name
+```
+
+This uploads your feature branch and commits to the remote repository.
+
+---
+
+### 7. **Merge Feature Branch into Release Branch**
+To integrate your feature branch into the main branch (`release/aurora20`):
+
+1. **Switch to the `release/aurora20` branch**:
+
+   ```bash
+   git checkout release/aurora20
+   ```
+
+2. **Merge your feature branch** into `release/aurora20`:
+
+   ```bash
+   git merge feature/your-feature-branch-name
+   ```
+
+   This brings your changes from the feature branch into the release branch.
+
+3. **Resolve any merge conflicts** (if any). Git will help you identify where conflicts have occurred and you’ll need to manually resolve them.
+
+4. After resolving conflicts (if any), **commit the merge**:
+
+   ```bash
+   git commit -m "Merged feature/your-feature-branch-name into release/aurora20"
+   ```
+
+---
+
+### 8. **Push the Merged Changes to Remote**
+To push the changes back to the remote `release/aurora20` branch:
+
+```bash
+git push origin release/aurora20
+```
+
+---
+
+### 9. **Create a Pull Request (PR)**
+After pushing your feature branch (or merged branch), go to your **Bitbucket** (or your Git platform) and create a **Pull Request** from your feature branch to the `release/aurora20` branch.
+
+- Include any necessary details (e.g., Jira ticket) in the PR description.
+- Request review and approval from the team.
+
+Once the PR is approved, **merge** it into `release/aurora20` using Bitbucket's interface.
+
+---
+
+### 10. **What Happens When You Make Changes Locally?**
+- **Local changes** will not automatically reflect on the main branch (`release/aurora20` or `master`).
+- You need to **stage** and **commit** your changes locally.
+- After committing, you'll **push** your changes to the remote repository (on a separate branch, usually).
+- The changes will remain in your **feature branch** until a **PR** is created and merged into the main branch.
+  
+---
+
+### Git Workflow Summary
+1. **Clone repo**: `git clone <repo-url>`
+2. **Create a new branch**: `git checkout -b feature/my-feature`
+3. **Make changes locally** (edit files).
+4. **Stage and commit**: 
+   - `git add .`
+   - `git commit -m "My changes"`
+5. **Push the changes** to remote: `git push origin feature/my-feature`
+6. **Merge feature branch** into `release/aurora20` (via Git or PR).
+7. **Push merged branch**: `git push origin release/aurora20`
+8. **Create a PR** and get it approved.
+
+---
+
+Let me know if any step needs further clarification!
