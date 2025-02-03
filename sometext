@@ -1,99 +1,31 @@
-# yaml-language-server: $schema=schema/aupodat_deployment_schema.json
-apiVersion: deployment/v1
-kind: Deployment
-metadata:
-    name: "auroratsdb"
-    sealID: "111597"
-    model:
-        name: xbsddbts
-        version: v5
-spec:
-    modulepack:
-        name: default
-        version: 0.9.2
-    environment:
-        awsAccountID: "533267018973"
-        awsRegion: us-east-1
-        tfeOrganization: 111597-114116-TEST
-    components:
-        - type: KMS
-          name: rdstestkms
-          action: apply
-          properties:
-            key_alias: rdstestkms
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: LightSwitch
-          name: lswitch
-          action: apply
-          properties:
-            lightswitch_enabled: true
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: S3
-          name: bucket
-          action: apply
-          properties:
-            #####BACKUP Enabled#####                                        
-            core_backups_retention: "35DAYS"
-            enable_bucket_versioning: "Enabled"
-            enable_object_locking: true
-            lifecycle_rules:
-                - id: "default"
-                  filter:
-                    prefix: ""
-                  expiration:
-                    - expired_object_delete_marker: true
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: RDSAuroraPostgres
-          name: xbsdtestdb
-          action: apply
-          connectsTo:
-            - type: KMS
-              name: rdstestkms
-            - type: LightSwitch
-              name: lswitch
-          dependsOn:
-            - type: PrivateVPCEndpoints
-              name: xbsdvpct ### check ###
-          properties:
-            #####Graviton Enabled#####
-            is_serverless: true
-            serverless_db_type: db.serverless
-            db_instance_type: "db.r6g.large"
-            database_name: "xbsdtestdb"
-            aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
-            aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
-            #####Backup Enabled#####
-            db_backup_retention_days: 7
-            skip_final_snapshot: false
-            deletion_protection: "false"
-            identifier_prefix: xbsdtestdb
-            enable_immutable_backups: false
-            preferred_backup_window: "21:00-22:00"
-            monitoring_interval: "5"
-            #####Auto Scaling Enabled#####        
-            min_capacity: 1
-            max_capacity: 8
-            #####Performance Enabled#####                
-            performance_insights_enabled: true
-            performance_insights_retention_period: 7
-            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
-            replica_count: 1
-            pg_cluster_log_statement: none
-            ca_cert_identifier: "rds-ca-rsa2048-g1"
-            enable_nlb_connectivity: true
-            rds_proxy: true
-            engine_version: "15.3"
-            healthcheck_enabled: true
-            subnets:
-              - "PrivateSubnet01"
-              - "PrivateSubnet02"
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-            custom_db_names:
-                - "custom"
-                #####LightSwitch Enabled#####                        
-            lightswitch_config:
-                enabled: true
-                start_action:
-                    schedule: "cron(00 7 ? * MON-FRI *)" ###5pm UTC
-                stop_action:
-                    schedule: "cron(00 20 ? * MON-FRI *)"
+Yes, it's okay to execute the commands in the path **`I:\ds\xbsd-aurora-postgresql`** as long as this is the root directory of your Git repository and where the repository has been cloned locally.
+
+Here’s why:
+- The Git repository is located in this directory (`I:\ds\xbsd-aurora-postgresql`), so any Git-related commands (like creating a new branch or committing changes) will apply to the files in this repository.
+- The `eac deployment apply` command and other EaC-related commands will also work within this directory, as long as you have the correct `aurora-Infra_Deploy_Test.yaml` deployment file and your repository is set up correctly.
+
+### To summarize, follow these steps in the current directory:
+
+1. **Create and switch to a new branch**:
+   Run these commands to create a new branch from `release/aurora20` (or the branch you're working from):
+   ```bash
+   git checkout release/aurora20  # Make sure you're on the latest release/aurora20 branch
+   git pull origin release/aurora20  # Ensure the branch is up-to-date
+   git checkout -b feature/your-branch-name  # Create a new branch
+   ```
+
+2. **Make your changes** (e.g., modify `aurora-Infra_Deploy_Test.yaml`).
+
+3. **Stage, commit, and push the changes**:
+   ```bash
+   git add aurora-Infra_Deploy_Test.yaml  # Stage the file you changed
+   git commit -m "<XBSD-898> Deploying Infra with EaC, Enabling AWS Backups tool for rds aurora postgress"  # Commit the changes
+   git push origin feature/your-branch-name  # Push the new branch to the remote repo
+   ```
+
+4. **Create a Pull Request (PR)** on Bitbucket from `feature/your-branch-name` to `release/aurora20`.
+
+Once the PR is approved and merged, the changes will be applied to the `release/aurora20` branch as part of the deployment.
+
+### Conclusion:
+Yes, it’s fine to execute these commands in the **`I:\ds\xbsd-aurora-postgresql`** directory as long as it’s your local Git repository, and the necessary files (like the `aurora-Infra_Deploy_Test.yaml`) are located there.
