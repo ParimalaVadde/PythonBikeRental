@@ -85,3 +85,11 @@ ERRO[0095] eac deployment apply: unable to push branch 'release/aurora20' to rem
 
 dev shell : 2.3.31 : default profile
 
+$ git checkout release/aurora20
+error: Your local changes to the following files would be overwritten by checkout:
+        Jenkinsfile
+        pipeline.config.yml
+Please commit your changes or stash them before you switch branches.
+Aborting
+
+dev shell : 2.3.31 : default profile
