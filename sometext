@@ -1,72 +1,13 @@
-Great! Since you have your changes in the **feature branch** locally and you now want to push those changes to the **release branch**, here’s how you can go about it:
+$ git checkout release/aurora20
+Switched to branch 'release/aurora20'
+Your branch is up to date with 'origin/release/aurora20'.
 
-### Steps to Push Your Feature Branch Changes to the Release Branch:
-
-1. **Ensure Your Feature Branch Is Up to Date**:
-   Before you push your changes, you want to make sure that your feature branch is up to date with the latest changes from the `release` branch (in case any changes have been made there). 
-
-   First, fetch the latest changes from the remote:
-
-   ```bash
-   git fetch origin
-   ```
-
-2. **Rebase or Merge Your Feature Branch onto the Release Branch**:
-   Now, you have two main options to integrate the latest changes from the `release` branch into your feature branch. You can either **merge** or **rebase**.
-
-   - **Option 1: Rebase** (Recommended for a cleaner history):
-     This will replay your feature branch changes on top of the latest `release` branch changes.
-
-     ```bash
-     git checkout feature/xbsd-aurora-postgresql-backup
-     git rebase origin/release/aurora20
-     ```
-
-     Resolve any merge conflicts if necessary, then continue the rebase process by running:
-
-     ```bash
-     git rebase --continue
-     ```
-
-     Once the rebase is complete, your feature branch will be updated with the latest changes from `release`.
-
-   - **Option 2: Merge** (Alternatively):
-     If you prefer merging instead of rebasing, you can switch to the `release` branch and merge your feature branch into it.
-
-     ```bash
-     git checkout release/aurora20
-     git merge feature/xbsd-aurora-postgresql-backup
-     ```
-
-     Again, resolve any merge conflicts, then commit the changes.
-
-3. **Push the Changes to the Remote Release Branch**:
-   
-   Once your feature branch has been integrated with the latest `release` branch changes, it's time to push it to the remote.
-
-   If you're pushing a **rebase**-updated feature branch:
-
-   ```bash
-   git push origin feature/xbsd-aurora-postgresql-backup
-   ```
-
-   If you merged the feature branch into the `release` branch locally, push the changes to the `release` branch on the remote:
-
-   ```bash
-   git push origin release/aurora20
-   ```
-
-4. **Create a Pull Request (PR)**:
-   After pushing the changes to the remote `release` branch, go to **Bitbucket** (or your Git hosting platform), and create a **Pull Request (PR)** from the feature branch (`feature/xbsd-aurora-postgresql-backup`) to the `release/aurora20` branch.
-
----
-
-### Summary of Steps:
-1. **Fetch the latest changes** from the remote repository using `git fetch`.
-2. **Rebase** (or **merge**) your feature branch onto the `release/aurora20` branch.
-3. **Push the feature branch** changes to the remote repository.
-4. **Create a Pull Request (PR)** from your feature branch to the `release/aurora20` branch.
-
-Once your PR is approved and merged, your changes will be integrated into the `release` branch.
-
-Let me know if you need more help with any of the steps!
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\xbsd-aurora-postgresql
+$ git merge feature/xbsd-aurora-postgresql-backup
+Updating a3d0f68..91e2c4f
+Fast-forward
+ aurora-Infra_Deploy_Test.yaml | 710 +++++++++++++++++++++---------------------
+ spinnaker-trigger.yml         |  17 +
+ 2 files changed, 377 insertions(+), 350 deletions(-)
+ create mode 100644 spinnaker-trigger.yml
