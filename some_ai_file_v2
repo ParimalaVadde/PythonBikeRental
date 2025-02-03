@@ -1,12 +1,15 @@
-[7:10 PM] V R, Parimala (CIB Tech, IND, Consultant)
-we have a requirement to enable aws backup for rds aurora postgress
-We have enabled the backup in dev via eac deployment file
-when we are trying to push the changes to TEST environment , its throwing permission related issue.
- 
-[7:10 PM] V R, Parimala (CIB Tech, IND, Consultant)
- 
- 
-[7:11 PM] V R, Parimala (CIB Tech, IND, Consultant)
-we don't have admin privileges.
-so wanted to check with you how to proceed 
-do we have to raise any request to get admin access?
+Sure! Here’s a revised and clearer version of your message:
+
+---
+
+**[7:10 PM] V R, Parimala (CIB Tech, IND, Consultant)**  
+We have a requirement to enable AWS Backup for RDS Aurora PostgreSQL.  
+We have successfully enabled the backup in the DEV environment using an EaC deployment file. However, when attempting to push the changes to the TEST environment, we are encountering a permission-related issue.
+
+**[7:11 PM] V R, Parimala (CIB Tech, IND, Consultant)**  
+We do not have admin privileges. Could you please advise on how to proceed?  
+Do we need to raise a request to obtain admin access?
+
+---
+
+Let me know if you need any further edits!
