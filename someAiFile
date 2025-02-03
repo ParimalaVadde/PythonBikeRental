@@ -93,3 +93,7 @@ Please commit your changes or stash them before you switch branches.
 Aborting
 
 dev shell : 2.3.31 : default profile
+
+
+git checkout -- Jenkinsfile pipeline.config.yml
+
