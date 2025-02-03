@@ -8,3 +8,46 @@ what shld i replace in <CHG_RECORD>
 
 i have cloned git repo release/aurora20 using ssh in my local and i have made changes to the file "aurora-Infra_Deploy_Test.yaml". now i want to push changes 
 that i have made in local to release/aurora20
+
+
+i am asked to below steps
+"Follow the below steps:-
+1. Open Dev Shell 
+cd <provide the path of git clone on local>
+2. Run the preflight on the deployment file using the command -   
+eac deployment preflight -f ecs-aurora-InfraDeploy.yaml
+3. Run the Plan on the deployment file using the command - 
+eac deployment plan -f ecs-aurora-InfraDeploy.yaml
+4. Run the apply on the deployment file using the command - 
+eac deployment apply -f ecs-aurora-InfraDeploy.yaml -g <CHG_RECORD> --pr --pr-branch master
+5. Confirm the deployment of infrastructure by clicking on 'yes'
+6. Provide the your SID and credentials for the authentication when asked during pull request creation
+7. A pull request with necessary changes has been raised, get pull request details from devshell log
+8. Get the pull request Approved and merged to master on the bitbucket by an authorised person
+9. Once Pull request is approved jules build will trigger automatically."
+
+i executed below commands
+cd I:\ds\xbsd-aurora-postgresql
+eac deployment preflight -f aurora-Infra_Deploy_Test.yaml
+eac deployment plan -f aurora-Infra_Deploy_Test.yaml
+eac deployment apply -f aurora-Infra_Deploy_Test.yaml -g XBSD-898 --pr --pr-branch release
+i m getting error over here , after executing above line cmd
+
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\xbsd-aurora-postgresql
+$ eac deployment apply -f aurora-Infra_Deploy_Test.yaml -g XBSD-898 --pr --pr-branch release
+INFO[0000] Preparing to run deployment apply             branch=release/aurora20 commit_msg="<XBSD-898> Deploying Infra with EaC, Enabling AWS Backups tool for rds aurora postgress" deployment_file=aurora-Infra_Deploy_Test.yaml repo_url="ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-aurora-postgresql.git"
+INFO[0004] Spinnaker pipeline init event not found, checking git repository for jib.yml...
+INFO[0004] Using git remote url: ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-aurora-postgresql.git
+INFO[0004] Initializing git repo...
+Enumerating objects: 62, done.
+Counting objects: 100% (62/62), done.
+Compressing objects: 100% (61/61), done.
+Total 62 (delta 28), reused 0 (delta 0), pack-reused 0
+INFO[0017] Branch eac-spinnaker/init exists!
+INFO[0017] Checked out branch eac-spinnaker/init
+Could not find pipelines in branch eac-spinnaker/init. Please run 'eac deployment pipeline init -f <deployment-file>'
+
+
+
+
