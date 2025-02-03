@@ -97,3 +97,7 @@ dev shell : 2.3.31 : default profile
 
 git checkout -- Jenkinsfile pipeline.config.yml
 
+W619378@WH-1AB5C35118 I:\ds\xbsd-aurora-postgresql
+$ git add .
+warning: in the working copy of 'aurora-Infra_Deploy_Test.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spinnaker-trigger.yml', LF will be replaced by CRLF the next time Git touches it
