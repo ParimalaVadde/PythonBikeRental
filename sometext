@@ -29,3 +29,6 @@ remote: Please follow the instructions above to amend your commit(s).
 To ssh://bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-aurora-postgresql.git
  ! [remote rejected] release/aurora20 -> release/aurora20 (pre-receive hook declined)
 error: failed to push some refs to 'ssh://bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-aurora-postgresql.git'
+
+
+rejection when trying to push to the release/aurora20 branch. This is because JPMCRejectPush is blocking the push to that branch, and the error indicates that pushing to certain branches, like master, develop, main, and some release branches, is restricted.
