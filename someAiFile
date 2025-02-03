@@ -1,57 +1,10 @@
-Here's a simple breakdown of the commands you'll need to execute for setting up the EaC (Environment as Code):
+4. Run the apply on the deployment file using the command - 
 
-### 1. **Install EaC CLI**
-If you're using **Dev Shell**:
-- Install the EaC CLI with the command:
-  ```bash
-  ds tool install eac-cli
-  ```
+eac deployment apply -f aurora-Infra_Deploy_Test.yaml -g <CHG_RECORD> --pr --pr-branch release
 
-- To verify it's installed, run:
-  ```bash
-  eac
-  ```
 
-### 2. **Install Visual Studio Code (VS CODE)**
+explain me above cmd
+what shld i replace in <CHG_RECORD>
 
-- Install VS CODE from the official site: [https://code.visualstudio.com/](https://code.visualstudio.com/).
-- Make sure to add the **YAML Extension by Redhat** in VS CODE for autocompletion with EaC configuration files.
-
-### 3. **Request Access**
-- To request access for your SID, run:
-  ```bash
-  eac access request
-  ```
-
-### 4. **Register SID/FID**
-- Register your SID or FID to EaC using this command:
-  ```bash
-  eac user register -d <DOMAIN> -u <SID>
-  ```
-  For example:
-  ```bash
-  eac user register -d NAEAST -u N652959
-  ```
-
-### 5. **Show EaC Configuration**
-- To see the current configuration, run:
-  ```bash
-  eac config show
-  ```
-
-### 6. **Configure EaC CLI**
-- Fetch the latest modulepack version:
-  ```bash
-  eac modulepack list
-  ```
-  
-- Set your configuration values:
-  ```bash
-  eac config set -c "<REPLACE_JIRA_ID> Deploying Infra with EaC"
-  eac config set -v "<X.X.X> (replace with the version from the previous command)"
-  eac config set -r ssh://git@<REPLACE_BITBUCKET_CLUSTER>:7999/<REPLACE_PROJECT_NAME>/<REPLACE_REPO_NAME>.git
-  eac config set -f develop
-  eac config set -b feature/eac-setup-tech-primer
-  ```
-
-Once you run these steps, you should be good to go with EaC setup on your local machine!
+i have cloned git repo release/aurora20 using ssh in my local and i have made changes to the file "aurora-Infra_Deploy_Test.yaml". now i want to push changes 
+that i have made in local to release/aurora20
