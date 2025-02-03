@@ -49,5 +49,10 @@ INFO[0017] Checked out branch eac-spinnaker/init
 Could not find pipelines in branch eac-spinnaker/init. Please run 'eac deployment pipeline init -f <deployment-file>'
 
 
+eac deployment pipeline init -f aurora-Infra_Deploy_Test.yaml
+eac deployment apply -f aurora-Infra_Deploy_Test.yaml -g XBSD-898 --pr --pr-branch release
+
+
+
 
 
