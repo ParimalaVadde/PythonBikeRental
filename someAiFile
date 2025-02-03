@@ -101,3 +101,10 @@ W619378@WH-1AB5C35118 I:\ds\xbsd-aurora-postgresql
 $ git add .
 warning: in the working copy of 'aurora-Infra_Deploy_Test.yaml', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'spinnaker-trigger.yml', LF will be replaced by CRLF the next time Git touches it
+
+
+git config --global core.autocrlf true
+git config --global core.autocrlf input
+git add .
+git commit -m "Fix line endings and commit changes"
+
