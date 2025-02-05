@@ -1,15 +1,162 @@
-Sure! Here’s a revised and clearer version of your message:
-
----
-
-**[7:10 PM] V R, Parimala (CIB Tech, IND, Consultant)**  
-We have a requirement to enable AWS Backup for RDS Aurora PostgreSQL.  
-We have successfully enabled the backup in the DEV environment using an EaC deployment file. However, when attempting to push the changes to the TEST environment, we are encountering a permission-related issue.
-
-**[7:11 PM] V R, Parimala (CIB Tech, IND, Consultant)**  
-We do not have admin privileges. Could you please advise on how to proceed?  
-Do we need to raise a request to obtain admin access?
-
----
-
-Let me know if you need any further edits!
+{
+  "Comment": "State machine to run E2E SDS workflow",
+  "StartAt": "Landing_ECS",
+  "States": {
+    "Landing_ECS": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.waitForTaskToken",
+      "HeartbeatSeconds": 5400,
+      "Parameters": {
+        "LaunchType": "FARGATE",
+        "Cluster": "ecs6a44-xbsd-v1",
+        "TaskDefinition": "arn:aws:ecs:us-east-1:484862117635:task-definition/ecs6a44-xbsd-v1-ecsapp2135-xbsdapp-v1",
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "ecsapp2135-xbsdapp-v1",
+              "Environment": [
+                {
+                  "Name": "TASK_TOKEN_ENV_VARIABLE",
+                  "Value.$": "$$.Task.Token"
+                },
+                {
+                  "Name": "SOURCE",
+                  "Value.$": "$.source"
+                },
+                {
+                  "Name": "TABLES",
+                  "Value.$": "$.tables"
+                },
+                {
+                  "Name": "OVERRIDE",
+                  "Value.$": "$.override"
+                },
+                {
+                  "Name": "CDC_FLAG",
+                  "Value.$": "$.cdc_flag"
+                }
+              ]
+            }
+          ]
+        },
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": [
+              "subnet-0c9f43d460989ff81",
+              "subnet-0ff9e70598fa2c988"
+            ],
+            "SecurityGroups": [
+              "sg-0304043069e078e96",
+              "sg-0c5b3c6f17da11a66",
+              "sg-027855167d8fe2eea",
+              "sg-059ccbf359d826c91"
+            ]
+          }
+        }
+      },
+      "Next": "Staging_Glue",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "FailState"
+        }
+      ],
+      "Comment": "success in executing Extraction"
+    },
+    "Staging_Glue": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "transformation_job-a83a21ee1280",
+        "Arguments": {
+          "--source.$": "$.source",
+          "--cdc_flag.$": "$.cdc_flag"
+        }
+      },
+      "ResultPath": "$.GlueJobResult",
+      "OutputPath": "$",
+      "Next": "Main_Glue",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.Timeout"
+          ],
+          "BackoffRate": 2,
+          "IntervalSeconds": 4,
+          "MaxAttempts": 1,
+          "Comment": "GlueRetry"
+        },
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "BackoffRate": 2,
+          "IntervalSeconds": 4,
+          "MaxAttempts": 1,
+          "Comment": "GlueRetry"
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "FailState"
+        }
+      ],
+      "Comment": "success in executing transformations into staging"
+    },
+    "Main_Glue": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "main_table_glue_job-8e4d6ffbc6f1",
+        "Arguments": {
+          "--source.$": "$.source"
+        }
+      },
+      "ResultPath": "$.GlueJobResult",
+      "OutputPath": "$",
+      "Next": "Success",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.Timeout"
+          ],
+          "BackoffRate": 2,
+          "IntervalSeconds": 4,
+          "MaxAttempts": 1,
+          "Comment": "GlueRetry"
+        },
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "BackoffRate": 2,
+          "IntervalSeconds": 4,
+          "MaxAttempts": 1,
+          "Comment": "GlueRetry"
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "FailState"
+        }
+      ],
+      "Comment": "success in executing transformations into main"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "FailState": {
+      "Type": "Fail",
+      "CausePath": "States.Format('This is a custom error message for {}, caused by {}.', $.Error, $.Cause)",
+      "ErrorPath": "States.Format('{}', $.Error)"
+    }
+  }
+}
