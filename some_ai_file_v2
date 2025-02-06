@@ -60,3 +60,81 @@ Sub task 5: AWS Secrets Manager Sentinel Policies and Skaffold Decommission - Mi
 Prepare Runbook for the deployment
 backout plan
 Raise Change request for PROD deployment
+
+
+Your Jira story and subtask structure looks fairly clear, but it can be slightly refined for readability and to ensure clarity. Below is a revised version with some formatting and minor changes to improve flow:
+
+---
+
+**Jira Ticket:** SDS AO: Prod Deployment Preparation
+
+**Subtask 1: ServiceNow Access**
+
+- Complete the training for ServiceNow and get access for the service owner.
+  - **Change Owner:** go/changeprocesstraining
+  - **Technician / Queue Manager:** go/incidentprocesstraining
+  - **Problem Owner:** go/problemprocesstraining
+  - **Configuration Process (Service Owners):** go/serviceownertraining
+
+- **Note:** [ServiceNow Access Training Info](https://confluence.prod.aws.jpmchase.net/confluence/pages/viewpage.action?pageId=1432909210)
+
+- After completing the courses, raise an RITM.
+
+**Procedure to Raise RITM:**
+1. Go to [MyHub](https://jpmorganchase.service-now.com/mytechub)
+2. Select **Request** → search for **seal id: 101979 (ServiceNow)** → **Add Request**
+3. Instance Name: "AF2 ServiceNow"
+4. Under **CIB**, choose the required access and raise the request.
+
+**Required Access for Different Roles:**
+- **CIB_BWP_OPER_XBSD:** ChangeOwner
+- **CIB_BWP_OPER_XBSD:** ChangeApprover, Team Admin
+- **CIB_BWP_SENG_XBSD:** Technician
+- **CIB_BWP_SENG_XBSD:** TeamAdmin, QueueManager
+- **CIB_BWP_SENG_XBSD:** ChangeOwner, ChangeApprover
+- **CIB_BWP_SENG_XBSD:** ProblemOwner, KnowledgeCurator
+- **CIB_BWP_SENG_XBSD:** ServiceOwner
+
+**Note:** Please refer to the email with subject "FW: SEAL ID 111597 - XBSD" forwarded by Ramsai for more details.
+
+---
+
+**Subtask 2: Dynamic Intermediate Certificate Authorities (ICA) – Mounika B**
+
+- Interact with the SRE Team and understand the procedure for implementation.
+
+---
+
+**Subtask 3: Enable AWS Backups Tool for Non-CPOF Applications – Parimala**
+
+- Move the changes to the **test** environment.
+- Prepare the **Runbook** for deployment.
+- Prepare the **Backout Plan**.
+- Raise a **Change Request** for PROD deployment.
+
+---
+
+**Subtask 4: AWS Secrets Manager Rotation – Rakesh**
+
+- Move the changes to the **test** environment.
+- Prepare the **Runbook** for deployment.
+- Prepare the **Backout Plan**.
+- Raise a **Change Request** for PROD deployment.
+
+---
+
+**Subtask 5: AWS Secrets Manager Sentinel Policies and Skaffold Decommission – Mounika G**
+
+- Prepare the **Runbook** for deployment.
+- Prepare the **Backout Plan**.
+- Raise a **Change Request** for PROD deployment.
+
+---
+
+### Recommendations:
+
+1. **Consistency:** Maintain consistency with task names (for example, use "Prepare Runbook" instead of just "Runbook").
+2. **Clarifications:** In the access section for Subtask 1, it's useful to define who needs which access, ensuring it’s clear for someone following it.
+3. **Actionable steps:** Ensure each subtask contains clear, actionable steps that can be followed easily.
+
+Let me know if you'd like further edits or additions!
