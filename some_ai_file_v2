@@ -1,7 +1,353 @@
-Hi Team,
-
-Since the call was scheduled on short notice and no one was able to join, I am rescheduling it for tomorrow. Please make sure to join.
-
-I’m setting up the call to discuss the upcoming certificate changes and deployment in the PROD environment, specifically regarding the Dynamic Intermediate Certificate Authorities (ICA).
-
-Looking forward to your participation.
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+  name: auroratsdb
+  sealID: "111597"
+  model:
+    name: xbsddbts
+    version: v5
+spec:
+  modulepack:
+    name: default
+    version: 0.9.2
+  environment:
+    awsAccountID: "533267018973"
+    awsRegion: us-east-1
+    tfeOrganization: 111597-114116-TEST
+  components:
+    - type: KMS
+      name: rdstestkms
+      action: apply
+      properties:
+        key_alias: rdstestkms
+        tags:
+          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
+          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
+    - type: LightSwitch
+      name: lswitch
+      action: apply
+      properties:
+        lightswitch_enabled: true
+        tags:
+          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
+          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
+    - type: S3
+      name: bucket
+      action: apply
+      properties:
+        core_backups_retention: 35DAYS
+        enable_bucket_versioning: Enabled
+        enable_object_locking: true
+        lifecycle_rules:
+          - expiration:
+              - expired_object_delete_marker: true
+            filter:
+              prefix: ""
+            id: default
+        tags:
+          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
+          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
+    - type: RDSAuroraPostgres
+      name: xbsdtestdb
+      action: apply
+      connectsTo:
+        - type: KMS
+          name: rdstestkms
+        - type: LightSwitch
+          name: lswitch
+      dependsOn:
+        - type: PrivateVPCEndpoints
+          name: xbsdvpct
+      properties:
+        aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
+        aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
+        ca_cert_identifier: rds-ca-rsa2048-g1
+        custom_db_names:
+          - custom
+        database_name: xbsdtestdb
+        db_backup_retention_days: 7
+        db_instance_type: db.r6g.large
+        deletion_protection: "false"
+        enable_immutable_backups: false
+        enable_nlb_connectivity: true
+        engine_version: "15.3"
+        healthcheck_enabled: true
+        identifier_prefix: xbsdtestdb
+        is_serverless: true
+        lightswitch_config:
+          enabled: true
+          start_action:
+            schedule: cron(00 7 ? * MON-FRI *)
+          stop_action:
+            schedule: cron(00 20 ? * MON-FRI *)
+        max_capacity: 8
+        min_capacity: 1
+        monitoring_interval: "5"
+        performance_insights_enabled: true
+        performance_insights_retention_period: 7
+        pg_cluster_log_statement: none
+        preferred_backup_window: 21:00-22:00
+        preferred_maintenance_window: Sun:22:00-Sun:23:00
+        rds_proxy: true
+        replica_count: 1
+        serverless_db_type: db.serverless
+        skip_final_snapshot: false
+        subnets:
+          - PrivateSubnet01
+          - PrivateSubnet02
+        tags:
+          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
+          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
+    - type: CloudWatch
+      name: dbcwalms
+      action: apply
+      properties:
+        alarms:
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: High CPU Utilization alarm"
+            alarm_name: "Aurora Postgres: High CPU Utilization"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: CPUUtilization
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 80
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
+            alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: AuroraReplicaLagMaximum
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 1000000
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Buffer Cache Hit Ratio alarm"
+            alarm_name: "Aurora Postgres: Buffer Cache Hit Ratio"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: BufferCacheHitRatio
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 90
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Connection Attempts alarm"
+            alarm_name: "Aurora Postgres: Connection Attempts"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: ConnectionAttempts
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 90
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Database Connections alarm"
+            alarm_name: "Aurora Postgres: Database Connections"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: DatabaseConnections
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 50
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Deadlocks alarm"
+            alarm_name: "Aurora Postgres: Deadlocks"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: Deadlocks
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 5
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Disk Queue Depth alarm"
+            alarm_name: "Aurora Postgres: Disk Queue Depth"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: DiskQueueDepth
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 50
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Network Receive Throughput alarm"
+            alarm_name: "Aurora Postgres: Network Receive Throughput"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: NetworkReceiveThroughput
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 1000000
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Network Transmit Throughput alarm"
+            alarm_name: "Aurora Postgres: Network Transmit Throughput"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: NetworkTransmitThroughput
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 1000000
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Read IOPS alarm"
+            alarm_name: "Aurora Postgres: Read IOPS"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: ReadIOPS
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 1000000
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Read Throughput alarm"
+            alarm_name: "Aurora Postgres: Read Throughput"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: ReadThroughput
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 1000000
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Write IOPS alarm"
+            alarm_name: "Aurora Postgres: Write IOPS"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: WriteIOPS
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 1000000
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Write Throughput alarm"
+            alarm_name: "Aurora Postgres: Write Throughput"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: WriteThroughput
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 1000000
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: High Latency for Read Transactions alarm"
+            alarm_name: "Aurora Postgres: High Latency for Read Transactions"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: ReadLatency
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 30
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: High Latency for Write Transactions alarm"
+            alarm_name: "Aurora Postgres: High Latency for Write Transactions"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: WriteLatency
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 30
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Low Available RAM alarm"
+            alarm_name: "Aurora Postgres: Low Available RAM"
+            comparison_operator: LessThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: FreeableMemory
+            namespace: AWS/RDS
+            period: 300
+            statistic: Average
+            threshold: 2
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: Low Free Local Storage alarm"
+            alarm_name: "Aurora Postgres: Low Free Local Storage"
+            comparison_operator: LessThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: FreeLocalStorage
+            namespace: AWS/RDS
+            period: 300
+            statistic: Maximum
+            threshold: 20000
+            treat_missing_data: notBreaching
+          - actions_enabled: true
+            alarm_description: "Aurora Postgres: DB Load alarm"
+            alarm_name: "Aurora Postgres: DB Load"
+            comparison_operator: GreaterThanThreshold
+            datapoints_to_alarm: 3
+            evaluation_periods: 3
+            insufficient_data_actions: []
+            metric_name: DBLoad
+            namespace: PerformanceInsights
+            period: 300
+            statistic: Sum
+            threshold: 700
+            treat_missing_data: notBreaching
+        tags:
+          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
+          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
+    - type: PrivateVPCEndpoints
+      name: xbsdvpct
+      action: skip
+      properties: null
+    - type: RDSProxy
+      name: proxy
+      action: apply
+      connectsTo:
+        - type: RDSAuroraPostgres
+          name: xbsdtestdb
+      properties: null
