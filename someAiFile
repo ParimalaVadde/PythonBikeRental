@@ -121,3 +121,14 @@ Here’s a step-by-step breakdown of your points, organized for a back-out plan 
 ---
 
 You can now copy these points directly into the Excel back-out plan for clarity.
+
+
+
+
+
+5.	 After implementing the above changes backup will be enabled to rds aurora postgress. Please refer to below evidence in TEST env
+        
+a.	Tag is enabled to rds aurora postgress in test env
+b.	We have centralized aws backup vault core-immutable. Where we can see the back being enabled
+c.	Selected backup plan is pitr backup. Which point in time restore. Explain about pitr
+d.	In case of any failure or data loss . outline the steps on how to take the backup
