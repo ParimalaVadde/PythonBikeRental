@@ -1,221 +1,197 @@
-Hi @Subramanian, Subashini (CIB Tech, IND), @Khan, Mehboob (CIB Tech, GBR),
-
-
-Request you to approve snow request raised. We snow access to carry out business . The request is waiting in your queue for approval. Also I have completed the required trainings.
-Certainly! Here's a more professional and well-structured version of your request:
-
----
-
-**Subject: Urgent Request for Approval of Snow Access to Proceed with Production Deployment**
-
-Hi @Subramanian, Subashini (CIB Tech, IND), @Khan, Mehboob (CIB Tech, GBR),
-
-I hope this message finds you well.
-
-I am reaching out to kindly request your approval for the Snow access request that has been raised. This access is critical for our ongoing business needs, and it is required to carry out the upcoming production deployment. The request is currently awaiting your approval in the queue.
-
-Additionally, I would like to inform you that I have completed all the necessary trainings to proceed with the task.
-
-Your prompt approval will greatly facilitate the timely execution of the deployment. Thank you for your attention to this matter.
-
-Best regards,  
-[Your Name]  
-[Your Position]
-
----
-
-This version is more formal and clearly emphasizes the urgency and importance of the access request for business continuity. Let me know if you'd like any further adjustments!
-
-
-refered documentation for enabling backup for rds aurora postgres
-
-https://engineers.jpmchase.net/docs/databases/aws-rds-aurora-postgres/guides/backup-restore/enable-immutable-backups/
-
-existing eac module version in prod 0.9.2
-
-Required eac module version 0.13.0
-
-what are all the changes to be implemented
-13 v eac
-
-for s3:
-
-core_backups_retention: "70DAYS"
-
-*******************************************************************************************
-
-for RDSAuroraPostgres:
-
-db_backup_retention_days: 35
-enable_immutable_backups: true
-tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-centralized_backup: "PITRBACKUP"
-centralized_backup_pitr_schedule: "cron(30 15 ? * * *)"
-
-add "holiday_schedule_expressions: []" for lightweight section if any
-
-lightswitch_config:
-	enabled: true
-	start_action:
-		schedule: "cron(00 7 ? * MON-FRI *)" ###5pm UTC
-	stop_action:
-		schedule: "cron(00 20 ? * MON-FRI *)"
-	holiday_schedule_expressions: []
-			
-*******************************************************************************************
-
-
-for PrivateVPCEndpoints
-
-        - type: PrivateVPCEndpoints
-          name: vpce
+-- xbsd-aurora-postgresql bitbucket backup
+# yaml-language-server: $schema=schema/aurora-InfraDeploy_schema.json
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+    name: auroraprdb
+    sealID: "111597"
+    model:
+        name: xbsddbts
+        version: v6
+spec:
+    modulepack:
+        name: default
+        version: 0.9.2
+    environment:
+        awsAccountID: "992382575964"
+        awsRegion: us-east-1
+        tfeOrganization: "111597-114116-PRD"
+    components:
+        - type: KMS
+          name: rdstestkms
           action: apply
           properties: 
+            key_alias: "rdsprodkms"    
+        - type: S3
+          name: bucket
+          action: apply
+          properties:
+            #####BACKUP Enabled#####                                        
+            core_backups_retention: "35DAYS"
+            enable_bucket_versioning: "Enabled"
+            enable_object_locking: true
+            lifecycle_rules:
+                - id: "default"
+                  filter:
+                    prefix: ""
+                  expiration:
+                    - expired_object_delete_marker: true
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}    
+        - type: RDSAuroraPostgres
+          name: xbsdtestdb
+          action: apply
+          connectsTo:
+            - type: KMS
+              name: rdstestkms
+          dependsOn:
+            - type: PrivateVPCEndpoints
+              name: xbsdvpct
+          properties: 
+            #####Graviton Enabled#####
+            is_serverless: true
+            serverless_db_type: db.serverless
+            db_instance_type: "db.r5.4xlarge"
+            database_name: xbsdproddb
+            aurora_cluster_postgres_db_parameter_group_family: "aurora-postgresql15"
+            aurora_instance_postgres_db_parameter_group_family: "aurora-postgresql15"
+            #####Backup Enabled#####
+            db_backup_retention_days: 7
+            skip_final_snapshot: true   
+            deletion_protection: "true"      
+            identifier_prefix: xbsdproddb   
+            enable_immutable_backups: false
+            preferred_backup_window: "21:00-22:00"
+            monitoring_interval: "5"
+            #####Auto Scaling Enabled##### 
+            min_capacity: 1
+            max_capacity: 8
+            #####Performance Enabled#####
+            performance_insights_enabled: true
+            performance_insights_retention_period: 7
+            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
+            replica_count: 1
+            pg_cluster_log_statement: none
+            ca_cert_identifier: "rds-ca-rsa2048-g1"
+            enable_nlb_connectivity: true
+            rds_proxy: true
+            engine_version: "15.3"
+            apply_immediately: true
+            healthcheck_enabled: true
+            subnets:
+              - "PrivateSubnet01"
+              - "PrivateSubnet02"
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+            custom_db_names:
+                - "custom"
+
+        - type: CloudWatch
+          name: dbcwalms
+          action: apply
+          properties:
+            alarms:
+                - alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "AuroraReplicaLagMaximum"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Connection Attempts"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "ConnectionAttempts"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 90
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Connection Attempts alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Deadlocks"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "Deadlocks"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 5
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Deadlocks alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Read IOPS"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "ReadIOPS"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Read IOPS alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Read Throughput"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "ReadThroughput"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Read Throughput alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Write IOPS"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "WriteIOPS"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Write IOPS alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Write Throughput"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "WriteThroughput"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Write Throughput alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+
+            
+        - type: PrivateVPCEndpoints
+          name: xbsdvpct
+          action: skip
+          properties: 
             tags:
-              {name: "ecs_vpc"}
-            service_names:
-              - name : rds
-			  
-
-*******************************************************************************************
-
-in case if deployment fails debug the issue and fix it
-if unable to fix revert back the changes in deployment file
-
-Taken the backup of deployment file
-
-
-
-
-Here’s a step-by-step breakdown of your points, organized for a back-out plan in Excel:
-
----
-
-### Step-by-Step Back-Out Plan
-
-1. **Refer to Documentation for Enabling Backup for RDS Aurora PostgreSQL:**
-   - URL: [Enable Immutable Backups for RDS Aurora PostgreSQL](https://engineers.jpmchase.net/docs/databases/aws-rds-aurora-postgres/guides/backup-restore/enable-immutable-backups/)
-
-2. **Check Existing EAC Module Version in Production:**
-   - Current Version: `0.9.2`
-
-3. **Identify Required EAC Module Version:**
-   - Required Version: `0.13.0`
-
-4. **List of Changes to Be Implemented for 13.v EAC Version:**
-
-   #### For S3:
-   - **core_backups_retention**: "70DAYS"
-
-   #### For RDS Aurora PostgreSQL:
-   - **db_backup_retention_days**: 35
-   - **enable_immutable_backups**: true
-   - **tags**: 
-     ```yaml
-     {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-     ```
-   - **centralized_backup**: "PITRBACKUP"
-   - **centralized_backup_pitr_schedule**: "cron(30 15 ? * * *)"
-
-5. **Add `holiday_schedule_expressions: []` for Lightweight Section (if applicable):**
-   ```yaml
-   lightswitch_config:
-     enabled: true
-     start_action:
-       schedule: "cron(00 7 ? * MON-FRI *)" # 5pm UTC
-     stop_action:
-       schedule: "cron(00 20 ? * MON-FRI *)"
-     holiday_schedule_expressions: []
-   ```
-
-6. **For Private VPCEndpoints Configuration:**
-   ```yaml
-   - type: PrivateVPCEndpoints
-     name: vpce
-     action: apply
-     properties:
-       tags:
-         {name: "ecs_vpc"}
-       service_names:
-         - name: rds
-   ```
-
-7. **In Case of Deployment Failure:**
-   - **Debug the Issue and Fix It**  
-   - If Unable to Fix, **Revert Changes in the Deployment File**
-
-8. **Backup the Deployment File:**
-   - Ensure a backup of the deployment file is taken before implementing changes.
-
----
-
-You can now copy these points directly into the Excel back-out plan for clarity.
-
-
-
-
-
-5.	 After implementing the above changes backup will be enabled to rds aurora postgress. Please refer to below evidence in TEST env
-        
-a.	Tag is enabled to rds aurora postgress in test env
-b.	We have centralized aws backup vault core-immutable. Where we can see the back being enabled
-c.	Selected backup plan is pitr backup. Which point in time restore. Explain about pitr
-d.	In case of any failure or data loss . outline the steps on how to take the backup
-
-
-
-Here is the revised version of your lines:
-
----
-
-5. After implementing the changes mentioned above, backup will be enabled for RDS Aurora PostgreSQL. Please refer to the evidence below in the TEST environment:
-
-a. The tag has been enabled for RDS Aurora PostgreSQL in the TEST environment.  
-b. We have a centralized AWS Backup Vault called "core-immutable" where we can verify that backups are enabled.  
-c. The selected backup plan is PITR (Point-in-Time Recovery) backup, which allows for point-in-time restores. Please explain the PITR process.  
-d. In the event of failure or data loss, outline the steps to take a backup.
-
----
-
-Let me know if you'd like further adjustments!
-
-
-Here is the explanation and outline of steps for **Point-in-Time Recovery (PITR)** and how to take a backup in case of failure or data loss:
-
-### **PITR (Point-in-Time Recovery) Explanation:**
-PITR is a backup strategy that allows you to restore your database to a specific point in time. This is useful if you need to recover from unintentional data modifications, such as accidental deletion or corruption. The process involves continuous archiving of the database's transaction logs, enabling restoration of the database to any point within the backup retention period.
-
-### **Steps to Take a Backup in Case of Failure or Data Loss:**
-
-1. **Access the AWS Management Console:**
-   - Log in to the AWS Management Console and navigate to the **RDS** service.
-
-2. **Verify Backup Configuration:**
-   - Ensure that your **RDS Aurora PostgreSQL** instance is configured to use the **PITR** backup plan. You can check this under the **Backup** section of the Aurora instance configuration.
-
-3. **Check AWS Backup Vault:**
-   - Navigate to the **AWS Backup Vault** (in this case, "core-immutable") and verify that backups are being captured regularly. The backup logs and vault will contain detailed evidence of scheduled backups.
-
-4. **Restore from a Point-in-Time:**
-   - If there’s data loss or failure, you can initiate a **Point-in-Time Recovery** from the AWS RDS Console.
-   - Go to **RDS > Snapshots**, and select **Restore Snapshot**.
-   - Choose the desired snapshot and specify the point-in-time for recovery using the PITR feature. For example, you can select a timestamp just before the data loss occurred.
-
-5. **Monitor the Restoration Process:**
-   - AWS will restore the database to the specified point in time. Monitor the process and verify that the data is recovered successfully.
-
-6. **Test the Restored Data:**
-   - Once the restoration is complete, verify the data integrity by running some test queries or reviewing the application data.
-   - Ensure everything is intact and consistent as expected.
-
-7. **Reapply Any Missing Changes:**
-   - If there are any new changes or data added after the recovery point, they may need to be reapplied manually.
-
-8. **Reconfigure Automated Backups (If Needed):**
-   - If there were any changes to backup retention policies or if the backup configuration was impacted, ensure that the backup plan is correctly re-enabled and running as expected.
-
-By following these steps, you can ensure that your RDS Aurora PostgreSQL database can be restored in case of failure or data loss while leveraging the PITR backup functionality for precise recovery.
-
----
-
-Let me know if you need more details on any of the steps!
+                {"name": "privatevpc"}
+        - type: RDSProxy
+          name: proxy
+          action: apply
+          connectsTo:
+            - type: RDSAuroraPostgres
+              name: xbsdtestdb
