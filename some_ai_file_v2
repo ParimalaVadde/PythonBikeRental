@@ -1,195 +1,205 @@
--- xbsd-aurora-postgresql eac backup
-apiVersion: deployment/v1
-kind: Deployment
-metadata:
-  name: auroraprdb
-  sealID: "111597"
-  model:
-    name: xbsddbts
-    version: v6
-spec:
-  modulepack:
-    name: default
-    version: 0.9.2
-  environment:
-    awsAccountID: "992382575964"
-    awsRegion: us-east-1
-    tfeOrganization: 111597-114116-PRD
-  components:
-    - type: KMS
-      name: rdstestkms
-      action: apply
-      properties:
-        key_alias: rdsprodkms
-    - type: S3
-      name: bucket
-      action: apply
-      properties:
-        core_backups_retention: 35DAYS
-        enable_bucket_versioning: Enabled
-        enable_object_locking: true
-        lifecycle_rules:
-          - expiration:
-              - expired_object_delete_marker: true
-            filter:
-              prefix: ""
-            id: default
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: RDSAuroraPostgres
-      name: xbsdtestdb
-      action: apply
-      connectsTo:
-        - type: KMS
-          name: rdstestkms
-      dependsOn:
-        - type: PrivateVPCEndpoints
-          name: xbsdvpct
-      properties:
-        apply_immediately: true
-        aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
-        aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
-        ca_cert_identifier: rds-ca-rsa2048-g1
-        custom_db_names:
-          - custom
-        database_name: xbsdproddb
-        db_backup_retention_days: 7
-        db_instance_type: db.r5.4xlarge
-        deletion_protection: "true"
-        enable_immutable_backups: false
-        enable_nlb_connectivity: true
-        engine_version: "15.3"
-        healthcheck_enabled: true
-        identifier_prefix: xbsdproddb
-        is_serverless: true
-        max_capacity: 8
-        min_capacity: 1
-        monitoring_interval: "5"
-        performance_insights_enabled: true
-        performance_insights_retention_period: 7
-        pg_cluster_log_statement: none
-        preferred_backup_window: 21:00-22:00
-        preferred_maintenance_window: Sun:22:00-Sun:23:00
-        rds_proxy: true
-        replica_count: 1
-        serverless_db_type: db.serverless
-        skip_final_snapshot: true
-        subnets:
-          - PrivateSubnet01
-          - PrivateSubnet02
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: CloudWatch
-      name: dbcwalms
-      action: apply
-      properties:
-        alarms:
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
-            alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: AuroraReplicaLagMaximum
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Connection Attempts alarm"
-            alarm_name: "Aurora Postgres: Connection Attempts"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: ConnectionAttempts
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 90
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Deadlocks alarm"
-            alarm_name: "Aurora Postgres: Deadlocks"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: Deadlocks
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 5
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Read IOPS alarm"
-            alarm_name: "Aurora Postgres: Read IOPS"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: ReadIOPS
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Read Throughput alarm"
-            alarm_name: "Aurora Postgres: Read Throughput"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: ReadThroughput
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Write IOPS alarm"
-            alarm_name: "Aurora Postgres: Write IOPS"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: WriteIOPS
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Write Throughput alarm"
-            alarm_name: "Aurora Postgres: Write Throughput"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: WriteThroughput
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: PrivateVPCEndpoints
-      name: xbsdvpct
-      action: skip
-      properties:
-        tags:
-          name: privatevpc
-    - type: RDSProxy
-      name: proxy
-      action: apply
-      connectsTo:
-        - type: RDSAuroraPostgres
-          name: xbsdtestdb
-      properties: null
+#global_methods.py
+
+
+# import libraries
+import base64
+import boto3
+from botocore.exceptions import NoCredentialsError
+import psycopg2
+import re
+import requests
+import pandas as pd
+import logging
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
+import math
+from configparser import ConfigParser
+import json
+sys.setrecursionlimit(4000)
+# VARIABLES
+total_records_initial = 0
+total_records_final = 0 
+# import methods from other instances
+import scripts.api_ingestion as api_ingestion
+import scripts.destination_load as destination_load
+import scripts.s3_ingestion as s3_ingestion
+# import data
+import data.payload_data as payload_data
+import data.data_mapping as data_mapping
+global config_data
+
+class DataExporter:
+    def __init__(self, payload):
+        #instance parameters from payload
+        self.instance = payload.get('instance')
+        self.access_token = None
+        self.headers = None
+        self.data_object = payload.get('data_object')
+        self.secret_name=payload.get('secret_name')
+        self.region_name=payload.get('region_name')
+
+        # API Endpoints
+        self.sf_api_version = payload.get('sf_api_version')
+        self.auth_endpoint = 'login.salesforce.com/services/oauth2/token'
+        self.data_path_prod = f'/services/data/{self.sf_api_version}/query/'
+        self.metadata_path_prod = f'/services/data/{self.sf_api_version}/sobjects/'
+        self.base_url = f'https://{self.instance}'
+
+        self.proxies = {
+            'https': 'http://proxy.jpmchase.net:10443',
+            'http': 'http://proxy.jpmchase.net:10443'
+        }
+        self.session = requests.Session()
+        self.session.proxies.update(self.proxies)
+
+        # Postgres
+        self.app_admin = payload.get('APP_ADMIN')
+        self.rds_host = payload.get('RDS_HOST')
+        self.database_name = payload.get('DATABASE_NAME')
+        self.database_port = payload.get('DATABASE_PORT')
+        self.database_region = payload.get('DATABASE_REGION')
+        self.ca_cert_path = payload.get('ca_cert_path')
+        self.schema_dev = 'sds_landing'
+        self.schema_prod = 'supplier_main'
+#     updated normalizing json
+    def custom_json_normalize(self, data, sep='_', parent_key='', max_levels=None, current_level=0):
+        if max_levels is not None and current_level > max_levels:
+            return {parent_key: data}
+
+        if isinstance(data, dict):
+            record = {}
+            for key, value in data.items():
+                new_key = f"{parent_key}{sep}{key}" if parent_key else key
+                record.update(self.custom_json_normalize(value, sep, new_key, max_levels, current_level + 1))
+            return record
+        elif isinstance(data, list):
+            record = {}
+            for i, item in enumerate(data):
+                new_key = f"{parent_key}{sep}{i}" if parent_key else str(i)
+                record.update(self.custom_json_normalize(item, sep, new_key, max_levels, current_level + 1))
+            return record
+        else:
+            return {parent_key: data}
+# get configuration details into dictonary
+def get_configuration():
+    config=ConfigParser()
+    config.read('configuration.ini')
+    return config        
+#  extract data after hitting api
+def get_request_methods(self,urlsss):
+    try:
+        print('request url'+urlsss)
+        response = self.session.get(urlsss, headers=self.headers)
+        data = response.json()
+        # print(data)
+        return  data['records']
+    except Exception as e:
+        print("Error in get_request_method()")
+        print(e)
+#  extract data based on source
+
+def get_payload(sourcename):
+    if  sourcename == 'cc_se_salesforce':
+        payload = payload_data.payload
+        return payload
+    if  sourcename == 'scf_salesforce':
+        payload = payload_data.payload
+        return payload
+
+# get parameters from secret manager
+
+def get_secret_value_sf(self,fieldkey):
+#          session = boto3.Session()
+     session = boto3.session.Session()
+     secret_name = f'{self.secret_name}'
+     region_name = f'{self.region_name}'
+     region_name='us-east-1'
+#         session = boto3.session.Session()
+     client = session.client(
+         service_name='secretsmanager',
+         region_name=region_name)
+     get_secret_value_response = client.get_secret_value(SecretId=secret_name)
+     res = json.loads(get_secret_value_response['SecretString'])
+     return res[fieldkey]
+
+
+
+********************************************************************************************************************************************************************************************
+
+how does below part of the code works. not understanding
+
+ config_data=global_methods.get_configuration()
+    ingestion_type=config_data[sourcename]['ingestion_type']
+    data_producer=config_data[sourcename]['data_schema']
+#     data_objects = config_data[sourcename]['data_tables']
+    data_objects=data_objects.split(",")
+    connection_payload = config_data[sourcename]['connection_payload']
+    data_destination = config_data[sourcename]['data_destination']
+    chunk_size = int(config_data[sourcename]['chunk_size'])
+
+server.py
+
+
+# import libraries
+import base64
+import boto3
+from botocore.exceptions import NoCredentialsError
+import psycopg2
+import re
+import requests
+import pandas as pd
+import logging
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
+import math
+from configparser import ConfigParser
+from io import StringIO
+sys.setrecursionlimit(4000)
+import os
+import json
+
+# VARIABLES
+total_records_initial = 0
+total_records_final = 0
+
+#scripts
+import scripts.api_ingestion as api_ingestion
+import scripts.global_methods as global_methods
+import scripts.destination_load as destination_load
+import scripts.s3_ingestion as s3_ingestion
+
+# Data
+import data.payload_data as payload_data
+import data.data_mapping as data_mapping
+
+
+# Main method to pull data from different sources
+def main():
+    global config_data
+    global sourcename
+#     arguments passed from stepfunctions
+    sourcename = os.environ.get('SOURCE')
+    data_objects = os.environ.get('TABLES')
+    override_data= os.environ.get('OVERRIDE')
+    cdc_flag_value= os.environ.get('CDC_FLAG')
+#     arguments configuration details
+    config_data=global_methods.get_configuration()
+    ingestion_type=config_data[sourcename]['ingestion_type']
+    data_producer=config_data[sourcename]['data_schema']
+#     data_objects = config_data[sourcename]['data_tables']
+    data_objects=data_objects.split(",")
+    connection_payload = config_data[sourcename]['connection_payload']
+    data_destination = config_data[sourcename]['data_destination']
+    chunk_size = int(config_data[sourcename]['chunk_size'])
+#     override_data = config_data[sourcename]['override_data'].upper()
+#     temporary variables
+    arrDataTables=[]
+    arrtotalcount=[]
+    arrfinalcount=[]
+    st_time=time.time()
+    print('cdc_flag is ...', cdc_flag_value)
+    # Retrieve the task token from the environment variable
+#     task_token = os.environ.get('TASK_TOKEN_ENV_VARIABLE')
+    # Simulate some task processing
