@@ -8,3 +8,17 @@ Changes apply after 9:30PM IST , as rds back up scheduled to apply at 9:00 PM IS
 4. under tags section verify the tag should be present ""CORE_BACKUPS_RETENTION - PITRBACKUP""
 5. select AWS backups service - > choose AWS Backup Vault then select ""core-immutable"" where we can verify that backups is enabled for RDS Aurora Postgres
 6. Check for the eac.modulepack and verify the version (0.13.0) "
+
+
+**Validation Steps:**
+
+1. Ensure ECS component is available on go/eacui and all pipeline tasks are green.
+2. Use go/awsconsolefid to access the AWS console.
+3. Verify deployment post 9:30 PM IST, after RDS backup scheduled at 9:00 PM IST.
+4. Follow these steps after 9:30 PM IST on deployment day or next day:
+   1. Go to go/awsconsole.
+   2. Select application operator role.
+   3. In RDS Service, click Databases → select "rdsapg86a8-auroraprdb-v1-cluster."
+   4. Verify the tag "CORE_BACKUPS_RETENTION - PITRBACKUP" under the tags section.
+   5. In AWS Backup service, select AWS Backup Vault → "core-immutable" to confirm backup is enabled for RDS Aurora Postgres.
+   6. Verify the eac.modulepack version is 0.13.0.
