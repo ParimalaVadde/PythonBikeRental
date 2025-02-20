@@ -13,6 +13,8 @@ Here’s the revised version of your lines:
 - **Worst-Case Scenario if the Change Fails**: We will revert the commit in the "master" branch and redeploy the application to roll back to the last known working BAU version  
 - **Reaction to Protect Against Worst-Case Scenario**: Rollback the changes and redeploy  
 
+and to perform an ECS version upgrade as per business requirements.
+
 ---
 
 **Steps to Follow**:
