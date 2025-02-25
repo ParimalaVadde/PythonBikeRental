@@ -34,3 +34,62 @@ In case of any failures
 dev team analyze adnd recify the error and reraise the pull request
 dev team should be allowed to recify and reraise the pull request atleast thrice.
 deployment team to merge the reraised pull req with master 
+
+
+
+Sure! Here's the corrected version of your instructions:
+
+---
+
+**Follow the steps below:**
+
+1. **Merge the following feature branches with the master branch:**
+    - a. `feature/xbsd-aws-backup-aurora-rds-postgres`
+    - b. `feature/eacversionupgrade_prod`
+
+2. **A pull request for the above two feature branches**, with the necessary changes, has been raised to merge with the master. Get the pull request details from the AD Team:
+    - a. [Pull Request 1](https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-aurora-postgresql/pull-requests/34/builds)
+    - b. [Pull Request 2](https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-ecs/pull-requests/32/builds)
+
+3. **Get the pull request approved and merged to master** on Bitbucket by an authorized person.
+
+4. Once the pull request is approved, the Jules build will trigger automatically.
+
+5. **Monitor the Jules build.**
+
+---
+
+**Note:**
+
+If you receive the following notification during deployment, click on "Proceed":
+> EaC Jules support for infrastructure paves is end of life on Mar 28. Teams should use Spinnaker (go/eac-spinnaker) to deploy their infrastructure using EaC.
+
+---
+
+**If the build encounters an error, follow these steps:**
+
+1. Log in to Jules using your SID and credentials.
+2. Click on the build that failed in the bottom left corner (The build link can be obtained from the following command under the Inspect tab:  
+   `eac deployment status -f <deployment.yaml>`  
+   Alternatively, use [this link](https://jules.jpmchase.net/111597/job/XBSD/job/xbsd-base/job/master/) to go to the latest build).
+3. In the left pane, click on the **Console Output** to check the log and view the error.
+
+Alternatively:
+1. Go to **go/eacui**.
+2. From the drop-down list, select **CIB - Corporate and Investment Bank**.
+3. Select the **111597 B2B Supplier Directory** from the list.
+4. Under **Environments**, click the icon beside the relevant deploy file name.
+5. Click on the **Pipelines** tab to check the status.
+
+---
+
+**Send an email to the DEV team with the validation status.**
+
+In case of any failures:
+- The DEV team should analyze and rectify the error, and re-raise the pull request.
+- The DEV team should be allowed to rectify and re-raise the pull request **up to three times**.
+- The deployment team should merge the re-raised pull request with master.
+
+---
+
+Let me know if any changes or further details are needed!
