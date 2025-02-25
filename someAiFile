@@ -1,197 +1,36 @@
--- xbsd-aurora-postgresql bitbucket backup
-# yaml-language-server: $schema=schema/aurora-InfraDeploy_schema.json
-apiVersion: deployment/v1
-kind: Deployment
-metadata:
-    name: auroraprdb
-    sealID: "111597"
-    model:
-        name: xbsddbts
-        version: v6
-spec:
-    modulepack:
-        name: default
-        version: 0.9.2
-    environment:
-        awsAccountID: "992382575964"
-        awsRegion: us-east-1
-        tfeOrganization: "111597-114116-PRD"
-    components:
-        - type: KMS
-          name: rdstestkms
-          action: apply
-          properties: 
-            key_alias: "rdsprodkms"    
-        - type: S3
-          name: bucket
-          action: apply
-          properties:
-            #####BACKUP Enabled#####                                        
-            core_backups_retention: "35DAYS"
-            enable_bucket_versioning: "Enabled"
-            enable_object_locking: true
-            lifecycle_rules:
-                - id: "default"
-                  filter:
-                    prefix: ""
-                  expiration:
-                    - expired_object_delete_marker: true
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}    
-        - type: RDSAuroraPostgres
-          name: xbsdtestdb
-          action: apply
-          connectsTo:
-            - type: KMS
-              name: rdstestkms
-          dependsOn:
-            - type: PrivateVPCEndpoints
-              name: xbsdvpct
-          properties: 
-            #####Graviton Enabled#####
-            is_serverless: true
-            serverless_db_type: db.serverless
-            db_instance_type: "db.r5.4xlarge"
-            database_name: xbsdproddb
-            aurora_cluster_postgres_db_parameter_group_family: "aurora-postgresql15"
-            aurora_instance_postgres_db_parameter_group_family: "aurora-postgresql15"
-            #####Backup Enabled#####
-            db_backup_retention_days: 7
-            skip_final_snapshot: true   
-            deletion_protection: "true"      
-            identifier_prefix: xbsdproddb   
-            enable_immutable_backups: false
-            preferred_backup_window: "21:00-22:00"
-            monitoring_interval: "5"
-            #####Auto Scaling Enabled##### 
-            min_capacity: 1
-            max_capacity: 8
-            #####Performance Enabled#####
-            performance_insights_enabled: true
-            performance_insights_retention_period: 7
-            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
-            replica_count: 1
-            pg_cluster_log_statement: none
-            ca_cert_identifier: "rds-ca-rsa2048-g1"
-            enable_nlb_connectivity: true
-            rds_proxy: true
-            engine_version: "15.3"
-            apply_immediately: true
-            healthcheck_enabled: true
-            subnets:
-              - "PrivateSubnet01"
-              - "PrivateSubnet02"
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-            custom_db_names:
-                - "custom"
+Follow the below steps:-
+1.Merge the following feature branches with the master branch: 
+       a.feature/xbsd-aws-backup-aurora-rds-postgres
+       b.feature/eacversionupgrade_prod
+2. A pull request for the above two feature branches, with the necessary changes, has been raised to merge with the master. Get the pull request details from the AD Team.
+        a.https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-aurora-postgresql/pull-requests/34/builds
+		b.https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-ecs/pull-requests/32/builds
+3. Get the pull request Approved and merged to master on the bitbucket by an authorised person
+4. Once Pull request is approved jules build will trigger automatically.
+5. Monitor the jules build.
 
-        - type: CloudWatch
-          name: dbcwalms
-          action: apply
-          properties:
-            alarms:
-                - alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "AuroraReplicaLagMaximum"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Connection Attempts"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "ConnectionAttempts"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 90
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Connection Attempts alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Deadlocks"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "Deadlocks"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 5
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Deadlocks alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Read IOPS"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "ReadIOPS"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Read IOPS alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Read Throughput"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "ReadThroughput"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Read Throughput alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Write IOPS"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "WriteIOPS"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Write IOPS alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Write Throughput"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "WriteThroughput"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Write Throughput alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+Note: suppose if we get below notification during deployment click on proceed
+EaC jules support for infrastructure paves is end of life on Mar 28. Teams should use spinnaker(go/eac-spinnaker) to deploy their infrastructure using EaC.
 
-            
-        - type: PrivateVPCEndpoints
-          name: xbsdvpct
-          action: skip
-          properties: 
-            tags:
-                {"name": "privatevpc"}
-        - type: RDSProxy
-          name: proxy
-          action: apply
-          connectsTo:
-            - type: RDSAuroraPostgres
-              name: xbsdtestdb
+
+
+"If build encounter an error, perform the following steps - 
+1. Login into the jules using your SID and credentials
+2. Click on the build that failed on the bottom left corner (The build link can be obtained from below command under inspect tab
+eac deployment status -f <deployment.yaml> Or Use https://jules.jpmchase.net/111597/job/XBSD/job/xbsd-base/job/master/ and go to latest build)
+3. On the left pane click on the console output to check the log and view the error
+(OR)
+1. Goto go/eacui
+2. From the drop down list, select CIB - Corporate and Investment Bank
+3. Select the 111597 B2B Supplier Directory from the list
+4. Under Environments, select          icon from beside the relevant deploy file name
+
+5. Click on the pipelines tab to check the status"
+
+
+Send out an email to DEV team with validation status
+
+In case of any failures 
+dev team analyze adnd recify the error and reraise the pull request
+dev team should be allowed to recify and reraise the pull request atleast thrice.
+deployment team to merge the reraised pull req with master 
