@@ -5,3 +5,22 @@ This is Release Ready Message from JET Console which can give you more details: 
 Please address this here and then click PROCEED button below to retry.
 
 Please go here to learn about this new control process that was implemented to address ECB's audit findings.
+
+
+The error message you are receiving suggests that there is an issue with the release eligibility of certain deployment artifacts, which are linked to the NioId (`83BFA206F74AA5B8C8FCAC6751746D938E7325BE445D10860CD0B6F3FBA3EF30`). Specifically, it appears that the artifacts are not marked as **"Release Eligible"** by the **JET Console**, which is the system used for managing releases.
+
+Here’s a breakdown of the error:
+
+- **"Release Eligible"**: This term indicates that certain deployment artifacts (software or other components ready for release) are not being recognized or marked as eligible to be released yet.
+- **"Release Ready Message"**: This refers to the system indicating that the release readiness check has failed because the artifacts are not authorized for release.
+- **"Not authorized for release"**: This suggests that the release process has encountered a permission or control issue. The system isn't allowing these artifacts to be released because they haven't passed the necessary compliance or authorization checks.
+- **"JET Console"**: This is the tool or system that is being used to manage the release process. The error is being flagged by this system.
+- **"ECB's audit findings"**: The error also references a control process put in place in response to audit findings by the ECB (European Central Bank), which likely involve stricter compliance checks for software releases.
+
+### What you can do:
+1. **Check Release Eligibility**: You’ll need to investigate why the artifacts are not marked as **Release Eligible**. This could be due to missing permissions, incomplete approvals, or some other compliance or technical issue.
+2. **Review the Process**: Since the error mentions an audit process (ECB's findings), it's likely that there are new checks or controls in place for compliance. You may need to review these new processes and ensure all necessary steps are completed before proceeding with the release.
+3. **Consult Documentation/Support**: Follow the link provided in the message to learn about the new control process. This might give you more detailed instructions on how to address the issue.
+4. **Retry the Release**: Once you resolve the issue, you can retry the release by clicking the **PROCEED** button.
+
+In summary, it appears the deployment process is blocked due to missing or incorrect authorization, and you need to resolve this before proceeding with the release.
