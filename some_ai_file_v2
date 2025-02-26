@@ -1,33 +1,7 @@
-Here's the refined version of your email:
+CP-6160 Compliance
+Deployment artifacts under NioId 83BFA206F74AA5B8C8FCAC6751746D938E7325BE445D10860CD0B6F3FBA3EF30
+are not currently marked as Release Eligible by the JET Console.
+This is Release Ready Message from JET Console which can give you more details: [[Release readiness check failed. Not authorized for release.]].
+Please address this here and then click PROCEED button below to retry.
 
----
-
-**Subject:** Access to Jules and Deployment Monitoring Support Request
-
-Hi Shruthi,
-
-We are from the B2B Supplier Directory Services Project, which is not yet live in production.
-
-The B2B Supplier Directory Services Project aims to establish a centralized repository for supplier profiles, streamlining the supplier recruitment process. Through comprehensive data capture, the project seeks to engage with suppliers intelligently, strengthen the network, and run targeted campaigns for business expansion. The system will also provide valuable insights into spend patterns and payment preferences.
-
-### Procedure for Raising a Request to Get Access to Jules:
-1. **Production - JET - XBSD - Bitbucket, Jules:** [Link to reference request]
-2. **Access Request:** [Link to RSAM access request]
-    - Select a Request Item: Line of Business Application
-    - What line of business application would you like to request? : 111597 or B2B Payables X-Business Supplier Directory Services
-    - Select an environment/instance for this application: Production - JET - XBSD
-
-The CHG33599721 change request is for enabling backup for RDS Aurora PostgreSQL and a version upgrade for EAC.
-
-Our team already has access to Jules, so we will monitor the deployment. Please proceed with the deployment as we plan to complete this task in production by February 28th.
-
-In case any additional help is required for accessing Jules, I kindly request support from the L2 team. Since the TechOps team doesn't have access to Jules yet, if we need assistance with Jules deployment monitoring, we would require your team's support to ensure everything is completed today.
-
-Thanks and regards,  
-[Your Name]  
-[Your Position]  
-[Your Contact Information]  
-
----
-
-Let me know if you need any further adjustments!
+Please go here to learn about this new control process that was implemented to address ECB's audit findings.
