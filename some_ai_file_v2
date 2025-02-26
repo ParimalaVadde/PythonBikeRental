@@ -1,24 +1,176 @@
-"Check on go/eacui the ECS component is available and all the pipeline tasks are in green.
-
-Use go/awsconsolefid for going into the AWS console to verify the deployment - 
-Changes apply after 9:30PM IST , as rds back up scheduled to apply at 9:00 PM IST. Perform the below steps post 9:30pm ist on the day of deployment or anytime next day post deployement
-1. Goto go/awsconsole
-2. Select application operator role
-3.In RDS Service , click on Databases -> select the rds instance ""rdsapg86a8-auroraprdb-v1-cluster""
-4. under tags section verify the tag should be present ""CORE_BACKUPS_RETENTION - PITRBACKUP""
-5. select AWS backups service - > choose AWS Backup Vault then select ""core-immutable"" where we can verify that backups is enabled for RDS Aurora Postgres
-6. Check for the eac.modulepack and verify the version (0.13.0) "
+TechOps team
 
 
-**Validation Steps:**
+*************************************************************
 
-1. Ensure ECS component is available on go/eacui and all pipeline tasks are green.
-2. Use go/awsconsolefid to access the AWS console.
-3. Verify deployment post 9:30 PM IST, after RDS backup scheduled at 9:00 PM IST.
-4. Follow these steps after 9:30 PM IST on deployment day or next day:
-   1. Go to go/awsconsole.
-   2. Select application operator role.
-   3. In RDS Service, click Databases → select "rdsapg86a8-auroraprdb-v1-cluster."
-   4. Verify the tag "CORE_BACKUPS_RETENTION - PITRBACKUP" under the tags section.
-   5. In AWS Backup service, select AWS Backup Vault → "core-immutable" to confirm backup is enabled for RDS Aurora Postgres.
-   6. Verify the eac.modulepack version is 0.13.0.
+previous mail abt rds backup enablement
+
+Hi Veerendra,
+
+We can able to implement the Aws backup for our RDS in dev. Currently testing inprogress.
+We are targeting to complete this task before Feb 28th.
+
+Thanks,
+Ram
+
+From: Chinta, Veerendra (CIB Tech, IND) <veerendra.chinta@jpmchase.com> 
+Sent: Tuesday, February 04, 2025 11:35 AM
+To: Gandikota, Ramsai (CIB Tech, IND, Consultant) <ramsai.gandikota@jpmchase.com>; V R, Parimala (CIB Tech, IND, Consultant) <parimala.vr@chase.com>
+Cc: Durai, Rohit X (CIB Tech, IND) <rohit.x.durai@jpmchase.com>; Kata, Prat (CIB, USA) <prat.kata@jpmchase.com>; CC Supplier Pirates <CC_Supplier_Pirates@jpmchase.com>; Antunez, Gustavo (CIB Tech, ARG) <gustavo.antunez@jpmchase.com>; Dharan, Bharanee (CIB Tech, IND) <bharanee.dharan@jpmchase.com>; Pathan, Abdul X (CIB Tech, IND) <abdul.x.pathan@jpmorgan.com>
+Subject: RE: AO Comms - New Message in Discussion - Enable AWS Backups tool for your Non-CPOF applications - B2B Payables X-Business Supplier Directory Services
+
+Hi Ram,
+
+Could you please share the current status.
+Also request you to provide the next ETA to complete this task in AOCOMMS.
+
+Regards,
+Veerendra Chinta | CIB Technology Resiliency Management APAC | JP Morgan Chase, 1st Floor, Platina-3, Bangalore, India | Zoom -3310372883/veeruc | E-Mail: veerendra.chinta@jpmchase.com
+Team E-Mail: CIB PM Tech Resiliency APAC |TRM Wiki
+  
+
+From: Chinta, Veerendra (CIB Tech, IND) 
+Sent: Wednesday, January 29, 2025 2:19 PM
+To: Gandikota, Ramsai (CIB Tech, IND, Consultant) <ramsai.gandikota@jpmchase.com>; V R, Parimala (CIB Tech, IND, Consultant) <parimala.vr@chase.com>
+Cc: Durai, Rohit X (CIB Tech, IND) <rohit.x.durai@jpmchase.com>; Kata, Prat (CIB, USA) <prat.kata@jpmchase.com>; CC Supplier Pirates <CC_Supplier_Pirates@jpmchase.com>; Antunez, Gustavo (CIB Tech, ARG) <gustavo.antunez@jpmchase.com>; Dharan, Bharanee (CIB Tech, IND) <bharanee.dharan@jpmchase.com>
+Subject: RE: AO Comms - New Message in Discussion - Enable AWS Backups tool for your Non-CPOF applications - B2B Payables X-Business Supplier Directory Services
+
+Hi Ram,
+
+The AOCOMMS completion date extended till 28th Feb.
+Request you to work with respective teams and make it complete before new deadline.
+
+Regards,
+Veerendra Chinta | CIB Technology Resiliency Management APAC | JP Morgan Chase, 1st Floor, Platina-3, Bangalore, India | Zoom -3310372883/veeruc | E-Mail: veerendra.chinta@jpmchase.com
+Team E-Mail: CIB PM Tech Resiliency APAC |TRM Wiki
+  
+
+From: Gandikota, Ramsai (CIB Tech, IND, Consultant) <ramsai.gandikota@jpmchase.com> 
+Sent: Wednesday, January 29, 2025 2:16 PM
+To: V R, Parimala (CIB Tech, IND, Consultant) <parimala.vr@chase.com>; Antunez, Gustavo (CIB Tech, ARG) <gustavo.antunez@jpmchase.com>; Chinta, Veerendra (CIB Tech, IND) <veerendra.chinta@jpmchase.com>; Dharan, Bharanee (CIB Tech, IND) <bharanee.dharan@jpmchase.com>
+Cc: Durai, Rohit X (CIB Tech, IND) <rohit.x.durai@jpmchase.com>; Kata, Prat (CIB, USA) <prat.kata@jpmchase.com>; CC Supplier Pirates <CC_Supplier_Pirates@jpmchase.com>
+Subject: RE: AO Comms - New Message in Discussion - Enable AWS Backups tool for your Non-CPOF applications - B2B Payables X-Business Supplier Directory Services
+
+Hi @Antunez, Gustavo (CIB Tech, ARG),@Chinta, Veerendra (CIB Tech, IND),
+
+The issue to Backup the AWS RDS is not fixed yet.We are still working with EAC support team as we are using the EAC for deployment. 
+We will not be able to complete this AO comms by jan 31.
+Our application is not critical and no team is actually using our data.
+Please let us know how to proceed further.
+
+
+Thanks,
+Ram
+
+
+
+
+
+
+
+
+
+From: V R, Parimala (CIB Tech, IND, Consultant) <parimala.vr@chase.com> 
+Sent: Thursday, January 23, 2025 5:08 PM
+To: Antunez, Gustavo (CIB Tech, ARG) <gustavo.antunez@jpmchase.com>; Chinta, Veerendra (CIB Tech, IND) <veerendra.chinta@jpmchase.com>
+Cc: Durai, Rohit X (CIB Tech, IND) <rohit.x.durai@jpmchase.com>; Kata, Prat (CIB, USA) <prat.kata@jpmchase.com>; CC Supplier Pirates <CC_Supplier_Pirates@jpmchase.com>
+Subject: RE: AO Comms - New Message in Discussion - Enable AWS Backups tool for your Non-CPOF applications - B2B Payables X-Business Supplier Directory Services
+
+Hi @Antunez, Gustavo (CIB Tech, ARG), @Chinta, Veerendra (CIB Tech, IND),
+
+Thank you for providing the guidance links on how to enable AWS Backup for the AWS-RDS-DBCluster.
+
+I wanted to update you on our progress with enabling AWS backups for the AWS-RDS-DBCluster. We have followed the required steps as outlined in the guidance link:
+
+1.	Tag Addition:  Added the tag `CORE_BACKUPS_RETENTION: PITR BACKUP`.
+2.	Immutable Backups: Set the `enable_immutable_backups` parameter to true.
+
+ 
+
+However, despite implementing these changes, we are unable to see the data backed up in the AWS Backup console (core-immutable).
+
+The documentation states that the required Terraform version for this setup is 11.0.0. The issue we’re encountering is that we are using EAC, and the equivalent EAC version for 11.0.0 is currently unknown to us. We are on EAC module pack version 0.10.0, and when attempting to upgrade to a later version (post 0.10.0), we receive the following error related to the `CORE_BACKUPS_RETENTION: PITR BACKUP` tag:
+
+ 
+
+This error indicates that the higher version of EAC does not allow users to add the `CORE_BACKUPS_RETENTION: PITR BACKUP` tag, which is essential for backup functionality.
+
+We’ve raised a support ticket (CCBEAASSD-3399) with the EAC team to clarify the required version and how we should proceed.
+
+With the January 30th deadline approaching and the need to deploy to production, we are currently blocked. Could you please advise on the next steps, or let us know if there are any alternatives we should consider?
+We want to ensure that this task is completed on time, but the current roadblock might cause a spillover.
+
+Thank you for your support, and I look forward to your advice.
+
+Best regards,
+Parimala VR
+
+From: Antunez, Gustavo (CIB Tech, ARG) <gustavo.antunez@jpmchase.com> 
+Sent: Friday, January 17, 2025 7:59 PM
+To: Durai, Rohit X (CIB Tech, IND) <rohit.x.durai@jpmchase.com>; Kata, Prat (CIB, USA) <prat.kata@jpmchase.com>; V R, Parimala (CIB Tech, IND, Consultant) <parimala.vr@chase.com>
+Cc: Chinta, Veerendra (CIB Tech, IND) <veerendra.chinta@jpmchase.com>
+Subject: AO Comms - New Message in Discussion - Enable AWS Backups tool for your Non-CPOF applications - B2B Payables X-Business Supplier Directory Services
+
+Hi Parimala,
+CIB has identified risk associated with applications that moved to production on AWS and not having immutable backups enabled or documented backup waivers. These AWS resources are flagged as NOT being backed up. The remediation is to upgrade to the recommended minimum terraform version modules to enable backups into centralized immutable vault using strategic AWS Backup Service allowing centralized monitoring & governance.
+Please reach out to myself/Veerendra Chinta/ Abdul Pathan If you need any help. 
+Risk:
+-	Failure to provide proper backups in production could lead to a disruption to business processes that rely on such data (and potential economic, regulatory or reputational loss).  
+-	Core Issue associated to this finding has been raised and remediation need to be done by 31/Jan/2025 
+-	
+Help Guide:
+-	How to use AWS Backups Service using tags? Here
+-	How to enable AWS Backups Service for existing resources? Here
+-	go/backupinfo
+Action Required:
+-	Review your area’s applications for remediation needed. For each non-compliant asset, You must Upgrade Terraform version of the module to the required version to support the “CORE_BACKUPS_RETENTION” tag
+-	Once on that version, a valid value must be set for that tag (for example, “35DAYS” for resources that require immutable backups, or “NOBACKUP” for resources that require a backup waiver). 
+
+Application details: See File Attach 
+
+
+
+
+
+*****************************************************************
+mail from shruti who is from TechOps team
+Hello Team,
+
+Greetings of the day! Hope everyone is doing well.
+
+CHG33599721 this change for commercial cards with new seal id 111597 is assigned to us. Upon verifying the runbook, we don't have access to Jules pipelines which is being used for the deployment.
+
+We are seeing this seal id (111597) for the first time. Could you please elaborate more on what type of change this is? which application this seal supports to? Additionally please provide access requests details for the deployments.
+
+
+Thanks and regards,
+*******************************************************************************************************************************
+can you write below mail correctly
+
+Hi Shruthi
+
+We are from B2B Supplier Directory Services Project. which not live in prod.
+
+The B2B Supplier Directory Services Project aims to  establish a centralized repository for supplier profiles, streamlining the supplier recruitment process. Through comprehensive data capture, project aims to intelligently engage with suppliers, strengthen the network, and conduct targeted campaigns for business expansion. The system will also provide valuable insights into spend patterns and payment preferences.
+
+
+Procedure for raising req to get access to jules
+
+* Production - JET - XBSD  - Bitbucket, Jules - https://rsam.jpmchase.net/993225057 (reference request)
+ 
+ 
+https://rsam.jpmchase.net/adhoc/request/select_access
+ 
+Select a Request Item : Line of Business Application
+What line of business application would you like to request? : 111597 or B2B Payables X-Business Supplier Directory Services
+Select an environment / instance for this application. : Production - JET - XBSD
+
+The CHG33599721 is for enabling backup for rds aurora postgreess and version upgrade for eac.
+
+
+Our team does have access to jules so we will monitor the deployment . so plesae proceed with deployement . as we have complete this task in prod by feb 28th.
+
+
+In case if any addition help required for accessing the jules . I request L@ team supports
+@l2 team as the deployment has to complete today. in case if we require any help in jules deployment monitoring we require any of ur team member support.
+
