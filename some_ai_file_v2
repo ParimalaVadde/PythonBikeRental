@@ -1,26 +1,19 @@
-CP-6160 Compliance
-Deployment artifacts under NioId 83BFA206F74AA5B8C8FCAC6751746D938E7325BE445D10860CD0B6F3FBA3EF30
-are not currently marked as Release Eligible by the JET Console.
-This is Release Ready Message from JET Console which can give you more details: [[Release readiness check failed. Not authorized for release.]].
-Please address this here and then click PROCEED button below to retry.
+Here’s a more polished and clear version of the lines:
 
-Please go here to learn about this new control process that was implemented to address ECB's audit findings.
+---
 
+**Hi Rohit,**
 
-The error message you are receiving suggests that there is an issue with the release eligibility of certain deployment artifacts, which are linked to the NioId (`83BFA206F74AA5B8C8FCAC6751746D938E7325BE445D10860CD0B6F3FBA3EF30`). Specifically, it appears that the artifacts are not marked as **"Release Eligible"** by the **JET Console**, which is the system used for managing releases.
+The production deployment yesterday did not complete due to deployment-related issues. There were no code-related issues, but the problem was with the deployment process.
 
-Here’s a breakdown of the error:
+When the L2 team merged the feature branch with the master branch after creating the release request in Jet UI, the deployment was referencing an old CR, which was different from the one specified in Jet UI. We attempted to resolve the issue, but it continued pointing to the old CR.
 
-- **"Release Eligible"**: This term indicates that certain deployment artifacts (software or other components ready for release) are not being recognized or marked as eligible to be released yet.
-- **"Release Ready Message"**: This refers to the system indicating that the release readiness check has failed because the artifacts are not authorized for release.
-- **"Not authorized for release"**: This suggests that the release process has encountered a permission or control issue. The system isn't allowing these artifacts to be released because they haven't passed the necessary compliance or authorization checks.
-- **"JET Console"**: This is the tool or system that is being used to manage the release process. The error is being flagged by this system.
-- **"ECB's audit findings"**: The error also references a control process put in place in response to audit findings by the ECB (European Central Bank), which likely involve stricter compliance checks for software releases.
+Since the CR's deployment end date was yesterday, we cannot use the same CR to resolve and push the changes. We now need to create a new CR. However, as per the accommodation requirements, the deployment needs to be completed tomorrow.
 
-### What you can do:
-1. **Check Release Eligibility**: You’ll need to investigate why the artifacts are not marked as **Release Eligible**. This could be due to missing permissions, incomplete approvals, or some other compliance or technical issue.
-2. **Review the Process**: Since the error mentions an audit process (ECB's findings), it's likely that there are new checks or controls in place for compliance. You may need to review these new processes and ensure all necessary steps are completed before proceeding with the release.
-3. **Consult Documentation/Support**: Follow the link provided in the message to learn about the new control process. This might give you more detailed instructions on how to address the issue.
-4. **Retry the Release**: Once you resolve the issue, you can retry the release by clicking the **PROCEED** button.
+If we raise the CR today, I am not sure if we can get all the necessary approvals and push the changes tomorrow. Would it be acceptable to extend the deployment window by 2-3 days? Alternatively, should the deployment be completed by tomorrow?
 
-In summary, it appears the deployment process is blocked due to missing or incorrect authorization, and you need to resolve this before proceeding with the release.
+We are proceeding with Jules. Yesterday, we had a call with Viswanath, Aishwarya, and Ramsai. Viswanath mentioned that they are moving to Spinakar instead of Jules. We also need to check Spinakar's deployment process.
+
+---
+
+Let me know if this works or if you'd like any further adjustments!
