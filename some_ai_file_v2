@@ -17,3 +17,20 @@ We are proceeding with Jules. Yesterday, we had a call with Viswanath, Aishwarya
 ---
 
 Let me know if this works or if you'd like any further adjustments!
+
+Here's a more concise version for chat:
+
+---
+
+**Hi Rohit,**
+
+- The production deployment yesterday didn't complete due to issues with the deployment process, not the code.
+- The L2 team merged the feature branch with the master branch, but it referenced an old CR, which we couldn’t resolve.
+- Since the CR’s deployment end date was yesterday, we need to create a new CR. However, with approvals, I’m unsure we can push the changes by tomorrow.
+- Can we extend the deployment window by 2-3 days, or should it still be completed by tomorrow?
+
+Also, we are moving forward with Jules, but Viswanath mentioned they are switching to Spinakar. We’ll need to check Spinakar’s deployment process.
+
+---
+
+This version keeps it short and to the point. Let me know if it works!
