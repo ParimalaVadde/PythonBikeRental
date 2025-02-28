@@ -13,3 +13,27 @@ Could please assign a resource for the same
 
 Thanks,
 Parimala
+
+
+Here’s a more concise version:
+
+---
+
+**Subject:** Request for Resource Assignment for RDS Aurora PostgreSQL Backup
+
+Hi Prateep,
+
+I’m part of the B2B Supplier Directory Services Project. Our app isn’t live yet, but we need to enable backup for RDS Aurora PostgreSQL as part of our tech deliverables.
+
+We’ve raised Change Request CHG34471614 for the backup and ECS version upgrade. AOCOMM details: [AOCOMM details](https://aocomms.prod.aws.jpmchase.net/subTask/365189).
+
+To proceed with deployment, we need a resource from your team for pre-implementation steps.
+
+Could you please assign a resource?
+
+Thanks,  
+Parimala
+
+---
+
+This version is more direct while still keeping the necessary details intact. Let me know if it works!
