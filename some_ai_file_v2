@@ -1,36 +1,15 @@
-Here’s a more polished and clear version of the lines:
+Hi Prateep,
 
----
+I am from the B2B Supplier Directory Services Project,
+Our app is not live yet. As part for tech deliverables, we need to enable backup for RDS Aurora PostgreSQL.
 
-**Hi Rohit,**
+We have raised  CHG34471614 change request for enabling backup for RDS Aurora PostgreSQL and a eac version upgrade for ECS.
+AOCOMM details : https://aocomms.prod.aws.jpmchase.net/subTask/365189
 
-The production deployment yesterday did not complete due to deployment-related issues. There were no code-related issues, but the problem was with the deployment process.
+In order to proceed with deployment . There are pre implementation steps to be completed . we require a resource from your team.
 
-When the L2 team merged the feature branch with the master branch after creating the release request in Jet UI, the deployment was referencing an old CR, which was different from the one specified in Jet UI. We attempted to resolve the issue, but it continued pointing to the old CR.
+Could please assign a resource for the same
 
-Since the CR's deployment end date was yesterday, we cannot use the same CR to resolve and push the changes. We now need to create a new CR. However, as per the accommodation requirements, the deployment needs to be completed tomorrow.
 
-If we raise the CR today, I am not sure if we can get all the necessary approvals and push the changes tomorrow. Would it be acceptable to extend the deployment window by 2-3 days? Alternatively, should the deployment be completed by tomorrow?
-
-We are proceeding with Jules. Yesterday, we had a call with Viswanath, Aishwarya, and Ramsai. Viswanath mentioned that they are moving to Spinakar instead of Jules. We also need to check Spinakar's deployment process.
-
----
-
-Let me know if this works or if you'd like any further adjustments!
-
-Here's a more concise version for chat:
-
----
-
-**Hi Rohit,**
-
-- The production deployment yesterday didn't complete due to issues with the deployment process, not the code.
-- The L2 team merged the feature branch with the master branch, but it referenced an old CR, which we couldn’t resolve.
-- Since the CR’s deployment end date was yesterday, we need to create a new CR. However, with approvals, I’m unsure we can push the changes by tomorrow.
-- Can we extend the deployment window by 2-3 days, or should it still be completed by tomorrow?
-
-Also, we are moving forward with Jules, but Viswanath mentioned they are switching to Spinakar. We’ll need to check Spinakar’s deployment process.
-
----
-
-This version keeps it short and to the point. Let me know if it works!
+Thanks,
+Parimala
