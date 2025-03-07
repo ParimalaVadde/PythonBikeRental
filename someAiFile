@@ -1,95 +1,14 @@
-Follow the below steps:-
-1.Merge the following feature branches with the master branch: 
-       a.feature/xbsd-aws-backup-aurora-rds-postgres
-       b.feature/eacversionupgrade_prod
-2. A pull request for the above two feature branches, with the necessary changes, has been raised to merge with the master. Get the pull request details from the AD Team.
-        a.https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-aurora-postgresql/pull-requests/34/builds
-		b.https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-ecs/pull-requests/32/builds
-3. Get the pull request Approved and merged to master on the bitbucket by an authorised person
-4. Once Pull request is approved jules build will trigger automatically.
-5. Monitor the jules build.
-
-Note: suppose if we get below notification during deployment click on proceed
-EaC jules support for infrastructure paves is end of life on Mar 28. Teams should use spinnaker(go/eac-spinnaker) to deploy their infrastructure using EaC.
-
-
-
-"If build encounter an error, perform the following steps - 
-1. Login into the jules using your SID and credentials
-2. Click on the build that failed on the bottom left corner (The build link can be obtained from below command under inspect tab
-eac deployment status -f <deployment.yaml> Or Use https://jules.jpmchase.net/111597/job/XBSD/job/xbsd-base/job/master/ and go to latest build)
-3. On the left pane click on the console output to check the log and view the error
-(OR)
-1. Goto go/eacui
-2. From the drop down list, select CIB - Corporate and Investment Bank
-3. Select the 111597 B2B Supplier Directory from the list
-4. Under Environments, select          icon from beside the relevant deploy file name
-
-5. Click on the pipelines tab to check the status"
-
-
-Send out an email to DEV team with validation status
-
-In case of any failures 
-dev team analyze adnd recify the error and reraise the pull request
-dev team should be allowed to recify and reraise the pull request atleast thrice.
-deployment team to merge the reraised pull req with master 
-
-
-
-Sure! Here's the corrected version of your instructions:
-
----
-
-**Follow the steps below:**
-
-1. **Merge the following feature branches with the master branch:**
-    - a. `feature/xbsd-aws-backup-aurora-rds-postgres`
-    - b. `feature/eacversionupgrade_prod`
-
-2. **A pull request for the above two feature branches**, with the necessary changes, has been raised to merge with the master. Get the pull request details from the AD Team:
-    - a. [Pull Request 1](https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-aurora-postgresql/pull-requests/34/builds)
-    - b. [Pull Request 2](https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-ecs/pull-requests/32/builds)
-
-3. **Get the pull request approved and merged to master** on Bitbucket by an authorized person.
-
-4. Once the pull request is approved, the Jules build will trigger automatically.
-
-5. **Monitor the Jules build.**
-
----
-
-**Note:**
-
-If you receive the following notification during deployment, click on "Proceed":
-> EaC Jules support for infrastructure paves is end of life on Mar 28. Teams should use Spinnaker (go/eac-spinnaker) to deploy their infrastructure using EaC.
-
----
-
-**If the build encounters an error, follow these steps:**
-
-1. Log in to Jules using your SID and credentials.
-2. Click on the build that failed in the bottom left corner (The build link can be obtained from the following command under the Inspect tab:  
-   `eac deployment status -f <deployment.yaml>`  
-   Alternatively, use [this link](https://jules.jpmchase.net/111597/job/XBSD/job/xbsd-base/job/master/) to go to the latest build).
-3. In the left pane, click on the **Console Output** to check the log and view the error.
-
-Alternatively:
-1. Go to **go/eacui**.
-2. From the drop-down list, select **CIB - Corporate and Investment Bank**.
-3. Select the **111597 B2B Supplier Directory** from the list.
-4. Under **Environments**, click the icon beside the relevant deploy file name.
-5. Click on the **Pipelines** tab to check the status.
-
----
-
-**Send an email to the DEV team with the validation status.**
-
-In case of any failures:
-- The DEV team should analyze and rectify the error, and re-raise the pull request.
-- The DEV team should be allowed to rectify and re-raise the pull request **up to three times**.
-- The deployment team should merge the re-raised pull request with master.
-
----
-
-Let me know if any changes or further details are needed!
+SOURCE_SYSTEM_NAME,SOURCE_SYSTEM_TABLE,SOURCE_SYSTEM_COLUMN,TARGET_TABLE,TARGET_COLUMN,Filter_Condition,TRANSFORMATION,Comments,IS_KEY,DQ_CHECK,DQ_FUNC,DQ_RULE,DQ_ACTION,COLLATE_STATEMENT,JPMC_VALUE,Format/Example Data
+PFD,PFD,buying_entity,business_entity_details,business_entity_name,,direct mapping,"This is the buyer entity, if we don’t have a match based on name, new business entity will have to be created and relationship between vendor/supplier has to be created in the business_entity_relationships table;  This is the buying entity within the client's org. Robbie to check if we can have Client name here",,,,,,,,string
+PFD,PFD,vendor_name_cleaned,business_entity_details,business_entity_name,,direct mapping,"This is the supplier entity, if ""sds_supplier_id"" was a blank , it means we don't have this entity and new needs to be created ",,,,,,,,string
+PFD,PFD,vendor_country,physical_address,country,"address_type=""Billing"" | assigned to business_entity",Filter Condition,,,,,,,,,string
+PFD,PFD,vendor_state,physical_address,state_province,"address_type=""Billing"" | assigned to business_entity",Filter Condition,,,,,,,,,string
+PFD,PFD,vendor_postcode,physical_address,postal_code,,direct mapping,,,,,,,,,string
+PFD,PFD,vendor_address_ln_1,physical_address,street_line1,"address_type=""Billing"" | assigned to business_entity",Filter Condition,,,,,,,,,string
+PFD,PFD,vendor_address_ln_2,physical_address,street_line2,,Filter Condition,,,,,,,,,string
+PFD,PFD,vendor_address_ln_3,physical_address,city,,Filter Condition,,,,,,,,,string
+PFD,PFD,vendor_annualrevenue,business_entity_details,reported_annual_revenue,,direct mapping;Float,Used for VCN. ,,,,,,,,float
+PFD,PFD,sds_supplier_id,business_entity,business_entity_id,,direct mapping,,,,,,,,,string
+PFD,PFD,filter_individual,business_entity_details,company_structure,"business_entity_details.company_structure.  Add ""Individual"" if not already present;company_structure=""Individual""","case condition (if given condition is  true then ""Y"" else ""N"")",,,,,,,,,binary (Y/N)
+PFD,PFD,year_incorporated,business_entity_details,.year_incorporated,,direct mapping,,,,,,,,,string
+PFD,PFD,corp_structures,business_entity_details,company_structure,business_entity_details.company_structure. ,Filter Condition,Only add values that are not present.Concatentate with ; delimiters if there are mutiple values in source ,,,,,,,,string
