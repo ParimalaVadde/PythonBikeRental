@@ -1,62 +1,195 @@
-Hi Prateep,
+#!/usr/bin/env python
+# coding: utf-8
 
-I am from the B2B Supplier Directory Services Project,
-Our app is not live yet. As part for tech deliverables, we need to enable backup for RDS Aurora PostgreSQL.
+# Libraries for setting up Glue Job
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
 
-We have raised  CHG34471614 change request for enabling backup for RDS Aurora PostgreSQL and a eac version upgrade for ECS.
-AOCOMM details : https://aocomms.prod.aws.jpmchase.net/subTask/365189
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
 
-In order to proceed with deployment . There are pre implementation steps to be completed . we require a resource from your team.
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
 
-Could please assign a resource for the same
+logger = glueContext.get_logger()
+
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+# Libraries for running the ETL framework
+import boto3
+from botocore.exceptions import NoCredentialsError
+import psycopg2
+import pandas as pd
+from io import StringIO # python3; python2: BytesIO
+import yaml
+
+from awsglue.utils import getResolvedOptions
+# args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+
+print(f"{'*'*20} STARTED: Deploy DDLs {'*'*20}")
+#from etl_python_scripts import etl_utils as utils
+# import etl_utils as utils
+#from etl_python_scripts.etl_utils import rds_ops
+#import rds_ops
+print("All imports complete")
+
+def read_config():
+    # Read .yaml configuration file
+    config_data = []
+    # try:
+    print(f"{'*'*20} Reading Config YAML... {'*'*20}")
+    # with ("etl_config.yaml", "r") as file:
+    #     config_data = yaml.safe_load(file)
+
+    with open("etl_config_table_creation.yaml") as stream:
+    # try:
+        config_data = yaml.safe_load(stream)
+        print(yaml.safe_load(stream))
+    # except yaml.YAMLError as exc:
+        # print(exc)
+
+    print(f"{'*'*20} Config YAML loaded...{'*'*20}")
+    print("Config Data:",config_data)
+
+    # except:
+    #     print("Could not load config file!!!")
+    return config_data
+
+class rds_ops:
+
+    # Constructor for fetching the PostgreSQL DB details from payload and setting up spark session
+    def __init__(self, spark=None):
+
+        # Setting mapping file and config file
+        self.config_data = read_config()
+
+        if not self.config_data:
+            self.config_data = read_config()
+            print('Config data read from payload object.')
+
+        # Spark session initiation
+        if spark:
+            self.spark = spark
+
+        # PostgreSQL connection attributes
+        print(f"{'*'*20} Assigning AWS connection details to class attributes... {'*'*20}")
+        payload = self.config_data['payload']
+        self.app_admin = payload.get('APP_ADMIN')
+        self.rds_host = payload.get('RDS_HOST')
+        self.database_name = payload.get('DATABASE_NAME')
+        self.database_port = payload.get('DATABASE_PORT')
+        self.database_region = payload.get('DATABASE_REGION')
+        self.ca_cert_path = payload.get('ca_cert_path')
+        self.local_scripts_path = payload.get('local_scripts_path')
+
+    def get_local_scripts(self):
+        # Load master DDL script and split the semi-colon (;) separated statments into individual script objects
+        scripts = []
+        with open(self.local_scripts_path, "r") as file:
+            scripts = file.read().split(';')  # Assuming scripts are separated by semicolons
+        return scripts
+
+    def execute_ddl_scripts(self, connection, scripts):
+        # Execute multiple DDL scripts against a PostgreSQL database
+    # try:
+        cursor = connection.cursor()
+        for script in scripts:
+            if script.strip():  # Make sure the script isn't just whitespace
+                cursor.execute(script)
+        connection.commit()
+        print("DDL scripts executed successfully.")
+    # except Exception as e:
+    #     print(f"An error occurred: {e}")
+    #     connection.rollback()
+    # finally:
+        if cursor:
+            cursor.close()
+
+    # Function to generate authorization token for connection to the PostgreSQL DB
+    def get_rds_session_token(self)->object:
+        print('Inside get_rds_session_token method')
+        session = boto3.Session(profile_name=None)
+
+    # try:
+        print('Attempting to generate DB token...')
+        client = session.client('rds', region_name=self.database_region)
+        token = client.generate_db_auth_token(DBHostname=self.rds_host, Port=self.database_port,
+                                                DBUsername=self.app_admin, Region=self.database_region)
+        print('Token generated succesfully!')
+        print(' - Get_rds_session_token: ' + str(token))
+        return token
+
+    # except Exception as err:
+    #     print("Could not generate authorization token!!!")
+    #     print(repr(err))
+    #     return None
+
+    # Function to connect to the PostgreSQL DB. This function returns a connection object which would be necessary to execute SQL queries on the DB
+    def get_rds_connection(self)->object:
+        print(f"Inside get_rds_connection function...")
+
+    # try:
+        gen_token = self.get_rds_session_token()
+
+        # Uncomment the below two statements to use manual token to connect to the DB
+        # token_manual = ''
+        # print('Manual Token:    ' + str(token_manual))
+
+        # Connection statement to the PostgreSQL DB
+        print(f'Attempting connection with the database...')
+        self.connection = psycopg2.connect(host=self.rds_host,
+                                            user=self.app_admin,
+                                            password=gen_token,
+                                            # password=token_manual,
+                                            port=self.database_port,
+                                            dbname=self.database_name,
+                                            sslmode="verify-full",
+                                            sslrootcert=self.ca_cert_path)
+        print(f"Connection to database established...")
+        # conn.autocommit = True
+        # conn.close()
+        # return 'Success!'
+        return self.connection
+
+    # except Exception as err:
+    #     print(f"Connection to database failed!!!")
+    #     print(repr(err))
+    #     return None
 
 
-Thanks,
-Parimala
+def deployDDLs():
+    # Connect to the database and execute DDL scripts
+    # Instantiate the RDS_OPS Class
+    # rds = utils.rds_ops()
+
+    #Create a connection to Postgres
+    rds_obj = rds_ops(spark=spark)
+    connection = rds_obj.get_rds_connection()
+    #Load the local DDL scripts
+    local_scripts = rds_obj.get_local_scripts()
 
 
-Here’s a more concise version:
+    if connection:
+        #If database conenction was successfully acquired
+        print("Connection acquired.")
 
----
+        #Execute DDL Scripts
+        rds_obj.execute_ddl_scripts(connection, local_scripts)
+        print("Scripts executed.")
 
-**Subject:** Request for Resource Assignment for RDS Aurora PostgreSQL Backup
+        # CLose database connection
+        connection.close()
+        print("Connection closed.")
 
-Hi Prateep,
+    else:
+        #If database conenction was NOT successfully acquired
+        print("Connection failed.")
 
-I’m part of the B2B Supplier Directory Services Project. Our app isn’t live yet, but we need to enable backup for RDS Aurora PostgreSQL as part of our tech deliverables.
+    print(f"{'*'*20} ENDED: Deploy DDLs {'*'*20}")
 
-We’ve raised Change Request CHG34471614 for the backup and ECS version upgrade. AOCOMM details: [AOCOMM details](https://aocomms.prod.aws.jpmchase.net/subTask/365189).
-
-To proceed with deployment, we need a resource from your team for pre-implementation steps.
-
-Could you please assign a resource?
-
-Thanks,  
-Parimala
-
----
-
-This version is more direct while still keeping the necessary details intact. Let me know if it works!
-
-
-
-Here’s a corrected and polished version of your email:
-
----
-
-**Subject:** Request for Approval for RDS Aurora PostgreSQL Backup Deployment
-
-Hi Team,
-
-I’m part of the B2B Supplier Directory Services Project. While our app is not live yet, we need to enable backup for RDS Aurora PostgreSQL as part of our technical deliverables.
-
-We’ve raised Change Request CHG34471614 for the backup and ECS version upgrade. AOCOMM details: [AOCOMM details].
-
-To proceed with deployment, we need approval. The deployment is planned for 3rd March. Since the app is not live yet, could you please approve it?
-
-Thanks,  
-Parimala
-
----
-
-This version keeps the message clear and concise. Let me know if you'd like any further changes!
+deployDDLs()
