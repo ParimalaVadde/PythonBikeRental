@@ -3,6 +3,22 @@
 "f5c5f707-82e5-c68c-ddd7-34a03ddf7af7","0013k00002fC1zNAAS","scf_salesforce",NULL,NULL,NULL,"000000000000000AAA",False,"supplier_directory","2024-11-19 11:02:59.810886","supplier_directory","2024-11-19 11:02:59.905404","DQ reject"
 "8c3ce314-6e36-7540-4023-80d5616f7085","0013k00002fC2JnAAK","scf_salesforce",NULL,NULL,NULL,"000000000000000AAA",False,"supplier_directory","2024-11-19 
 
+SOURCE_SYSTEM_NAME,SOURCE_SYSTEM_TABLE,SOURCE_SYSTEM_COLUMN,TARGET_TABLE,TARGET_COLUMN,FUNCTION_TYPE,TRANSFORMATION,Filter_Condition,IS_KEY,DQ_CHECK,DQ_FUNC,DQ_RULE,DQ_ACTION,COLLATE_STATEMENT
+SCF,account_scf,IsDeleted,,,FILTER,,IsDeleted != 1,,,,,,
+SCF,account_scf,Record_Status__c,,,FILTER,,"Record_Status__c != ""To be Deleted""",,,,,,
+SCF,contact_scf,IsDeleted,,,FILTER,,IsDeleted != 1,,,,,,
+SCF,,,business_entity,stg_business_entity_id,SOURCE_KEY,"id, source_system_name",,Y,N,,,,
+SCF,account_scf,Id,business_entity,source_system_id,F2F,,,N,N,,,,
+SCF,,,business_entity,source_system_name,CONSTANT,SCF_Salesforce,,N,N,,,,
+SCF,,,business_entity,hierarchy_identifier,,,,N,N,,,,
+SCF,,,business_entity,hierarchy_level,CONDITION,,,N,N,,,,
+SCF,,,business_entity,hierarchy_role,CONDITION,,,N,N,,,,
+SCF,account_scf,ParentId,business_entity,parent_id,F2F,,,N,N,,,,
+SCF,,,business_entity,is_active,CONSTANT,Y,,N,N,,,,
+SCF,,,business_entity,last_updated_by,CONSTANT,SUPPLIER_DIRECTORY,,N,N,,,,
+SCF,,,business_entity,last_updated_date,CONSTANT,DATETIME,,N,N,,,,
+SCF,,,business_entity,created_by,CONSTANT,SUPPLIER_DIRECTORY,,N,N,,,,
+SCF,,,business_entity,created_date,CONSTANT,DATETIME,,N,N,,,,
 
 etl_trnsformtion.py
 
