@@ -1,14 +1,29 @@
-SOURCE_SYSTEM_NAME,SOURCE_SYSTEM_TABLE,SOURCE_SYSTEM_COLUMN,TARGET_TABLE,TARGET_COLUMN,Filter_Condition,TRANSFORMATION,Comments,IS_KEY,DQ_CHECK,DQ_FUNC,DQ_RULE,DQ_ACTION,COLLATE_STATEMENT,JPMC_VALUE,Format/Example Data
-PFD,PFD,buying_entity,business_entity_details,business_entity_name,,direct mapping,"This is the buyer entity, if we don’t have a match based on name, new business entity will have to be created and relationship between vendor/supplier has to be created in the business_entity_relationships table;  This is the buying entity within the client's org. Robbie to check if we can have Client name here",,,,,,,,string
-PFD,PFD,vendor_name_cleaned,business_entity_details,business_entity_name,,direct mapping,"This is the supplier entity, if ""sds_supplier_id"" was a blank , it means we don't have this entity and new needs to be created ",,,,,,,,string
-PFD,PFD,vendor_country,physical_address,country,"address_type=""Billing"" | assigned to business_entity",Filter Condition,,,,,,,,,string
-PFD,PFD,vendor_state,physical_address,state_province,"address_type=""Billing"" | assigned to business_entity",Filter Condition,,,,,,,,,string
-PFD,PFD,vendor_postcode,physical_address,postal_code,,direct mapping,,,,,,,,,string
-PFD,PFD,vendor_address_ln_1,physical_address,street_line1,"address_type=""Billing"" | assigned to business_entity",Filter Condition,,,,,,,,,string
-PFD,PFD,vendor_address_ln_2,physical_address,street_line2,,Filter Condition,,,,,,,,,string
-PFD,PFD,vendor_address_ln_3,physical_address,city,,Filter Condition,,,,,,,,,string
-PFD,PFD,vendor_annualrevenue,business_entity_details,reported_annual_revenue,,direct mapping;Float,Used for VCN. ,,,,,,,,float
-PFD,PFD,sds_supplier_id,business_entity,business_entity_id,,direct mapping,,,,,,,,,string
-PFD,PFD,filter_individual,business_entity_details,company_structure,"business_entity_details.company_structure.  Add ""Individual"" if not already present;company_structure=""Individual""","case condition (if given condition is  true then ""Y"" else ""N"")",,,,,,,,,binary (Y/N)
-PFD,PFD,year_incorporated,business_entity_details,.year_incorporated,,direct mapping,,,,,,,,,string
-PFD,PFD,corp_structures,business_entity_details,company_structure,business_entity_details.company_structure. ,Filter Condition,Only add values that are not present.Concatentate with ; delimiters if there are mutiple values in source ,,,,,,,,string
+Here is the formatted SQL code:
+
+```
+CREATE TABLE spark_catalog.gms_us_hub.gmsgq_laketohub_batch_config (
+    src_system STRING,
+    src_tbl STRING,
+    tgt_tbl STRING,
+    src_merge_col_nm STRING,
+    tgt_merge_col_nm STRING,
+    src_merge_filter_condition STRING,
+    tgt_merge_filter_condition STRING,
+    load_strategy STRING,
+    src_incr_query STRING,
+    src_truncate_query STRING,
+    lake_to_hub_flow STRING,
+    hard_delete_flag STRING,
+    hub_tidal_job_id INT,
+    post_sql_query STRING,
+    post_sql_flag STRING
+)
+USING delta
+PARTITIONED BY (src_system, src_tbl, tgt_tbl)
+LOCATION 's3://tpc-aws-ted-prd-edpp-hub-gms-us-east-1/gms_us_hub/GMSGQ_DDM/BATCH/gmsgq_laketohub_batch_config'
+TBLPROPERTIES (
+    'delta.minReaderVersion' = '1',
+    'delta.minWriterVersion' = '2',
+    'upgraded_to' = 'us_gmsgq_prd.gms_us_hub.gmsgq_laketohub_batch_config'
+);
+```
