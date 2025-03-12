@@ -1,93 +1,18 @@
--- First, make sure the pgcrypto extension is enabled
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
--- Then modify your query
-SELECT 
-  t1.*, 
-  CAST(digest(CONCAT_WS('-', 
-    COALESCE(t1.vendor_name_cleaned, ''), 
-    COALESCE(CAST(t1.vendor_id AS VARCHAR), ''), 
-    COALESCE(CAST(t1.vendor_government_id AS VARCHAR), '')
-  ), 'sha256') AS VARCHAR) AS stg_business_entity_id 
-FROM (
-  -- Rest of your query remains the same
-  select distinct 
-    'PFD' as source_system_name, 
-    cast(vendor_name_cleaned as VARCHAR) as vendor_name_cleaned,
-    cast(vendor_id as VARCHAR) as vendor_id,
-    cast(vendor_government_id as VARCHAR) as vendor_government_id,
-    cast(NULL as VARCHAR) as source_system_id, 
-    cast(NULL as VARCHAR) as parent_id, 
-    cast(1 as Decimal(23,3)) as hierarchy_level, 
-    cast(1 as Decimal(23,3)) as hierarchy_identifier, 
-    cast(1 as Decimal(23,3)) as hierarchy_role, 
-    cast('Y' as VARCHAR) as is_active, 
-    current_timestamp as created_date, 
-    cast('supplier_directory' as VARCHAR) as created_by 
-  from sds_landing.analysis_pfd
-) t1
-
-
-\xdfdf394a69a558ba0e8fbd3f26c8f2e66b7b9ef75ae6bc89e6d8309eb0605022
-f5c5f707-82e5-c68c-ddd7-34a03ddf7af7
-
-
-****************************************************************
-
--- Make sure pgcrypto extension is enabled
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 WITH t1 AS (
-  SELECT DISTINCT 
-    'PFD' AS source_system_name, 
+  SELECT DISTINCT
     CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
     CAST(vendor_id AS VARCHAR) AS vendor_id,
     CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
-    CAST(NULL AS VARCHAR) AS source_system_id, 
-    CAST(NULL AS VARCHAR) AS parent_id, 
-    CAST(1 AS DECIMAL(23,3)) AS hierarchy_level, 
-    CAST(1 AS DECIMAL(23,3)) AS hierarchy_identifier, 
-    CAST(1 AS DECIMAL(23,3)) AS hierarchy_role, 
-    CAST('Y' AS VARCHAR) AS is_active, 
-    current_timestamp AS created_date, 
-    CAST('supplier_directory' AS VARCHAR) AS created_by 
-  FROM sds_landing.analysis_pfd
-)
-SELECT 
-  t1.*,
-  (
-    WITH hash AS (
-      SELECT encode(digest(CONCAT_WS('-', 
-        COALESCE(t1.vendor_name_cleaned, ''), 
-        COALESCE(t1.vendor_id, ''), 
-        COALESCE(t1.vendor_government_id, '')
-      ), 'sha256'), 'hex') AS hash_value
-    )
-    SELECT 
-      substring(hash_value, 1, 8) || '-' ||
-      substring(hash_value, 9, 4) || '-' ||
-      substring(hash_value, 13, 4) || '-' ||
-      substring(hash_value, 17, 4) || '-' ||
-      substring(hash_value, 21, 12)
-    FROM hash
-  ) AS stg_business_entity_id
-FROM t1;
-
-******************************************************************************************************************
-
--- CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-WITH t1 AS (
-  SELECT DISTINCT 
-    'PFD' AS source_system_name, 
-    CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
-    CAST(vendor_id AS VARCHAR) AS vendor_id,
-    CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
-    CAST(NULL AS VARCHAR) AS source_system_id, 
-    CAST(NULL AS VARCHAR) AS parent_id, 
-    CAST('1' AS VARCHAR) AS hierarchy_level, 
-    CAST('1' AS VARCHAR) AS hierarchy_identifier, 
-    CAST('1' AS VARCHAR) AS hierarchy_role, 
+	CAST(vendor_annualrevenue AS VARCHAR) AS reported_annual_revenue,
+	CAST(year_incorporated AS VARCHAR) AS year_incorporated,
+	
+	""" here i want you to write sql cmd for company_structure
+	logic as follows 
+	if corp_structures column in sds_landing.analysis_pfd is not null then 
+	  corp_structures column value will be as value for company_structure for a specific vendor_name_cleaned
+	  suppose if corp_structures column in sds_landing.analysis_pfd is null then 
+	  consider filter_individual column of sds_landing.analysis_pfd, this filter_individual column will have only two values either Y or N. if the value is Y then for company_structure the value will be constant "Individual" else if N for filter_individual then NULL for company_structure
+	"
     CAST('Y' AS BOOLEAN) AS is_active,
     CAST(current_timestamp AS TIMESTAMP) AS created_date, 
     CAST('supplier_directory' AS VARCHAR) AS created_by 
@@ -110,91 +35,4 @@ SELECT
   substring(hash_value, 13, 4) || '-' ||
   substring(hash_value, 17, 4) || '-' ||
   substring(hash_value, 21, 12) AS stg_business_entity_id
-FROM hash_values h;
-
-
-**********************************************************************************************************
-
-sds_staging.business_entity
-
-CREATE TABLE IF NOT EXISTS sds_staging.business_entity
-(
-    stg_business_entity_id   varchar not null primary key,
-    source_system_id       varchar,
-    source_system_name     varchar,
-    hierarchy_identifier varchar,
-    hierarchy_level      varchar,
-    hierarchy_role       varchar,
-    parent_id            varchar,
-    is_active            boolean,
-    last_updated_by      varchar,
-    last_updated_date    timestamp,
-    created_by           varchar,
-    created_date         timestamp
-);
-
-stg_business_entity_id,source_system_id,source_system_name,hierarchy_identifier,hierarchy_level,hierarchy_role,parent_id,is_active,last_updated_by,last_updated_date,created_by,created_date
-
-
-****************************************************************************************************************
-
--- CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-INSERT INTO sds_staging.business_entity (
-    stg_business_entity_id,
-    source_system_id,
-    source_system_name,
-    hierarchy_identifier,
-    hierarchy_level,
-    hierarchy_role,
-    parent_id,
-    is_active,
-    last_updated_by,
-    last_updated_date,
-    created_by,
-    created_date
-)
-WITH t1 AS (
-  SELECT DISTINCT 
-    'PFD' AS source_system_name, 
-    CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
-    CAST(vendor_id AS VARCHAR) AS vendor_id,
-    CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
-    CAST(NULL AS VARCHAR) AS source_system_id, 
-    CAST(NULL AS VARCHAR) AS parent_id, 
-    CAST('1' AS VARCHAR) AS hierarchy_level, 
-    CAST('1' AS VARCHAR) AS hierarchy_identifier, 
-    CAST('1' AS VARCHAR) AS hierarchy_role, 
-    CAST('Y' AS BOOLEAN) AS is_active,
-    CAST(current_timestamp AS TIMESTAMP) AS created_date, 
-    CAST('supplier_directory' AS VARCHAR) AS created_by 
-  FROM sds_landing.analysis_pfd
-),
-hash_values AS (
-  SELECT 
-    t1.*,
-    encode(digest(CONCAT_WS('-', 
-      COALESCE(t1.vendor_name_cleaned, ''), 
-      COALESCE(t1.vendor_id, ''), 
-      COALESCE(t1.vendor_government_id, '')
-    ), 'sha256'), 'hex') AS hash_value
-  FROM t1
-)
-SELECT 
-  substring(hash_value, 1, 8) || '-' ||
-  substring(hash_value, 9, 4) || '-' ||
-  substring(hash_value, 13, 4) || '-' ||
-  substring(hash_value, 17, 4) || '-' ||
-  substring(hash_value, 21, 12) AS stg_business_entity_id,
-  h.source_system_id,
-  h.source_system_name,
-  h.hierarchy_identifier,
-  h.hierarchy_level,
-  h.hierarchy_role,
-  h.parent_id,
-  h.is_active,
-  NULL AS last_updated_by,
-  NULL AS last_updated_date,
-  h.created_by,
-  h.created_date
 FROM hash_values h;
