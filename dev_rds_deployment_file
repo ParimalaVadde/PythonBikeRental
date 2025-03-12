@@ -89,32 +89,25 @@ WITH t1 AS (
     CAST('1' AS VARCHAR) AS hierarchy_identifier, 
     CAST('1' AS VARCHAR) AS hierarchy_role, 
     CAST('Y' AS BOOLEAN) AS is_active,
-    current_timestamp AS created_date, 
+    CAST(current_timestamp AS TIMESTAMP) AS created_date, 
     CAST('supplier_directory' AS VARCHAR) AS created_by 
   FROM sds_landing.analysis_pfd
+),
+hash_values AS (
+  SELECT 
+    t1.*,
+    encode(digest(CONCAT_WS('-', 
+      COALESCE(t1.vendor_name_cleaned, ''), 
+      COALESCE(t1.vendor_id, ''), 
+      COALESCE(t1.vendor_government_id, '')
+    ), 'sha256'), 'hex') AS hash_value
+  FROM t1
 )
 SELECT 
-  t1.*,
-  (
-    WITH hash AS (
-      SELECT encode(digest(CONCAT_WS('-', 
-        COALESCE(t1.vendor_name_cleaned, ''), 
-        COALESCE(t1.vendor_id, ''), 
-        COALESCE(t1.vendor_government_id, '')
-      ), 'sha256'), 'hex') AS hash_value
-    )
-    SELECT 
-      substring(hash_value, 1, 8) || '-' ||
-      substring(hash_value, 9, 4) || '-' ||
-      substring(hash_value, 13, 4) || '-' ||
-      substring(hash_value, 17, 4) || '-' ||
-      substring(hash_value, 21, 12)
-    FROM hash
-  ) AS stg_business_entity_id
-FROM t1;
-
-ERROR:  syntax error at or near "current_timestamp"
-LINE 1: current_timestamp
-        ^
-SQL state: 42601
-Character: 1
+  h.*,
+  substring(hash_value, 1, 8) || '-' ||
+  substring(hash_value, 9, 4) || '-' ||
+  substring(hash_value, 13, 4) || '-' ||
+  substring(hash_value, 17, 4) || '-' ||
+  substring(hash_value, 21, 12) AS stg_business_entity_id
+FROM hash_values h;
