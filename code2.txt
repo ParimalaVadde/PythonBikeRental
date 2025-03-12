@@ -1,0 +1,1237 @@
+# Databricks notebook source
+import boto3
+import logging
+import datetime
+import time
+import sys
+import os
+import multiprocessing
+import multiprocessing.pool
+from typing import Any, Dict, List
+import tempfile
+
+# COMMAND ----------
+
+# MAGIC %md ###Initializing Logging
+
+# COMMAND ----------
+
+def create_log_file(log_name: str, logfilename: str, action_type: str) -> dict:
+    """
+    This function creates a log file for logging the entire procedure of loading data and auditing and debugging.
+
+    Parameters:
+    - log_name (str): Name of the logger.
+    - logfilename (str): Name of the log file.
+    - action_type (str): Action type for the log file (e.g., 'a' for append, 'w' for write).
+
+    Returns:
+    - dict: A dictionary containing the logger instance and the local log file path.
+
+    Developer: anvita.nagabhairava@takeda.com
+    """
+    try:      
+        temp_dir = tempfile.gettempdir()
+        local_log_path = f"{temp_dir}/{logfilename}"
+        logger = logging.getLogger(log_name)
+        logger.setLevel(logging.DEBUG)
+        file_handler = logging.FileHandler(local_log_path, mode=action_type)
+        formatter = logging.Formatter("%(asctime)s - %(threadName)s - %(name)s - %(levelname)s: %(message)s",
+                                       datefmt='%m/%d/%Y %I:%M:%S %p')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        logger.info('Logger Enabled')
+        print(local_log_path)
+        logger_connects = {'logger': logger, 'local_log_path': local_log_path}
+        return logger_connects
+    except Exception as CreateLogFile_Error:
+        get_notebook_jobid(src_table, tgt_table, src_system, nb_job_json, poolmap_log_path, poolmap_logger)
+        raise CreateLogFile_Error
+
+
+# COMMAND ----------
+
+# MAGIC %md ###S3Manager
+
+# COMMAND ----------
+
+class S3Manager:
+    """
+    Class for handling S3 objects.
+
+    Parameters:
+    - raw_bucket (str): The S3 bucket.
+
+    Developer: dominik.prokop1@takeda.com
+    """
+    def __init__(self, raw_bucket: str) -> None:
+        self.raw_bucket = raw_bucket
+        self.s3_client = boto3.client('s3')
+
+    def get_object(self, file_path: str):
+        """
+        Read file from S3 Bucket.
+
+        Parameters:
+        - file_path (str): Path to the file in S3.
+
+        Returns:
+        - Any: Parsed content of the file.
+
+        Raises:
+        - boto3.exceptions.botocore.client.ClientError: If an error occurs during S3 interaction.
+        """
+        try:
+            s3_response_object = self.s3_client.get_object(Key=file_path, Bucket=self.raw_bucket)
+            config_file_data = s3_response_object["Body"].read()
+            return eval(config_file_data) if config_file_data else {}
+        except boto3.exceptions.botocore.client.ClientError as e:
+            logger.error(f"S3 ClientError: {e}")
+            raise e
+
+    def upload(self, file_path: str, target_path: str) -> None:
+        """
+        Upload file to S3 Bucket.
+
+        Parameters:
+        - file_path (str): Local path of the file to be uploaded.
+        - target_path (str): Target path in the S3 bucket.
+
+        Raises:
+        - boto3.exceptions.botocore.client.ClientError: If an error occurs during S3 interaction.
+        """
+        try:
+            self.s3_client.upload_file(Filename=file_path, Bucket=self.raw_bucket, Key=target_path)
+        except boto3.exceptions.botocore.client.ClientError as e:
+            logger.error(f"S3 ClientError: {e}", exc_info=True)
+            raise e
+
+    def delete_file_from_s3(self, delete_file_path: str) -> None:
+        """
+        Delete file from S3 Bucket.
+
+        Parameters:
+        - delete_file_path (str): Path of the file to be deleted.
+
+        Raises:
+        - Exception: If an error occurs during S3 file deletion.
+        """
+        try:
+            logger.info("*****File deleting file from S3*****")
+            self.s3_client.delete_object(Bucket=self.raw_bucket, Key=delete_file_path)
+            logger.info("*****File deleted from S3 successfully*****")
+        except Exception as s3_file_deletion_exception:
+            logger.error(f"Error occurred in S3 file deletion: {s3_file_deletion_exception}")
+            raise s3_file_deletion_exception
+
+    def put(self, file_obj: str, file_path: str) -> None:
+        """
+        Update data into file in S3 Bucket.
+
+        Parameters:
+        - file_obj (str): Data to be updated in the file.
+        - file_path (str): Path of the file to be updated.
+
+        Raises:
+        - boto3.exceptions.botocore.client.ClientError: If an error occurs during S3 interaction.
+        """
+        try:
+            self.s3_client.put_object(Body=file_obj, Bucket=self.raw_bucket, Key=file_path)
+        except boto3.exceptions.botocore.client.ClientError as e:
+            logger.error(f"S3 ClientError: {e}", exc_info=True)
+            raise e
+
+    def copy(self, destination_key: str, source_key: str) -> None:
+        """
+        Copy data from one location to other within S3 Bucket.
+
+        Parameters:
+        - destination_key (str): destination path to move file.
+        - source_key (str): source path of the file
+        Raises:
+        - boto3.exceptions.botocore.client.ClientError: If an error occurs during S3 interaction.
+        """
+        try:
+            logger.info("****Moving Files to Destination Folder*****")
+            logger.info(f"Moving Files to :{destination_key}")
+            self.s3_client.copy_object(Bucket=self.raw_bucket,CopySource={'Bucket':self.raw_bucket , 'Key': source_key},Key=destination_key)
+            logger.info("Copied: s3://{self.raw_bucket}/{source_key} to s3://{self.raw_bucket}/{destination_key}")
+            s3manager.delete_file_from_s3(source_key)
+            logger.info("****Moved Sucessfully*****")
+        except boto3.exceptions.botocore.client.ClientError as e:
+            logger.error(f"S3 ClientError: {e}", exc_info=True)
+            raise e
+
+# COMMAND ----------
+
+# MAGIC %md ###notebook_failures
+
+# COMMAND ----------
+
+def notebook_failures(logger_name: str, local_log_file: str) -> Any:
+    '''
+    Print failed Notebook Id, source table, target table.
+
+    Parameters:
+    - logger_name (str): Name of the logger.
+    - local_log_file (str): Log file path.
+
+    Developer: khushi.bansal@takeda.com
+    '''
+    try:
+        logger_lst = []
+        logger.info('Checking for any Notebook Failure')
+        with open(local_log_file, 'r') as file:
+            lines = file.readlines()
+
+        for line in lines:
+            if f'{logger_name} - ERROR: Notebook job' in line:
+                line = line.split(f'{logger_name} - ERROR:')[1].strip()
+                logger_lst.append(line)
+
+        result_dict = {}
+
+        for job_info in logger_lst:
+            parts = job_info.split(", ")
+            notebook_job = int(parts[0].split(": ")[1])
+            src_table = parts[1].split(": ")[1]
+            tgt_table = parts[2].split(": ")[1]
+            src_system = parts[3].split(": ")[1]
+
+            key = f"{src_table}###{tgt_table}###{src_system}"
+
+            if key in result_dict:
+                result_dict[key].append(notebook_job)
+            else:
+                result_dict[key] = [notebook_job]
+
+        output_list = []
+        output_list_main=[]
+        for i, (key, job_list) in enumerate(result_dict.items(), start=1):
+            key_parts = key.split("###")
+            src_table, tgt_table, src_system = key_parts[:3]
+            notebook_jobs = key_parts[3:] + job_list
+            output_str = f"{i}. src_table: {src_table}, tgt_tbl: {tgt_table}, src_system: {src_system}, notebook job id(s) ={notebook_jobs}"
+            output_list.append(output_str)
+            output_lst_data = {"src_table": src_table, "tgt_tbl": tgt_table, "src_system": src_system}
+            output_list_main.append(output_lst_data)
+
+        if logger_lst:
+            print("\033[31m *** Below are the List of child notebook tables Failed: *** \033[0m")
+
+        for failure_list in output_list:
+            print("\033[31m" + failure_list + "\033[0m")
+            logger.error("\033[31m" + failure_list + "\033[0m")
+        return output_list_main
+
+    except Exception as failure_list_exception:
+        logger.error("******* Failed to fetch failed tables list *********")
+        logger.error(f"Error occurred in fetching failed tables. Detail Exception: {failure_list_exception}")
+        raise failure_list_exception
+
+
+# COMMAND ----------
+
+# MAGIC %md ###upload_log_file_to_s3
+
+# COMMAND ----------
+
+def upload_log_file_to_s3(logger_configs : dict) -> None:
+  """
+  Uploads log file to S3.
+
+  Parameters:
+  - logger_configs (dict): Configuration for logging.
+  """
+  try:
+    local_log_file=logger_configs.get('local_log_file')
+    partitions = datetime.datetime.now().strftime("%Y/%m/%d/")
+    log_file_path = logger_configs.get('log_file_path')
+    log_file_name = logger_configs.get('log_file_name')
+    if logger_configs.get('layer'):
+      s3_log_file=log_file_path + partitions +logger_configs.get('layer')+ log_file_name
+    else:
+      s3_log_file=log_file_path + partitions + log_file_name
+    print("\n"+"s3_log_file path : "+str(s3_log_file)+"\n")
+    s3manager.upload(local_log_file, s3_log_file) 
+    os.remove(local_log_file)
+
+  except Exception as err: 
+    logger.error(f'Error occurred while uploading log file to S3: {err}')
+    raise err
+
+# COMMAND ----------
+
+# MAGIC %md ###trigger_databricks_notebook
+
+# COMMAND ----------
+
+def trigger_databricks_notebook(config: dict) -> None:
+    """
+    This function triggers a data flow notebook for a table.
+
+    Parameters:
+    - config (dict): Configuration dictionary containing notebook_path, notebook_params, max_retries, etc.
+
+    Raises:
+    - Exception: If the maximum number of retries is exceeded.
+
+    Returns:
+    - None
+    """
+    try:
+        logger.info(f'config: {config}')
+        notebook_path = config.get('notebook_path')
+        notebook_params = config.get('notebook_params')
+        src_tbl = notebook_params['src_table']
+        tgt_tbl = notebook_params['tgt_table']
+        src_system = notebook_params['src_system']
+        max_retries = config['max_retries']
+        current_retries = 0
+
+        while True:
+            try:
+                print(f'\n==> run-{current_retries + 1} | Triggering notebook with params: {config}\n')
+                dbutils.notebook.run(notebook_path, timeout, notebook_params)
+                return None
+            except Exception as e:
+                if current_retries >= max_retries:
+                    table_dict = {'src_tbl': src_tbl, 'tgt_tbl': tgt_tbl, 'src_system': src_system}
+                    logger.info("Failure notebooks!")
+                    logger.info(str(table_dict))
+                    raise e
+                else:
+                    current_retries += 1
+                    logger.info("Oops! Execution failed, retrying..!")
+                    print("Retrying....!")
+
+    except Exception as e:
+        logger.error("Error occurred in trigger_databricks_notebook.")
+        raise e
+
+
+# COMMAND ----------
+
+# MAGIC %md ###MultitaskingNotebooks
+
+# COMMAND ----------
+
+def multi_tasking_notebooks(threadcount: int, items_list: list) -> None:
+    """
+    Start multiprocessing and assign the thread count to trigger Databricks notebooks.
+
+    Parameters:
+    - threadcount (int): Number of threads to use for multiprocessing.
+    - items_list (list): List of notebook parameters.
+
+    Raises:
+    - Exception: If an error occurs during multiprocessing.
+
+    Returns:
+    - None
+    """
+    try:
+        logger.info(f'Starting Pool Map Handler and assigning the thread count: {threadcount}')
+        
+        # Create a ThreadPool with the specified thread count
+        p = multiprocessing.pool.ThreadPool(threadcount)
+        
+        # Trigger Databricks notebooks in parallel using the ThreadPool
+        p.map(trigger_databricks_notebook, items_list)
+        
+        logger.info('Ended Pool Map Handler')
+        p.close()
+
+    except Exception as multiprocessing_error:
+        # Log the error or take appropriate actions
+        logger.error(f'Error occurred during multiprocessing: {multiprocessing_error}')
+        raise multiprocessing_error
+
+
+# COMMAND ----------
+
+# MAGIC %md ###fetch_config_metadata
+
+# COMMAND ----------
+
+def fetch_config_metadata(config_info: Dict) -> Dict:
+    """
+    Fetch metadata from the Config table based on provided parameters.
+
+    Parameters:
+    - config_info (dict): Dictionary containing information about the configuration, including
+                         'config_table', 'src_system', 'src_table', and 'tgt_table'.
+
+    Returns:
+    - dict: Metadata fetched from the Config table.
+    """
+    try:
+        logger.info("*************** read data from the config table Started ***************")
+        config_table = config_info.get("config_table")
+        src_system = config_info.get("src_system")
+        src_table = config_info.get("src_table")
+        tgt_table = config_info.get("tgt_table")
+
+        if not any([config_table, src_table, tgt_table]):
+            raise ValueError("Required params missing for function: fetch_metadata")
+
+        sql_query = f"SELECT * FROM {config_table} WHERE src_system = '{src_system}' AND lower(src_tbl) = '{src_table}' AND lower(tgt_tbl) = '{tgt_table}'"
+        logger.info(f"config_query: {sql_query}")
+        config_df = spark.sql(sql_query)
+        config_data = eval(config_df.toJSON().first()) if config_df.count() else {}
+   
+        logger.info("*************** read data from the config table completed ***************")
+
+        return config_data
+    except Exception as err:
+        logger.error("******* Failure in getting read data from the config table *********")
+        logger.error(f"Error occurred in getting read data from the config table. Detail Exception: {err}")
+
+        raise err
+
+
+# COMMAND ----------
+
+# MAGIC %md ###get_notebook_info
+
+# COMMAND ----------
+
+class NotebookInfo():
+    """
+    Class for retrieving details from notebook job JSON.
+
+    Parameters:
+    - domain_nm (str): Domain name.
+    - nb_job_json (dict): Notebook job JSON.
+
+    Methods:
+    - get_notebook_details() -> str: Returns the notebook URL.
+    - get_cluster_id_details() -> str: Returns the cluster ID.
+    """
+    def __init__(self, domain_nm: str, nb_job_json: dict) -> None:
+        self.domain_nm = domain_nm
+        self.nb_job_json = json.loads(nb_job_json)
+
+    def get_notebook_details(self) -> str:
+        try:
+            nb_url = f"https://{self.domain_nm}/?o={self.nb_job_json['tags']['orgId']}#/job/{'/'.join(self.nb_job_json['jobGroup'].split('-')[1:4])}"
+            return str(nb_url)
+        except Exception as get_notebook_details_exception:
+            logger.error(f'Error in get_notebook_details: {get_notebook_details_exception}')
+            raise get_notebook_details_exception
+
+    def get_cluster_id_details(self) -> str:
+        cluster_id = self.nb_job_json.get('tags', {}).get('clusterId')
+        return str(cluster_id)
+
+
+# COMMAND ----------
+
+# MAGIC %md ###pool_map_log_config
+
+# COMMAND ----------
+
+def pool_map_log_config(poolmap_log_path: str, poolmap_logger: str) -> Any:
+    """
+    Configures a logger for pool mapping operations.
+
+    Args:
+    - poolmap_log_path (str): The path to the log file for pool mapping.
+    - poolmap_logger (str): The name of the logger.
+
+    Returns:
+    - logging.Logger: Configured logger object.
+    """
+    try:
+        logger = logging.getLogger(poolmap_logger)
+        logger.setLevel(logging.DEBUG)
+        
+        file_handler = logging.FileHandler(poolmap_log_path, mode='a')
+        formatter = logging.Formatter("%(asctime)s - %(threadName)s - %(name)s - %(levelname)s: %(message)s", datefmt='%m/%d/%Y %I:%M:%S %p')
+        
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        
+        return logger
+    except Exception as pool_map_log_config_exception:
+        logger.error(f'Error in pool_map_log_config: {pool_map_log_config_exception}')
+        raise pool_map_log_config_exception
+
+
+# COMMAND ----------
+
+# MAGIC %md ###get_notebook_jobid
+
+# COMMAND ----------
+
+def get_notebook_jobid(source_table_lake: str, target_table_hub: str, source_system: str,nb_job_json: dict, poolmap_log_path: str, poolmap_logger: str) -> None:
+    """
+    Fetch the Job Id of the notebook which has failed and log the job details in the log file.
+
+    Parameters:
+    - source_table_lake (str): Source table in the data lake.c
+    - target_table_hub (str): Target table in the data hub.
+    - source_system (str): Source system information.
+    - nb_job_json (dict): JSON representation of the notebook job.
+    - poolmap_log_path (str): Path to the log file.
+    - poolmap_logger (str): Logger name for the log file.
+
+    Returns:
+    - None
+    """
+    try:
+        # Configure pool logger
+        pool_logger = pool_map_log_config(poolmap_log_path, poolmap_logger)
+        
+        # Extract Job Id from notebook job JSON
+        job_json = json.loads(nb_job_json) 
+        job_id = job_json.get("jobGroup").split('-')[1:4][0]
+
+        # Generate error details string
+        error_details = f'Notebook job: {job_id}, src_table: {source_table_lake}, tgt_tbl: {target_table_hub}, src_system: {source_system}'
+
+        # Log error details
+        pool_logger.error(error_details)
+    
+    except Exception as get_notebook_jobid_exception: 
+        logger.error(f'Error in get_notebook_jobid: {get_notebook_jobid_exception}')
+        raise get_notebook_jobid_exception
+
+
+
+# COMMAND ----------
+
+# MAGIC %md ###get_merge_filter_cond
+
+# COMMAND ----------
+
+def get_merge_filter_cond(target_merge_filter_cond: str) -> dict:
+    '''
+    Extracts relevant information from the target merge filter condition.
+
+    Args:
+    - target_merge_filter_cond (str): The filter condition to extract information from.
+
+    Returns:
+    - dict: A dictionary containing extracted information:
+        - Site Name
+        - Src System
+        - Archive Flag
+    If the input is empty or None, an empty dictionary is returned.
+
+    Developer: khushi.bansal@takeda.com
+    '''
+    try:
+        target_merge = {}
+
+        if target_merge_filter_cond:
+            if "('" in target_merge_filter_cond:
+                sub_list = [x.strip() for x in target_merge_filter_cond.split(' in ')]
+                value = sub_list[1].strip().replace("('", "").replace(")'", "").replace("'", "").replace(")", "")
+
+                key = sub_list[0].strip().replace("'", "").replace('"', '').lower()
+                key_val = key.split('.')[1]
+                target_merge[key_val] = value
+
+            else:
+                sub_list = [x.strip() for x in target_merge_filter_cond.split(' and ')]
+                for filter_con in sub_list:
+                    key = filter_con.split("=")[0].strip().replace("'", "").replace('"', '').lower()
+                    key_val = key.split('.')[1]
+                    value = filter_con.split("=")[1].strip().replace("'", "").replace('"', '')
+                    target_merge[key_val] = value
+
+        return target_merge
+    except Exception as err:
+        logger.info("Failed to fetch target merge filter condition")
+        logger.info(f"Error occurred in fetching target merge filter condition. Detail Exception: {err}")
+
+
+# COMMAND ----------
+
+# MAGIC %md ###common_cols
+
+# COMMAND ----------
+
+def common_cols(tgt_tbl: str, src_data_query: str, logger: any) -> dict:
+    """
+    Fetches common columns between source and target tables and returns a dictionary with the list of columns for generating the merge condition.
+
+    Parameters:
+    - tgt_tbl (str): Target table name.
+    - src_data_query (str): Source data query.
+    - logger (any): Logger object for logging.
+
+    Returns:
+    - dict: Dictionary containing sorted source columns, sorted target columns, and common columns.
+
+    Developer: anvita.nagabhairava@takeda.com
+    """
+    logger.info('Trying to fetch the common columns')
+    tgt_columns = spark.sql(f"select * from {tgt_tbl} limit 1").columns
+    src_columns = spark.sql(f'select * from ({src_data_query}) limit 1').columns
+    src_cols_sort = src_columns.copy()
+    tgt_cols_sort = tgt_columns.copy()
+    src_cols_sort = [x.upper() for x in src_cols_sort]
+    tgt_cols_sort = [x.upper() for x in tgt_cols_sort]
+    src_cols_sort.sort()
+    tgt_cols_sort.sort()
+
+    # Considering the common columns in Source & Target
+    common_columns = list(set(src_cols_sort) & set(tgt_cols_sort))
+    common_columns.sort()
+    logger.info(f'common_columns : {common_columns}')
+    
+    if src_cols_sort == tgt_cols_sort:
+        logger.info('SOURCE & TARGET columns are matching!')
+    else:
+        logger.warning('Oops! SOURCE & TARGET columns are not matching!')
+        unmatched_src_cols = [x for x in src_cols_sort if x not in common_columns]
+        logger.info(f'unmatched_src_cols : {unmatched_src_cols}')
+        unmatched_tgt_cols = [x for x in tgt_cols_sort if x not in common_columns]
+        logger.info(f'unmatched_tgt_cols : {unmatched_tgt_cols}')
+
+    common_col_result = {
+        'src_cols_sort': src_cols_sort,
+        'tgt_cols_sort': tgt_cols_sort,
+        'common_columns': common_columns
+    }
+    return common_col_result
+
+
+# COMMAND ----------
+
+# MAGIC %md ###generate_merge_query
+
+# COMMAND ----------
+
+def generate_merge_query(common_columns, source_merge_filter_cond, target_merge_filter_cond, tgt_merge_col_nm, src_data_query, tgt_tbl, load_strategy, hard_delete_required, md5_column, update_timestamp_column,primarykey_column,load_timestamp_column, full_load_flag = 'N'):
+
+    source_merge_filter_cond = source_merge_filter_cond.strip() if source_merge_filter_cond is not None else None
+    target_merge_filter_cond = target_merge_filter_cond.strip() if target_merge_filter_cond is not None else None
+
+
+    try:
+        tgt_columns = spark.sql("SELECT * FROM " + tgt_tbl).columns
+
+        logger.info("Generating the Merge statement based on the Load strategy")
+        logger.info("The Load strategy is: " + load_strategy)
+
+        if load_strategy == "SCD2":
+     
+            tgt_merge_cols_list = tgt_merge_col_nm.split(",")
+            join_merge_cols_list = ["COALESCE(TGT.{}, '-1')=COALESCE(STG.{}, '-1')".format(col_name.upper(), col_name.upper()) for col_name in tgt_merge_cols_list]
+            join_condition = " and ".join(join_merge_cols_list)
+            if target_merge_filter_cond:
+                join_condition = (
+                    join_condition
+                    + " and "
+                    + target_merge_filter_cond
+                    + " and TGT.ACTIVE_FLAG = 'Y' and TGT." + md5_column + " != STG." + md5_column + " and STG.ACTIVE_FLAG = 'Y'"
+                )
+            else:
+                join_condition = join_condition + " and TGT.ACTIVE_FLAG = 'Y' and TGT." + md5_column + " != STG." + md5_column + " and STG.ACTIVE_FLAG = 'Y'"
+            src_list = ["STG.{} as SOURCE_{}".format(col_name.upper(), col_name.upper()) for col_name in tgt_merge_cols_list]
+            tgt_list = ["Null as SOURCE_{}".format(col_name.upper()) for col_name in tgt_merge_cols_list]
+            logger.info("Generating the Merge condition")
+            merge_condition_list = ["COALESCE(TGT.{}, '-1')=COALESCE(STG.SOURCE_{}, '-1')".format(col_name.upper(), col_name.upper()) for col_name in tgt_merge_cols_list]
+            merge_condition = " and ".join(merge_condition_list)
+
+
+
+            logger.info("Generating the Hard delete condition")
+            if hard_delete_required == "Y": 
+                hard_delete_filter = [" WHEN MATCHED and STG.ACTIVE_FLAG = 'N' THEN DELETE "," WHEN MATCHED and STG.ACTIVE_FLAG = 'Y' "]
+            else : 
+                hard_delete_filter = [" "," WHEN MATCHED "]
+            hard_delete_condition=hard_delete_filter[0] + hard_delete_filter[1]
+            src_select_cols=" ,".join(src_list)
+            src_select_cols=src_select_cols + ", STG.*"
+            tgt_select_cols=" ,".join(tgt_list)
+            tgt_select_cols=tgt_select_cols + ", STG.*"
+            src_select_query="Select Distinct "+src_select_cols+" from ( "+src_data_query+" ) STG union all select distinct "+tgt_select_cols+" from ("+src_data_query+" ) STG JOIN "+tgt_tbl+ " TGT on "+join_condition
+            logger.info("Generating the update statement")
+            update_statement = "UPDATE SET TGT.ACTIVE_FLAG='N', TGT.AUD_UPD_DTS=now()"
+            insert_condition = ''
+
+            update_condition = " and TGT." + md5_column + " != STG." + md5_column
+
+        else:
+            src_select_query = src_data_query
+            tgt_upd_cols = common_columns.copy()
+            tgt_upd_cols = [x.strip().lower() for x in tgt_upd_cols]
+            if load_timestamp_column.lower() in tgt_upd_cols:
+                tgt_upd_cols.remove(load_timestamp_column.lower())
+            if primarykey_column.lower() in tgt_upd_cols:
+                tgt_upd_cols.remove(primarykey_column.lower())
+            logger.info("Generating the update statement")
+            update_statement = "UPDATE SET {}".format(", ".join(["TGT.{}=STG.{}".format(col_name.upper(), col_name.upper()) for col_name in tgt_upd_cols]))
+            update_statement = update_statement.replace('STG.'+update_timestamp_column.upper(), 'now()')
+            logger.info("Generating the Merge condition")
+            merge_condition = ''
+            tgt_merge_cols_list = tgt_merge_col_nm.split(",")
+            tgt_merge_cols_list = ["COALESCE(TGT.{}, '-1')=COALESCE(STG.{}, '-1')".format(col_name.upper(), col_name.upper()) for col_name in tgt_merge_cols_list]
+            merge_condition = " and ".join(tgt_merge_cols_list)
+
+     
+
+            logger.info("Generating the Hard delete condition")
+            if hard_delete_required == "Y": 
+                hard_delete_filter = [" WHEN MATCHED and STG.ACTIVE_FLAG = 'N' THEN DELETE "," WHEN MATCHED and STG.ACTIVE_FLAG = 'Y' "]
+            else : 
+                hard_delete_filter = [" "," WHEN MATCHED "]
+            hard_delete_condition=hard_delete_filter[0] + hard_delete_filter[1]
+            logger.info('hard_delete_conditon : {}'.format(hard_delete_condition))
+            if poolmap_logger in ["CDB-LAKE-TO-HUB-POOLMAP", "CDB-HUB-TO-MART-POOLMAP"]:
+                insert_condition = ""
+            else:
+                insert_condition = "and STG.ACTIVE_FLAG='Y'"
+            logger.info("Generating the update condition")
+          
+            if load_strategy == "APPEND":
+                update_condition = " and 1=2"
+            else:
+                tgt_columns=[x.upper() for x in tgt_columns]
+                if md5_column.upper() in tgt_columns:
+                    md5_check = " and TGT." + md5_column + " != STG." + md5_column
+                    update_condition = md5_check
+                else:
+                    update_condition = ""
+                logger.info('md5_check : {}'.format(md5_check))
+        
+        
+        if source_merge_filter_cond in [None,'','null','Null' ] and target_merge_filter_cond in [None,'','null','Null' ]:
+            merge_condition = merge_condition +" and TGT.ACTIVE_FLAG='Y' "
+        elif target_merge_filter_cond in [None,'','null','Null' ]:
+            merge_condition=merge_condition+" and "+source_merge_filter_cond
+        elif source_merge_filter_cond in [None,'','null','Null' ]:
+            merge_condition = merge_condition + " and "+ target_merge_filter_cond+ " and TGT.ACTIVE_FLAG = 'Y'"
+        else:
+            merge_condition=merge_condition+" and "+source_merge_filter_cond +" and "+target_merge_filter_cond+" and TGT.ACTIVE_FLAG='Y' "
+        logger.info('merge_filter_condition is : {}'.format(merge_condition))
+
+        logger.info("Generating the insert condition")
+        insert_statement = "INSERT ({}) VALUES ({})".format(
+            ",".join(common_columns),
+            ",".join(["STG.{}".format(col_name) for col_name in common_columns]),
+        )
+        insert_statement = insert_statement.replace("STG.AUD_LD_DTS", "now()").replace(
+            "STG.AUD_UPD_DTS", "NULL"
+        )
+        f_tgt_tbl = tgt_tbl
+        f_source_sql = src_select_query
+        f_merge_condition = merge_condition
+        f_hard_delete_condition = hard_delete_condition
+        f_update_condition = update_condition
+        f_update_statement = update_statement
+        f_insert_condition = insert_condition
+        f_insert_statement = insert_statement
+
+
+
+        if full_load_flag == 'Y':
+            tgt_merge_filter_cond = '' if target_merge_filter_cond in [None, '', 'null', 'Null'] else f" AND {target_merge_filter_cond}"
+            not_matched_src_filter_cond = f"{tgt_merge_filter_cond} AND TGT.ACTIVE_FLAG = 'Y' "
+            not_matched_src_update = "UPDATE SET TGT.ACTIVE_FLAG = 'N', TGT.AUD_UPD_DTS = now()"
+            not_matched_src_clause = f"WHEN NOT MATCHED BY SOURCE {not_matched_src_filter_cond} THEN {not_matched_src_update}"
+        else:
+            not_matched_src_clause = ""
+
+        merge_query = f"""
+            MERGE INTO {f_tgt_tbl} TGT
+            USING ({f_source_sql}) STG
+            ON {f_merge_condition}
+            {f_hard_delete_condition} {f_update_condition} THEN {f_update_statement}
+            WHEN NOT MATCHED {f_insert_condition} THEN {f_insert_statement}
+            {not_matched_src_clause} """
+
+        return merge_query
+    except Exception as generate_merge_error:
+        logger.error('Error occurred in generating merge statement. Detail Exception: ' + str(generate_merge_error))
+        raise generate_merge_error
+
+
+# COMMAND ----------
+
+# MAGIC %md ###Create Temp file 
+
+# COMMAND ----------
+
+
+def create_tmp_file(s3_key_for_temp_file: str):
+  """
+  Create Temp file before initiating stream
+    a) Look for tmp file in tempfilelocation 
+    b) Src to lake: If the file is present, do not proceed with the execution. if the tmp file is not present, create tmp file
+    c) Lake to Hub: If the file is present, do not proceed with the execution. If the tmp file is not present, create tmp file and proceed with execution'''
+    :s3_key_for_temp_file(string) - s3 key for temp file
+    Developer: dominik.prokop1@takeda.com
+    """
+  file_created   = "N"
+  tmpfile_client = boto3.client('s3')
+  try:
+    tmpfile_client.head_object(Bucket=raw_bucket, Key=s3_key_for_temp_file)
+    logger.info("Temp file already exists : {}".format(s3_key_for_temp_file))
+  except ClientError as notfoundcheck:
+    if notfoundcheck.response['Error']['Message'] == 'Not Found':
+      temp_message= "Temp file created : "+s3_key_for_temp_file
+      temp_data = bytes(temp_message, 'utf8')
+      tmpfile_client.put_object(Body=temp_data, Bucket=raw_bucket, Key=s3_key_for_temp_file)
+      logger.info("Temp file created : {}".format(s3_key_for_temp_file))
+      file_created   = "Y"
+    else:
+      logger.exception(notfoundcheck)
+      raise ValueError("Error in checking tempfile")
+  return file_created
+
+# COMMAND ----------
+
+# MAGIC %md ###Audit_enhancing
+
+# COMMAND ----------
+
+class AuditManager():
+    def __init__(self, audit_parameters, audit_config_parameters, poolmap_logger):
+        """
+        Initializes an instance of the AuditManager class.
+
+        Parameters:
+        - audit_parameters (dict): Dictionary containing audit parameters.
+        - audit_config_parameters (dict): Dictionary containing audit configuration parameters.
+        - poolmap_logger (str) : poolmap logger value
+        """
+        logger.info("--------------- Auditing Started --------------- ")
+        self.audit_parameters = audit_parameters
+        self.audit_config_parameters = audit_config_parameters
+        self.src_system = self.audit_parameters.get('src_system', None)
+        self.src_tbl_nm = self.audit_parameters.get('src_tbl_nm', None).lower()
+        self.tgt_tbl_nm = self.audit_parameters.get('tgt_tbl_nm', None).lower()
+        self.audit_master_tbl = self.audit_config_parameters.get('audit_master_tbl')
+        self.audit_log_tbl = self.audit_config_parameters.get('audit_log_tbl')
+        self.audit_parameters['batch_load_flg'] = self.audit_parameters.get('batch_load_flg', None)
+        self.audit_parameters['cluster_id'] = self.audit_parameters.get('cluster_id', None)
+        self.audit_parameters['full_load_flg'] = self.audit_parameters.get('full_load_flg', None)
+        
+        if poolmap_logger in ["CDB-LAKE-TO-HUB-POOLMAP", "CDB-HUB-TO-MART-POOLMAP","JDE_LTT_TB_INCREMENTAL_PROCESS","JDE_LTT_TF_REVERSAL_PROCESS","JDE_LTT_TB_REVERSAL_PROCESS","JDE_LTT_TF_INCREMENTAL_PROCESS","JDE_LTT_TB_RECONSILE_PROCESS","JDE_LTT_TF_RECONSILE_PROCESS"]:
+            self.batch_flag_join_condition = " "
+            self.batch_id="batch_id"
+        else:
+            self.batch_flag_join_condition = f" and batch_load_flg = '{self.audit_parameters['batch_load_flg']}'"
+            self.batch_id="lake_to_hub_batch_id"
+
+    def check_previous_runs(self) -> None:
+        """
+        Checks for previous runs of the audit process and logs the status accordingly.
+        """
+        last_batch_id_query = f"""SELECT MAX({self.batch_id}) batch_id from {self.audit_master_tbl} 
+                                WHERE src_system='{self.src_system}' 
+                                    and src_tbl_nm='{self.src_tbl_nm}' 
+                                    and tgt_tbl_nm='{self.tgt_tbl_nm}' 
+                                    and status='running' {self.batch_flag_join_condition}"""
+
+        last_batch_id_df = spark.sql(last_batch_id_query)
+        last_batch_id_data = eval(last_batch_id_df.toJSON().first()) if last_batch_id_df.count() else {}
+        last_run_batch_id = last_batch_id_data.get("batch_id", None)
+
+        logger.info(f"last_run_batch_id = {str(last_run_batch_id)}")
+
+        if not last_run_batch_id or last_run_batch_id in (None, "null", "NULL"):
+            logger.info("No previous executions!")
+        else:
+            previous_run_final_status_query = f"""
+                                                SELECT * 
+                                                FROM {self.audit_master_tbl} 
+                                                WHERE src_system = '{self.src_system}' 
+                                                    AND src_tbl_nm = '{self.src_tbl_nm}' 
+                                                    AND tgt_tbl_nm = '{self.tgt_tbl_nm}' 
+                                                    AND status IN ('completed', 'failed') 
+                                                    AND {self.batch_id} = '{last_run_batch_id}'{self.batch_flag_join_condition}
+                                            """
+
+            previous_run_final_status_df = spark.sql(previous_run_final_status_query)
+
+            if previous_run_final_status_df.count():
+                logger.info("All fine with the last execution!")
+                logger.info(f"previous_run_final_status_data : {previous_run_final_status_df.toJSON().first()}\n")
+            else:
+                logger.info("***  Oops! Last execution broken.")
+                load_timestamp = datetime.datetime.now()
+                load_month = load_timestamp.strftime("%Y-%m")
+                last_run_nb_job_link = f"""SELECT  *
+                           FROM {self.audit_master_tbl} 
+                           WHERE src_system = '{self.src_system}' 
+                             AND src_tbl_nm = '{self.src_tbl_nm}' 
+                             AND tgt_tbl_nm = '{self.tgt_tbl_nm}' 
+                             AND status = 'running' 
+                             AND {self.batch_id} = '{last_run_batch_id}'{self.batch_flag_join_condition}
+                             """
+
+                last_run_nb_job_link_df = spark.sql(last_run_nb_job_link)
+                if last_run_nb_job_link_df.count():
+                    last_run_nb_job_link_data = eval(last_run_nb_job_link_df.toJSON().first())
+                else:
+                    last_run_nb_job_link_data = {}
+
+                last_run_nb_job_link = last_run_nb_job_link_data.get("nb_job_link", None)
+                last_run_lake_to_hub_batch_id=last_run_nb_job_link_data.get("lake_to_hub_batch_id", None)
+
+                if last_run_nb_job_link is None:
+                    last_run_nb_job_link = "N/A"
+
+                if last_run_lake_to_hub_batch_id is None:
+                    last_run_lake_to_hub_batch_id = last_run_batch_id
+ 
+                last_run_nb_job_link_status_parms = {"status": "failed",
+                                                     "batch_id": last_run_batch_id,
+                                                     "load_month": str(load_month),
+                                                     "load_dtm": str(load_timestamp),
+                                                     "nb_job_link": last_run_nb_job_link,
+                                                     "lake_to_hub_batch_id":last_run_lake_to_hub_batch_id
+                                                     }
+                
+                audit_params = {**self.audit_parameters, **last_run_nb_job_link_status_parms}
+
+                failed_status_params = self.audit_meta_schema(self.audit_master_tbl, audit_params)
+
+                previous_run_failed_query = f"INSERT INTO {self.audit_master_tbl} ({', '.join(failed_status_params.keys())}) VALUES {tuple(failed_status_params.values())};"
+
+                logger.info(f"previous_run_failed_query: {previous_run_failed_query}\n")
+
+                spark.sql(previous_run_failed_query)
+
+    def audit_meta_schema(self, schema_meta_table: Any, log_params: Any) -> dict:
+        """
+        Retrieves metadata schema information and filters relevant fields.
+
+        Parameters:
+        - schema_meta_table (Any): Table containing metadata schema information.
+        - log_params (Any): Log parameters.
+
+        Returns:
+        - dict: Dictionary containing filtered metadata schema information.
+        """
+        mast_ad = f"SELECT * FROM {schema_meta_table} LIMIT 1"
+        mst_data = spark.sql(mast_ad)
+        log_fields = [x.lower() for x in mst_data.columns]
+        log_params = dict((k.lower(), v) for k, v in log_params .items())
+        finaldict = {field: log_params[field] for field in log_fields if field in log_params}
+        return finaldict
+
+    def cureent_date_time_flages(self):
+        self.load_timestamp = datetime.datetime.now()
+        self.load_month = self.load_timestamp.strftime("%Y-%m")
+        return self.load_timestamp, self.load_month
+
+    def start_status_handle(self, status: Any, flag_parms: Any) -> Any:
+        """
+        Handles the start status of the audit process.
+
+        Parameters:
+        - status (Any): Current status of the audit process.
+        - flag_parms (Any): Flag parameters.
+
+        Returns:
+        - Any: New batch ID.
+        """
+        load_timestamp, load_month = self.cureent_date_time_flages()
+        self.audit_parameters['load_dtm'] = str(load_timestamp)
+        self.audit_parameters['load_month'] = str(load_month)
+        self.audit_parameters["aud_dtm"] = str(load_timestamp)
+
+        running_status_params = {**{'status': status}, **self.audit_parameters}
+
+        epoch_time = int(time.mktime(time.strptime(load_timestamp.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')))
+        self.new_batch_id = epoch_time
+
+        if flag_parms['batch_id'] in ["0", 0, None, "Null", 'N', '']:
+            self.batch_id = self.new_batch_id
+        else:
+            self.batch_id = flag_parms['batch_id']
+
+        running_status_params['batch_id'] = self.batch_id
+        running_status_params['lake_to_hub_batch_id'] = self.new_batch_id
+
+        running_status_params = self.audit_meta_schema(self.audit_master_tbl, running_status_params)
+        running_status_query = f"INSERT INTO {self.audit_master_tbl} ({', '.join(running_status_params.keys())}) VALUES {tuple(running_status_params.values())};"
+
+        logger.info(f"running_status_query: {running_status_query}\n")
+        spark.sql(running_status_query)
+
+        return self.new_batch_id
+
+    def fail_status_handle(self, status: Any) -> None:
+        """
+        Handles the fail status of the audit process.
+
+        Parameters:
+        - status (Any): Current status of the audit process.
+
+        """
+        load_timestamp, load_month = self.cureent_date_time_flages()
+        self.audit_parameters['load_dtm'] = str(load_timestamp)
+        self.audit_parameters['load_month'] = str(load_month)
+        self.audit_parameters["aud_dtm"] = str(load_timestamp)
+
+        failed_status_params = {**{'status': status}, **self.audit_parameters}
+        failed_status_params['batch_id'] = self.batch_id
+        failed_status_params['lake_to_hub_batch_id'] = self.new_batch_id
+        failed_status_params = self.audit_meta_schema(self.audit_master_tbl, failed_status_params)
+        failed_status_query = f"INSERT INTO {self.audit_master_tbl} ({', '.join(failed_status_params.keys())}) VALUES {tuple(failed_status_params.values())};"
+
+        logger.info(f"failed_status_query: {failed_status_query}\n")
+        spark.sql(failed_status_query)
+
+    def complete_status_handle(self, status: Any) -> None:
+        """
+        Handles the complete status of the audit process.
+
+        Parameters:
+        - status (Any): Current status of the audit process.
+
+        """
+        # ----------------------------- common parameters -----------------------------#
+        load_timestamp, load_month = self.cureent_date_time_flages()
+        self.audit_parameters['load_dtm'] = str(load_timestamp)
+        self.audit_parameters['load_month'] = str(load_month)
+        self.audit_parameters["aud_dtm"] = str(load_timestamp)
+
+        log_common_parameters = {**{'status': status}, **self.audit_parameters}
+        log_common_parameters['batch_id'] = self.batch_id
+        log_common_parameters['lake_to_hub_batch_id'] = self.new_batch_id
+        completed_status_params = self.audit_meta_schema(self.audit_master_tbl, log_common_parameters)
+        complete_status_query = f"INSERT INTO {self.audit_master_tbl} ({', '.join(completed_status_params.keys())}) VALUES {tuple(completed_status_params.values())};"
+
+        logger.info(f"complete_status_query: {complete_status_query}\n")
+        spark.sql(complete_status_query)
+    
+    def process_merge_metrics(self,operation_metrics, src_data_count):
+        if not src_data_count:
+            src_data_count=int(operation_metrics.get('numSourceRows', 0))
+
+            
+        tgt_total_records = (int(operation_metrics.get('numTargetRowsInserted', 0)) +
+                                    int(operation_metrics.get('numTargetRowsUpdated', 0)) +
+                                    int(operation_metrics.get('numTargetRowsDeleted', 0)))
+        if not tgt_total_records:
+            tgt_total_records = operation_metrics.get('numOutputRows', 0)
+
+        tgt_records_inserted = int(operation_metrics.get('numTargetRowsInserted', 0))
+        if not tgt_records_inserted:
+            tgt_records_inserted = operation_metrics.get('numTargetRowsInserted', 0)
+        tgt_records_skipped = int(src_data_count) - int(tgt_total_records)
+        tgt_total_records = int(tgt_total_records)
+        tgt_records_updated = int(operation_metrics.get('numTargetRowsUpdated', 0))
+        tgt_records_deleted = int(operation_metrics.get('numTargetRowsDeleted', 0))
+
+        metric_log_params={
+                    "src_total_records":int(src_data_count), 
+                    "tgt_total_records":int(tgt_total_records),
+                    "tgt_records_inserted":int(tgt_records_inserted), 
+                    "tgt_records_updated":int(tgt_records_updated), 
+                    "tgt_records_deleted":int(tgt_records_deleted), 
+                    "tgt_records_skipped":int(tgt_records_skipped)
+                }
+        return metric_log_params
+    
+    def process_update_metrics(self,operation_metrics, src_data_count):
+        if not src_data_count:
+            src_data_count=int(operation_metrics.get('numUpdatedRows', 0))
+
+        metric_log_params={
+                    "src_total_records":int(src_data_count), 
+                    "tgt_total_records":int(operation_metrics.get('numUpdatedRows', 0)),
+                    "tgt_records_inserted":0 , 
+                    "tgt_records_updated":int(operation_metrics.get('numUpdatedRows', 0)), 
+                    "tgt_records_deleted":0, 
+                    "tgt_records_skipped":0
+                }
+        return metric_log_params
+    def process_delete_metrics(self,operation_metrics):
+        metric_log_params={
+                    "src_total_records":int(operation_metrics.get('numDeletedRows', 0)), 
+                    "tgt_total_records":int(operation_metrics.get('numDeletedRows', 0)),
+                    "tgt_records_inserted":0 , 
+                    "tgt_records_updated":0, 
+                    "tgt_records_deleted":int(operation_metrics.get('numDeletedRows', 0)), 
+                    "tgt_records_skipped":0
+                }
+        return metric_log_params
+
+    def metrics_cap(self, max_version: Any) -> Any:
+        """
+        Captures metrics from the audit history table.
+
+        Parameters:
+        - max_version (Any): Maximum version of the target table.
+
+        Returns:
+        - Any: Metrics log parameters.
+        """
+        max_version_data = f"SELECT * FROM (DESCRIBE HISTORY {self.recon_tgt_tbl_nm}) WHERE version = '{str(max_version)}'"
+
+        version_data_df = spark.sql(max_version_data)
+        version_data_df = version_data_df.select("version", "operation", "timestamp", "clusterId", "operationMetrics").toJSON()
+        execution_info = eval(version_data_df.first()) if version_data_df.count() else {}
+
+        logger.info(f"audit_version: {execution_info.get('version', None)}")
+
+        if not execution_info:
+            logger.error('Oops!, Audit data not found!')
+            raise ValueError('Oops!, Audit data not found!')
+        else:
+            src_data_count = int(self.main_operations_data['src_data_count'])
+            operation = execution_info.get('operation', {})
+            operation_metrics = execution_info.get('operationMetrics', {})
+
+            if operation == "MERGE":
+                logger.info("MERGE operation metrics capturing")
+                metric_log_params=self.process_merge_metrics(operation_metrics, src_data_count)
+
+            elif operation == "UPDATE":
+                logger.info("UPDATE operation metrics capturing")
+                metric_log_params=self.process_update_metrics(operation_metrics, src_data_count)
+            
+            elif operation=="DELETE":
+                logger.info("DELETE operation metrics capturing")
+                metric_log_params=self.process_delete_metrics(operation_metrics)
+
+
+            elif operation=="CREATE OR REPLACE TABLE AS SELECT" or operation=="WRITE":
+                logger.info("CREATE OR REPLACE TABLE AS SELECT/WRITE operation metrics capturing")
+                if not src_data_count:
+                    src_data_count=int(operation_metrics.get('numOutputRows', 0))
+                metric_log_params={
+                    "src_total_records":int(src_data_count), 
+                    "tgt_total_records":int(src_data_count),
+                    "tgt_records_inserted":int(src_data_count), 
+                    "tgt_records_updated":0, 
+                    "tgt_records_deleted":0, 
+                    "tgt_records_skipped":0
+                    }
+            else:
+                logger.info("default operation metrics capturing")
+                metric_log_params=self.default_pars  
+        return metric_log_params
+    
+    def max_version_finder(self, tgt_merge_filter_condition, df_tgt_tbl):
+        if not tgt_merge_filter_condition:
+            logger.info("Max_version finding for Non tgt_merge_filter_condition operations")
+            max_version = df_tgt_tbl.select("version").rdd.max()[0]
+            return max_version
+
+        merge_filter_condition = get_merge_filter_cond(tgt_merge_filter_condition)
+
+        if not merge_filter_condition:
+            logger.info("Max_version finding for Non tgt_merge_filter_condition operations")
+            max_version = df_tgt_tbl.select("version").rdd.max()[0]
+            return max_version
+
+        if self.main_operations_data['operation'] == "DELETE" and merge_filter_condition.get('archive_flag') == "Y":
+            merge_filter_condition['archive_flag'] = 'N'
+
+        ordered_dict = []
+
+        for item in merge_filter_condition:
+            try:
+                ordered_dict.append(f"operationParameters.predicate like '%{merge_filter_condition[item]}%'")
+            except KeyError:
+                logger.info('No found any processing merge_filter_condition key')
+                continue
+
+        result = " and ".join(ordered_dict)
+        df_tgt_tbl.createOrReplaceTempView("recent_versions")
+        operation_types = ['MERGE', 'UPDATE', 'DELETE']
+        parameters_opr = f"select max(version) as max_version from recent_versions where ({result}) and (operation like '%{operation_types[0]}%' or operation like '%{operation_types[1]}%' or operation like '%{operation_types[2]}%')"
+        logger.info(parameters_opr)
+
+        max_version = spark.sql(parameters_opr)
+
+        try:
+            json_array = eval(max_version.toJSON().first())
+            max_version = json_array['max_version']
+        except KeyError:
+            if self.main_operations_data['operation'] == "WRITE":
+                logger.info('write operation Maximum version')
+                max_version = df_tgt_tbl.select("version").rdd.max()[0]
+            else:
+                logger.info('Not found any Maximum version')
+                max_version = None
+
+        return max_version
+
+
+    
+    def audit_log_parameter_inserter(self,main_operations_data,target_table,tgt_merge_filter_condition):
+        load_timestamp, load_month = self.cureent_date_time_flages()
+        self.audit_parameters['load_dtm']=str(load_timestamp)
+        self.audit_parameters['load_month']=str(load_month)
+        self.audit_parameters["aud_dtm"]=str(load_timestamp)
+
+        log_common_parameters={**{'status':status},**self.audit_parameters}
+        log_common_parameters['batch_id']=self.batch_id
+        log_common_parameters['lake_to_hub_batch_id']=self.new_batch_id 
+        self.main_operations_data=main_operations_data
+        
+        log_common_parameters['op_flg']=self.main_operations_data['oper_proc_flg']
+
+        if self.tgt_tbl_nm.upper() != target_table.upper():
+            self.recon_tgt_tbl_nm = target_table
+        else:
+            self.recon_tgt_tbl_nm = self.tgt_tbl_nm
+
+
+
+
+        logger.info(f"Input Operation: {self.main_operations_data['operation']}")
+
+        self.default_pars={
+                "src_total_records":0, 
+                "tgt_total_records":0,
+                "tgt_records_inserted":0, 
+                "tgt_records_updated":0, 
+                "tgt_records_deleted":0, 
+                "tgt_records_skipped":0
+                }
+        
+        df_tgt_tbl = f"SELECT * FROM (DESCRIBE HISTORY {self.recon_tgt_tbl_nm}) WHERE operation = '{self.main_operations_data['operation']}' AND timestamp > (SELECT MAX(load_dtm) AS load_dtm FROM {self.audit_master_tbl} WHERE tgt_tbl_nm = '{self.tgt_tbl_nm}' AND src_tbl_nm = '{self.src_tbl_nm}' AND src_system = '{self.src_system}' AND status = 'running' {self.batch_flag_join_condition})"
+
+        logger.info(df_tgt_tbl)
+        df_tgt_tbl = spark.sql(df_tgt_tbl)
+
+        cnt=df_tgt_tbl.count()
+        if cnt > 0:
+            max_version=self.max_version_finder(tgt_merge_filter_condition,df_tgt_tbl)
+
+
+            if max_version:
+                result_met=self.metrics_cap(max_version)
+
+                log_fields = { **log_common_parameters, **result_met}
+                log_fields = self.audit_meta_schema(self.audit_log_tbl,log_fields)
+                audit_log_insert_query = f"INSERT INTO {self.audit_log_tbl} ({', '.join(log_fields.keys())}) VALUES {tuple(log_fields.values())};"
+
+
+                #audit_log_entry
+                logger.info(f"audit_log_query: {audit_log_insert_query}\n")
+                spark.sql(audit_log_insert_query)
+
+            else:
+                logger.info("Max_version_not_found")
+                log_fields = { **log_common_parameters, **self.default_pars}
+                log_fields = self.audit_meta_schema(self.audit_log_tbl,log_fields)
+                audit_log_insert_query = f"INSERT INTO {self.audit_log_tbl} ({', '.join(log_fields.keys())}) VALUES {tuple(log_fields.values())};"
+                logger.info(f"audit_log_query: {audit_log_insert_query}\n")
+
+                spark.sql(audit_log_insert_query)
+
+
+        else:
+            logger.info("****Not found any operations*****")
+            logger.info("****No changes in target table*****")
+            log_fields = { **log_common_parameters, **self.default_pars}
+                       
+            log_fields = self.audit_meta_schema(self.audit_log_tbl,log_fields)
+            audit_log_insert_query = f"INSERT INTO {self.audit_log_tbl} ({', '.join(log_fields.keys())}) VALUES {tuple(log_fields.values())};"
+            logger.info(f"audit_log_query: {audit_log_insert_query}\n")
+            spark.sql(audit_log_insert_query)
+

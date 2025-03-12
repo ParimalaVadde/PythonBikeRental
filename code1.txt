@@ -1,0 +1,644 @@
+# Databricks notebook source
+# MAGIC %md ###Tidal Utils
+
+# COMMAND ----------
+
+# MAGIC %run  /TIDAL_UTILS/tidal_util
+
+# COMMAND ----------
+
+# MAGIC %md ### Importing common utility
+
+# COMMAND ----------
+
+# MAGIC %run /Workspace/GMS/GMSGQ/GMSGQDDM/COMMON_UTILS/GMSGQ-DDM-COMMON-UTILS
+
+# COMMAND ----------
+
+# MAGIC %md ### Widgets creation
+
+# COMMAND ----------
+
+dbutils.widgets.text("s3_bucket", "", "s3_bucket")
+dbutils.widgets.text("config_file_path", "", "config_file_path")
+dbutils.widgets.text("src_table", "", "src_table")
+dbutils.widgets.text("tgt_table", "", "tgt_table")
+dbutils.widgets.text("src_system", "", "src_system")
+dbutils.widgets.text("md5_column", "", "md5_column")
+dbutils.widgets.text("full_load_flag", "", "full_load_flag")
+dbutils.widgets.text("load_strategy", "", "load_strategy")
+dbutils.widgets.text("poolmap_log_path", "", "poolmap_log_path")
+dbutils.widgets.text("poolmap_logger", "", "poolmap_logger")
+dbutils.widgets.text("batch_tidal_job_id", "", "batch_tidal_job_id")
+dbutils.widgets.text("hard_delete_flag", '', "hard_delete_flag")
+
+# COMMAND ----------
+
+# MAGIC %md ###Initializing Parameters
+
+# COMMAND ----------
+
+# DBTITLE 1,Initializing Parameters
+"""
+Initializing required parameters
+"""
+
+# Fetching widget values
+s3_bucket = dbutils.widgets.get("s3_bucket").strip()
+config_file_path = dbutils.widgets.get("config_file_path").strip()
+src_table = dbutils.widgets.get("src_table").strip()
+tgt_table = dbutils.widgets.get("tgt_table").strip()
+src_system = dbutils.widgets.get("src_system").strip()
+md5_column = dbutils.widgets.get("md5_column").strip()
+full_load_flag = dbutils.widgets.get("full_load_flag").strip()
+load_strategy = dbutils.widgets.get("load_strategy").strip()
+poolmap_log_path = dbutils.widgets.get("poolmap_log_path").strip()
+poolmap_logger = dbutils.widgets.get("poolmap_logger").strip()
+hub_tidal_jobid = dbutils.widgets.get("batch_tidal_job_id").strip()
+hard_delete_flag = dbutils.widgets.get("hard_delete_flag").strip()
+
+nb_job_json = dbutils.notebook.entry_point.getDbutils().notebook().getContext().toJson() 
+# Converting table names to lowercase
+tgt_table = tgt_table.lower()
+src_table = src_table.lower()
+
+try:
+    # Checking required parameters
+    if not s3_bucket:
+        raise ValueError("raw_bucket value required!")
+    if not config_file_path:
+        raise ValueError("config_file_path value required!")
+    if not src_table:
+        raise ValueError("src_table value required!")
+    if not tgt_table:
+        raise ValueError("tgt_table value required!")
+    if not src_system:
+        raise ValueError("src_system value required!")
+
+except ValueError as ve:
+    get_notebook_jobid(src_table, tgt_table, src_system, nb_job_json, poolmap_log_path, poolmap_logger)
+    print(f"Error: {ve}")
+    
+    if hub_tidal_jobid:
+        tidal_job_callback(hub_tidal_jobid)
+
+    # Raising the exception 
+    raise ve
+
+
+# COMMAND ----------
+
+# MAGIC %md ### Importing Libraries
+
+# COMMAND ----------
+
+# DBTITLE 1,Importing Libraries
+"""
+Importing required libraries
+"""
+
+try:
+    import boto3
+    import logging
+    import datetime
+    import time
+    import os
+    import json
+    from pyspark.sql.functions import *
+    from typing import Dict, List, Optional
+except Exception as e:
+    get_notebook_jobid(src_table, tgt_table, src_system, nb_job_json, poolmap_log_path, poolmap_logger)
+    print(f"Error: {e}")
+    
+    if hub_tidal_jobid:
+        tidal_job_callback(hub_tidal_jobid)
+
+    raise e
+
+
+# COMMAND ----------
+
+# MAGIC %md ### Initializing Logging
+
+# COMMAND ----------
+
+# DBTITLE 1,Initializing Logging
+"""
+Enable Logging
+"""
+try:
+    logger_name = "CDB-DATA-FLOW"
+    log_file_name = "{}-{}-{}-{}.txt".format(src_system.lower(),src_table.split(".")[1],tgt_table.split(".")[1],datetime.datetime.now().strftime("%Y%m%d%H%M%S"),)
+
+    action_type: str = "a"
+    
+    logger_conn= create_log_file(logger_name, log_file_name, action_type)
+    logger=logger_conn['logger']
+    local_log_file =logger_conn['local_log_path']
+except Exception as e:
+    get_notebook_jobid(src_table, tgt_table, src_system, nb_job_json, poolmap_log_path, poolmap_logger)
+    print(f"Error: {e}")
+    
+    if hub_tidal_jobid:
+        tidal_job_callback(hub_tidal_jobid)
+
+    raise e
+
+
+# COMMAND ----------
+
+# MAGIC %md ### Reads Parameter from Config File
+
+# COMMAND ----------
+
+s3manager=S3Manager(s3_bucket)
+try:
+    logger.info("************** Reading config file **************")
+    config_data=s3manager.get_object(config_file_path)
+    #Domain name feteching from config file
+    domain_nm = config_data.get("domain_nm")
+
+    # Feteching URL of current Note book
+    note_book_parameters=NotebookInfo(domain_nm,nb_job_json)
+
+    note_book_url=note_book_parameters.get_notebook_details()
+    cluster_id=note_book_parameters.get_cluster_id_details()
+    
+except Exception as e:
+    logger.error("************** Reading config file Failed **************")
+    get_notebook_jobid(src_table, tgt_table, src_system, nb_job_json,poolmap_log_path,poolmap_logger)
+    if hub_tidal_jobid:
+        tidal_job_callback(hub_tidal_jobid)
+    raise e
+
+
+# COMMAND ----------
+
+# MAGIC %md ###Proceed Delete Load
+
+# COMMAND ----------
+
+def proceed_delete_load(config_entry):
+    try:
+        tgt_tbl = config_entry.get("tgt_tbl", None)
+        primary_key = config_data.get("primary_key", None)
+        source_sql = config_entry.get("src_delete_query", None)
+        src_data_count=spark.sql(source_sql).count()
+        if(src_data_count== None) : 
+            src_data_count=0
+        tgt_merge_col_nm = config_entry.get("tgt_merge_col_nm", None)
+        tgt_merge_cols_list = tgt_merge_col_nm.split(",")
+        tgt_merge_cols_list = [
+            "COALESCE(TGT.{}, '-1')=COALESCE(STG.{}, '-1')".format(
+                col_name.upper(), col_name.upper()
+            )
+            for col_name in tgt_merge_cols_list
+        ]
+        tgt_delete_filter_condition = config_entry.get(
+            "tgt_delete_filter_condition", None
+        )
+        merge_condition = " and ".join(tgt_merge_cols_list)
+        if not (source_sql or tgt_tbl or tgt_merge_filter_condition):
+            raise ValueError("Required params are missing for delete operation!")
+        delete_query = (
+            "SELECT tgt."
+            + primary_key
+            + " FROM "
+            + tgt_tbl
+            + " tgt	LEFT JOIN ("
+            + source_sql
+            + ") stg ON "
+            + merge_condition
+            + " WHERE "
+            + tgt_delete_filter_condition
+            + " AND stg."
+            + primary_key
+            + " IS NULL"
+        )
+        delete_condition = (
+            tgt_delete_filter_condition
+            + " and tgt."
+            + primary_key
+            + " = stg."
+            + primary_key
+        )
+        merge_query = """
+        MERGE INTO {tgt_tbl} TGT 
+        USING ({source_sql}) STG 
+        ON {merge_condition} 
+        WHEN MATCHED THEN DELETE
+        """.format(
+            tgt_tbl=tgt_tbl, source_sql=delete_query, merge_condition=delete_condition
+        )
+        spark.sql(merge_query)
+        main_operations_data={
+                "operation":"MERGE",
+                "src_data_count":0
+                        }
+
+        logger.info("delete_query -- {}\n".format(merge_query))
+        logger.info("Hard delete completed for: {}".format(tgt_tbl))
+
+        filter_condition=delete_condition
+        target_table =tgt_tbl
+        current_job.audit_log_parameter_inserter(main_operations_data, target_table, filter_condition)
+        logger.info("***** Hard delete process logic metrics caputered ********")
+
+    except Exception as e:
+        logger.error("***** Hard delete process failed ********")
+        raise e
+
+# COMMAND ----------
+
+# MAGIC %md ###Proceeding Incremental Load
+
+# COMMAND ----------
+
+# DBTITLE 1,Proceeding Incremental Load
+def proceed_incr_load(config_entry: dict) -> None:
+    """
+    Process the incremental load based on the provided configuration entry.
+
+    Parameters:
+    - config_entry (dict): Dictionary containing configuration details.
+    if required add below code after line 42
+    src_cols_sort = common_columns_result['src_cols_sort']
+    tgt_cols_sort = common_columns_result['tgt_cols_sort']
+
+    Returns:
+    - None
+    """
+    try:
+        src_system = config_entry.get('src_system', None)
+        tgt_tbl = config_entry.get('tgt_tbl', None)
+        tgt_merge_col_nm = config_entry.get('tgt_merge_col_nm', None)
+        tgt_merge_filter_condition = config_entry.get('tgt_merge_filter_condition', None)
+
+        if full_load_flag == "Y":
+            src_data_query = config_entry.get('src_truncate_query', None)
+            logger.info('Source query : src_truncate_query')
+            logger.info('hard delete flag value for full load process : {}'.format(hard_delete_flag))
+        else:
+            src_data_query = config_entry.get('src_incr_query', None)
+            logger.info('Source query: src_incr_query')
+
+        src_data_count = spark.sql(src_data_query).count() or 0
+
+        delete_flag = config_entry.get('hard_delete_flag', None)
+        pre_sql_query = config_entry.get('pre_sql_query', None)
+        pre_sql_flag = config_entry.get('pre_sql_flag', None)
+        post_sql_query = config_entry.get('post_sql_query', None)
+        post_sql_flag = config_entry.get('post_sql_flag', None)
+
+        # Check for required parameters
+        if not (src_system or src_data_query or tgt_tbl or tgt_merge_col_nm or tgt_merge_filter_condition or delete_flag):
+            raise ValueError('Required params are missing for MERGE operation!')
+
+        # Get common columns
+        common_columns_result = common_cols(tgt_tbl, src_data_query, logger)
+
+        common_columns = common_columns_result['common_columns']
+
+        if pre_sql_flag == 'Y':
+            logger.info("*****Executing pre sql process*****")
+            spark.sql(pre_sql_query)
+            logger.info(f"****pre sql process query -- {pre_sql_query} \n")
+            logger.info("****pre sql process is completed****")
+
+        if load_strategy == "OVERWRITE":
+            logger.info("Overwriting process started")
+            source_sql = config_entry.get('src_truncate_query', None)
+            logger.info("Source query: src_truncate_query")
+            logger.info(f"Query: {source_sql}")
+            src_data_count = spark.sql(src_data_query).count() or 0
+
+            df = spark.sql(source_sql)
+            current_timestamp = datetime.datetime.now()
+            df = df.withColumn("AUD_LD_DTS", lit(current_timestamp))
+            df = df.withColumn("AUD_LD_DTS", df["AUD_LD_DTS"].cast('timestamp'))
+
+            df = df.withColumn("AUD_UPD_DTS", lit('NULL'))
+            df = df.withColumn("AUD_UPD_DTS", df["AUD_UPD_DTS"].cast('timestamp'))
+
+            main_operations_data = {"src_data_count": src_data_count}
+
+            if not tgt_merge_filter_condition:
+                filter_condition = None
+                main_operations_data['operation'] = "CREATE OR REPLACE TABLE AS SELECT"
+                df.write.format("delta").mode("overwrite").saveAsTable(tgt_tbl)
+                logger.info("Overwriting process completed.")
+            else:
+                filter_condition = tgt_merge_filter_condition
+                main_operations_data['operation'] = "WRITE"
+                full_load_filter = tgt_merge_filter_condition.replace("tgt.", "")
+                df.write.format("delta").mode("overwrite").option("replaceWhere", full_load_filter).saveAsTable(tgt_tbl)
+                logger.info("Overwriting process completed ")
+            main_operations_data['oper_proc_flg'] = "OVERWRITE"
+            target_table =tgt_tbl
+            current_job.audit_log_parameter_inserter(main_operations_data, target_table, filter_condition)
+            logger.info("***** Master Table Auditing metrics captured ********")
+
+        else:
+            merge_query = generate_merge_query(
+                common_columns,
+                src_merge_filter_condition,
+                tgt_merge_filter_condition,
+                tgt_merge_col_nm,
+                src_data_query,
+                tgt_tbl,
+                load_strategy,
+                delete_flag,
+                md5_column,
+                update_timestamp_column,
+                primarykey_column,
+                load_timestamp_column,
+                full_load_flag
+            )
+
+            filter_condition = tgt_merge_filter_condition
+            logger.info('** Executing merge query!\n')
+            logger.info(f"merge_query -- {merge_query}\n")
+
+            main_operations_data = {"operation": "MERGE", "src_data_count": src_data_count}
+            main_operations_data['oper_proc_flg'] = "MERGE"
+            spark.sql(merge_query)
+            target_table =tgt_tbl
+            current_job.audit_log_parameter_inserter(main_operations_data, target_table, filter_condition)
+            logger.info("***** Master Table Auditing metrics captured ********")
+
+            if post_sql_flag == 'Y':
+                logger.info("*****Executing post sql process*****")
+                execute_post_sql(tgt_tbl,post_sql_query, tgt_merge_filter_condition)
+                logger.info("****post sql process is completed****")
+
+    except Exception as err:
+        logger.error("******* Failure in getting proceeding incremental load *********")
+        logger.error(f'Error occurred in getting proceeding incremental load. Detail Exception: {err}')
+        raise err
+
+
+# COMMAND ----------
+
+# MAGIC %md ###Post Sql Logic
+
+# COMMAND ----------
+
+# DBTITLE 0,Post Sql
+def execute_post_sql(post_tgt_tbl: str, post_sql_query: str, tgt_merge_filter_condition: str) -> None:
+    """
+    Execute post SQL queries.
+
+    Parameters:
+    - post_sql_query (str): SQL queries to be executed.
+    - tgt_merge_filter_condition (str): Filter condition for the target table.
+
+    Returns:
+    - None
+    """
+    try:
+        def execute_single_query(query: str, seq: int) -> None:
+            main_operations_data = {}
+            logger.info(f"****Postsql-{str(seq)}****")
+            logger.info(f"****post sql process query -- {query} \n")
+            spark.sql(query)
+
+            main_query = query.strip()
+            main_operation = main_query.split()[0].upper()
+            main_target_tbl = main_query.split()[2].replace("(", '').upper() if main_operation in ['MERGE', 'INSERT', 'DELETE'] else main_query.split()[1].replace("(", '').upper()
+
+            target_table = post_tgt_tbl.upper() if post_tgt_tbl.upper() == main_target_tbl else main_target_tbl
+            
+            main_operations_data['oper_proc_flg'] = f"Postsql-{str(seq)}-{main_operation}"
+
+            if main_operation == 'INSERT':
+                main_operation = 'WRITE'
+
+            main_operations_data['operation'] = main_operation
+            
+            main_operations_data['src_data_count'] = 0
+
+            filter_condition = tgt_merge_filter_condition
+            current_job.audit_log_parameter_inserter(main_operations_data, target_table, filter_condition)
+            logger.info("***** postsql Master Table Auditing metrics captured ********")
+
+        logger.info("****Queries to be executed****")
+
+        char = post_sql_query.find(";")
+        queries = post_sql_query.split(";")
+
+        if char == -1:
+            logger.info("****Query to be executed****")
+            execute_single_query(post_sql_query.strip(), 1)
+        else:
+            seq = 1
+            for query in queries:
+                query = query.strip()
+                if len(query):
+                    execute_single_query(query, seq)
+                    seq += 1
+
+    except Exception as postsql_error:
+        logger.error(f'Error occurred in postsql logic. Detail Exception: {postsql_error}')
+        raise postsql_error
+
+
+# COMMAND ----------
+
+# MAGIC %md ###Finding failed to runs to incident creation
+
+# COMMAND ----------
+
+def failed_records_tbl(audit_master_tbl, target_table, source_table, source_system):
+    logger.info("Fetching failed runs to log incidents")
+
+    # Query to fetch failed runs
+    failed_stream_query = f"""
+        WITH cte AS (
+            SELECT
+                batch_id,
+                status
+            FROM (
+                SELECT
+                    DISTINCT batch_id,
+                    status,
+                    ROW_NUMBER() OVER (PARTITION BY batch_id ORDER BY status) rnk
+                FROM {audit_master_tbl}
+                WHERE tgt_tbl_nm = '{target_table}'
+                    AND src_tbl_nm = '{source_table}'
+                    AND src_system = '{source_system}'
+                ORDER BY batch_id DESC
+            )
+            WHERE rnk = 1
+            LIMIT 2
+        ),
+        cte1 AS (
+            SELECT
+                batch_id,
+                status AS status1,
+                LAG(status, 1) OVER (ORDER BY batch_id DESC) status2,
+                ROW_NUMBER() OVER (ORDER BY batch_id DESC) row_num
+            FROM cte
+        ),
+        fail_counter AS (
+            SELECT
+                *,
+                IF(status1 = 'failed', 1, 0) + IF(status2 = 'failed', 1, 0) count
+            FROM cte1
+        )
+        SELECT * FROM fail_counter WHERE count = 2
+    """
+
+    # Execute the query and retrieve the result
+    query_result = spark.sql(failed_stream_query).first()
+
+    # Check if the query result is None
+    if query_result is None:
+        return 0
+    else:
+        # Return the count value from the query result
+        return query_result['count']
+
+
+# COMMAND ----------
+
+# MAGIC %md ###Main Function
+
+# COMMAND ----------
+
+# DBTITLE 1,Main Function
+"""
+Main Function
+"""
+if __name__ == '__main__':
+    try:
+        audit_configs = {}
+        audit_params = {}
+        main_operations_data = {}
+        audit_batch_id = None
+        logger_configs = {}
+
+        audit_params = {
+            'src_system': src_system,
+            'src_tbl_nm': src_table.lower(),
+            'tgt_tbl_nm': tgt_table.lower(),
+            "log_file_nm": log_file_name,
+            "nb_job_link": note_book_url,
+            "batch_load_flg": 'Y',
+            "cluster_id": cluster_id,
+            "full_load_flg": full_load_flag
+        }
+
+        audit_configs = {
+            'audit_master_tbl': config_data.get('audit_tables', {}).get('master_tbl', None),
+            'audit_log_tbl': config_data.get('audit_tables', {}).get('log_tbl', None)
+        }
+
+        flag_parms = {}
+
+        logger.info("*** Auditing started ***")
+
+        current_job = AuditManager(audit_params, audit_configs, poolmap_logger)
+        logger.info("--------- Checking Previous Runs ---------")
+        current_job.check_previous_runs()
+        logger.info("--------- Checking Previous Runs completed ---------")
+        logger.info("Audit Table Entries")
+
+        status = "running"
+        flag_parms = {"batch_id": audit_batch_id}
+        audit_batch_id = current_job.start_status_handle(status, flag_parms)
+
+        logger_configs = config_data.get('logger_configs', {})
+        logger_configs['log_file_name'] = log_file_name
+        logger_configs['local_log_file'] = local_log_file
+        logger.info('logger_configs : {}'.format(logger_configs))
+
+        params = {'config_table': config_data.get(
+            'config_table', None), 'src_system': src_system, 'src_table': src_table.lower(), 'tgt_table': tgt_table.lower()}
+
+        # Fetching metadata of requested input params
+        config_entry = fetch_config_metadata(params)
+
+        logger.info('config_entry : {}'.format(config_entry))
+
+        if not config_entry:
+            raise ValueError('Oops!, config entry missing.')
+
+        load_timestamp_column = config_data.get('load_timestamp_column', None)
+        update_timestamp_column = config_data.get('update_timestamp_column', None)
+        primarykey_column = config_data.get('primarykey_column', None)
+
+        delete_flag = config_entry.get('hard_delete_flag').upper()
+        tgt_merge_filter_condition = config_entry.get('tgt_merge_filter_condition', None)
+        src_merge_filter_condition = config_entry.get('src_merge_filter_condition', None)
+        tgt_tbl = config_entry.get('tgt_tbl', None)
+        load_strategy = load_strategy.upper() if load_strategy else config_entry.get('load_strategy').upper()
+
+        if load_strategy.lower() == "truncate":
+            full_load_flag = "Y"
+            hard_delete_flag = "Y"
+            logger.info('full_load_flag changed to Y based on truncate load_strategy ')
+            logger.info('hard_delete_flag set to Y based on truncate load_strategy ')
+        logger.info('full_load_flag : {}'.format(full_load_flag))
+
+        # Switch to data refresh and full load path
+        if ((full_load_flag == "Y") and (load_strategy != "OVERWRITE") and (hard_delete_flag == "Y")):
+            logger.info("***** Full data load started ********")
+            main_operations_data = {}
+
+            if tgt_merge_filter_condition:
+                delete_filter = tgt_merge_filter_condition.replace('tgt.', '')
+                truncate_sql_logic = "DELETE FROM " + tgt_tbl + " WHERE " + delete_filter
+            else:
+                truncate_sql_logic = "DELETE FROM " + tgt_tbl
+
+            logger.info("***** Executing Truncate logic *****")
+            logger.info(truncate_sql_logic)
+            spark.sql(truncate_sql_logic)
+
+            logger.info("***** Truncate logic executed ********")
+
+        logger.info('load_strategy: {}'.format(load_strategy))
+        hub_tidal_jobid = config_entry.get('hub_tidal_job_id')
+
+        if load_strategy:
+
+            if load_strategy == "SCD1":
+                logger.info('----  INCREMENTAL LOADING  ----')
+                proceed_incr_load(config_entry)
+                if (delete_flag == 'Y'):
+                    proceed_delete_load(config_entry)
+
+            else:
+                logger.info(f'----  {load_strategy} LOADING  ----')
+                proceed_incr_load(config_entry)
+
+        else:
+            raise ValueError("Oops!, Unexpected value: load_strategy")
+
+        status = 'completed'
+        current_job.complete_status_handle(status)
+
+    except Exception as e:
+        logger.error('Error occurred in child notebook. Detail Exception: ' + str(e))
+        get_notebook_jobid(src_table, tgt_table, src_system, nb_job_json, poolmap_log_path, poolmap_logger)
+
+        if audit_batch_id:
+            status = 'failed'
+            current_job.fail_status_handle(status)
+
+        raise e
+
+    finally:
+        failed_data = failed_records_tbl(
+            config_data.get('audit_tables', {}).get('master_tbl', None), tgt_table.lower(), src_table.lower(), src_system)
+        if failed_data > 0:
+            logger.info("Incident created")
+            tidal_job_callback(hub_tidal_jobid)
+
+        print("Batch_id : ", audit_batch_id)
+        logger.info('Uploading the Log File to S3...')
+
+        logger.info('Logger disabled')
+        upload_log_file_to_s3(logger_configs)
+
+        logging.shutdown()
