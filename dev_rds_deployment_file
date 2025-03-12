@@ -1,1 +1,28 @@
-rds
+SELECT t1.*, 
+CAST( SHA2( CONCAT_WS( '-', COALESCE(t1.vendor_name_cleaned, ''), COALESCE(CAST(t1.vendor_id
+ AS VARCHAR), ''), COALESCE(CAST(t1.vendor_government_id
+ AS VARCHAR), '') ), 256 ) AS VARCHAR ) AS stg_business_entity_id
+ from
+ (select distinct 'PFD' as source_system_name,
+  cast (vendor_name_cleaned as VARCHAR) as vendor_name_cleaned ,
+  cast (vendor_id as VARCHAR) as vendor_id ,
+  cast (vendor_government_id as VARCHAR) as vendor_government_id ,
+  cast (NULL as VARCHAR) as source_system_id,
+  cast (NULL as VARCHAR) as parent_id,
+  cast (1 as Decimal(23,3)) as hierarchy_level,
+  cast (1 as Decimal(23,3)) as hierarchy_identifier,
+  cast (1 as Decimal(23,3)) as hierarchy_role,
+  cast ('Y' as VARCHAR) as is_active,
+  current_timestamp as created_date,
+  cast ('supplier_directory' as VARCHAR) as created_by
+  from sds_landing.analysis_pfd
+ ) t1
+
+
+
+ERROR:  function sha2(text, integer) does not exist
+LINE 2: CAST( SHA2( CONCAT_WS( '-', COALESCE(t1.vendor_name_cleaned,...
+              ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+SQL state: 42883
+Character: 21
