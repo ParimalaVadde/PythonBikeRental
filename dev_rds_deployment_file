@@ -3,16 +3,13 @@ WITH t1 AS (
     CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
     CAST(vendor_id AS VARCHAR) AS vendor_id,
     CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
-	CAST(vendor_annualrevenue AS VARCHAR) AS reported_annual_revenue,
-	CAST(year_incorporated AS VARCHAR) AS year_incorporated,
-	
-	""" here i want you to write sql cmd for company_structure
-	logic as follows 
-	if corp_structures column in sds_landing.analysis_pfd is not null then 
-	  corp_structures column value will be as value for company_structure for a specific vendor_name_cleaned
-	  suppose if corp_structures column in sds_landing.analysis_pfd is null then 
-	  consider filter_individual column of sds_landing.analysis_pfd, this filter_individual column will have only two values either Y or N. if the value is Y then for company_structure the value will be constant "Individual" else if N for filter_individual then NULL for company_structure
-	"
+    CAST(vendor_annualrevenue AS VARCHAR) AS reported_annual_revenue,
+    CAST(year_incorporated AS VARCHAR) AS year_incorporated,
+    CASE
+      WHEN corp_structures IS NOT NULL THEN CAST(corp_structures AS VARCHAR)
+      WHEN filter_individual = 'Y' THEN 'Individual'
+      ELSE NULL
+    END AS company_structure,
     CAST('Y' AS BOOLEAN) AS is_active,
     CAST(current_timestamp AS TIMESTAMP) AS created_date, 
     CAST('supplier_directory' AS VARCHAR) AS created_by 
