@@ -26,3 +26,6 @@ FROM (
     cast('supplier_directory' as VARCHAR) as created_by 
   from sds_landing.analysis_pfd
 ) t1
+
+
+\xdfdf394a69a558ba0e8fbd3f26c8f2e66b7b9ef75ae6bc89e6d8309eb0605022
