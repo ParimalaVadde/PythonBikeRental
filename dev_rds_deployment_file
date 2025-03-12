@@ -30,3 +30,45 @@ FROM (
 
 \xdfdf394a69a558ba0e8fbd3f26c8f2e66b7b9ef75ae6bc89e6d8309eb0605022
 f5c5f707-82e5-c68c-ddd7-34a03ddf7af7
+
+
+****************************************************************
+
+-- Make sure pgcrypto extension is enabled
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+WITH t1 AS (
+  SELECT DISTINCT 
+    'PFD' AS source_system_name, 
+    CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
+    CAST(vendor_id AS VARCHAR) AS vendor_id,
+    CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
+    CAST(NULL AS VARCHAR) AS source_system_id, 
+    CAST(NULL AS VARCHAR) AS parent_id, 
+    CAST(1 AS DECIMAL(23,3)) AS hierarchy_level, 
+    CAST(1 AS DECIMAL(23,3)) AS hierarchy_identifier, 
+    CAST(1 AS DECIMAL(23,3)) AS hierarchy_role, 
+    CAST('Y' AS VARCHAR) AS is_active, 
+    current_timestamp AS created_date, 
+    CAST('supplier_directory' AS VARCHAR) AS created_by 
+  FROM sds_landing.analysis_pfd
+)
+SELECT 
+  t1.*,
+  (
+    WITH hash AS (
+      SELECT encode(digest(CONCAT_WS('-', 
+        COALESCE(t1.vendor_name_cleaned, ''), 
+        COALESCE(t1.vendor_id, ''), 
+        COALESCE(t1.vendor_government_id, '')
+      ), 'sha256'), 'hex') AS hash_value
+    )
+    SELECT 
+      substring(hash_value, 1, 8) || '-' ||
+      substring(hash_value, 9, 4) || '-' ||
+      substring(hash_value, 13, 4) || '-' ||
+      substring(hash_value, 17, 4) || '-' ||
+      substring(hash_value, 21, 12)
+    FROM hash
+  ) AS stg_business_entity_id
+FROM t1;
