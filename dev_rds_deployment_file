@@ -61,3 +61,10 @@ SELECT
   h.created_date,
   NULL AS business_validation_reason
 FROM hash_values h;
+
+
+"[
+  {
+  ""corporate_structure"":""CORPORATION""
+  }
+]"
