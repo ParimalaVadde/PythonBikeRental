@@ -111,3 +111,26 @@ SELECT
   substring(hash_value, 17, 4) || '-' ||
   substring(hash_value, 21, 12) AS stg_business_entity_id
 FROM hash_values h;
+
+
+**********************************************************************************************************
+
+sds_staging.business_entity
+
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity
+(
+    stg_business_entity_id   varchar not null primary key,
+    source_system_id       varchar,
+    source_system_name     varchar,
+    hierarchy_identifier varchar,
+    hierarchy_level      varchar,
+    hierarchy_role       varchar,
+    parent_id            varchar,
+    is_active            boolean,
+    last_updated_by      varchar,
+    last_updated_date    timestamp,
+    created_by           varchar,
+    created_date         timestamp
+);
+
+stg_business_entity_id,source_system_id,source_system_name,hierarchy_identifier,hierarchy_level,hierarchy_role,parent_id,is_active,last_updated_by,last_updated_date,created_by,created_date
