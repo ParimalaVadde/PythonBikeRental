@@ -1,35 +1,22 @@
-WITH t1 AS (
-  SELECT DISTINCT
-    CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
-    CAST(vendor_id AS VARCHAR) AS vendor_id,
-    CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
-    CAST(vendor_annualrevenue AS VARCHAR) AS reported_annual_revenue,
-    CAST(year_incorporated AS VARCHAR) AS year_incorporated,
-    CASE
-      WHEN corp_structures IS NOT NULL THEN CAST(corp_structures AS VARCHAR)
-      WHEN filter_individual = 'Y' THEN 'Individual'
-      ELSE NULL
-    END AS company_structure,
-    CAST('Y' AS BOOLEAN) AS is_active,
-    CAST(current_timestamp AS TIMESTAMP) AS created_date, 
-    CAST('supplier_directory' AS VARCHAR) AS created_by 
-  FROM sds_landing.analysis_pfd
-),
-hash_values AS (
-  SELECT 
-    t1.*,
-    encode(digest(CONCAT_WS('-', 
-      COALESCE(t1.vendor_name_cleaned, ''), 
-      COALESCE(t1.vendor_id, ''), 
-      COALESCE(t1.vendor_government_id, '')
-    ), 'sha256'), 'hex') AS hash_value
-  FROM t1
-)
-SELECT 
-  h.*,
-  substring(hash_value, 1, 8) || '-' ||
-  substring(hash_value, 9, 4) || '-' ||
-  substring(hash_value, 13, 4) || '-' ||
-  substring(hash_value, 17, 4) || '-' ||
-  substring(hash_value, 21, 12) AS stg_business_entity_id
-FROM hash_values h;
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_details
+(
+    stg_business_entity_id   varchar not null primary key,
+    business_entity_name varchar,
+    company_structure         varchar,
+    market_segment_type  varchar,
+    industry_type        varchar,
+	year_incorporated varchar,
+	reported_annual_revenue  numeric,
+    is_active            boolean,
+    last_updated_by      varchar,
+    last_updated_date    timestamp,
+    created_by           varchar,
+    created_date         timestamp,
+	business_validation_reason varchar
+);
+
+
+now i need insert data in sds_staging.business_entity_details from above select query
+business_entity_name ntg but vendor_name_cleaned
+
+also need to keep null for last_updated_by,last_updated_date,business_validation_reason
