@@ -42,6 +42,11 @@ hash_values AS (
     ), 'sha256'), 'hex') AS hash_value,
     encode(digest(COALESCE(t1.buying_entity, ''), 'sha256'), 'hex') AS buying_entity_hash
   FROM t1
+),
+constant_entity AS (
+  SELECT 
+    'JP Morgan Chase Bank N.A.' AS entity_name,
+    encode(digest('JP Morgan Chase Bank N.A.', 'sha256'), 'hex') AS entity_hash
 )
 -- First insert the regular business entities
 SELECT 
@@ -84,7 +89,26 @@ SELECT DISTINCT
   'supplier_directory' AS created_by,
   CAST(current_timestamp AS TIMESTAMP) AS created_date
 FROM hash_values h
-WHERE h.buying_entity IS NOT NULL;
+WHERE h.buying_entity IS NOT NULL
 
+UNION ALL
 
-JP Morgan Chase Bank N.A.
+-- Add the constant entity 'JP Morgan Chase Bank N.A.'
+SELECT
+  substring(entity_hash, 1, 8) || '-' ||
+  substring(entity_hash, 9, 4) || '-' ||
+  substring(entity_hash, 13, 4) || '-' ||
+  substring(entity_hash, 17, 4) || '-' ||
+  substring(entity_hash, 21, 12) AS stg_business_entity_id,
+  NULL AS source_system_id,
+  'PFD' AS source_system_name,
+  NULL AS hierarchy_identifier,
+  NULL AS hierarchy_level,
+  NULL AS hierarchy_role,
+  NULL AS parent_id,
+  CAST('Y' AS BOOLEAN) AS is_active,
+  NULL AS last_updated_by,
+  NULL AS last_updated_date,
+  'supplier_directory' AS created_by,
+  CAST(current_timestamp AS TIMESTAMP) AS created_date
+FROM constant_entity;
