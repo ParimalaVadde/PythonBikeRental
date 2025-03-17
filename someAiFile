@@ -112,3 +112,14 @@ SELECT
   'supplier_directory' AS created_by,
   CAST(current_timestamp AS TIMESTAMP) AS created_date
 FROM constant_entity;
+
+
+
+
+
+ERROR:  column "last_updated_date" is of type timestamp without time zone but expression is of type text
+LINE 66:   NULL AS last_updated_date,
+           ^
+HINT:  You will need to rewrite or cast the expression.
+SQL state: 42804
+Character: 2029
