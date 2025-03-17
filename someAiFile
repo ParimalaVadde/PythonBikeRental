@@ -1,29 +1,60 @@
-Here is the formatted SQL code:
-
-```
-CREATE TABLE spark_catalog.gms_us_hub.gmsgq_laketohub_batch_config (
-    src_system STRING,
-    src_tbl STRING,
-    tgt_tbl STRING,
-    src_merge_col_nm STRING,
-    tgt_merge_col_nm STRING,
-    src_merge_filter_condition STRING,
-    tgt_merge_filter_condition STRING,
-    load_strategy STRING,
-    src_incr_query STRING,
-    src_truncate_query STRING,
-    lake_to_hub_flow STRING,
-    hard_delete_flag STRING,
-    hub_tidal_job_id INT,
-    post_sql_query STRING,
-    post_sql_flag STRING
+INSERT INTO sds_staging.business_entity (
+    stg_business_entity_id,
+    source_system_id,
+    source_system_name,
+    hierarchy_identifier,
+    hierarchy_level,
+    hierarchy_role,
+    parent_id,
+    is_active,
+    last_updated_by,
+    last_updated_date,
+    created_by,
+    created_date
 )
-USING delta
-PARTITIONED BY (src_system, src_tbl, tgt_tbl)
-LOCATION 's3://tpc-aws-ted-prd-edpp-hub-gms-us-east-1/gms_us_hub/GMSGQ_DDM/BATCH/gmsgq_laketohub_batch_config'
-TBLPROPERTIES (
-    'delta.minReaderVersion' = '1',
-    'delta.minWriterVersion' = '2',
-    'upgraded_to' = 'us_gmsgq_prd.gms_us_hub.gmsgq_laketohub_batch_config'
-);
-```
+WITH t1 AS (
+  SELECT DISTINCT 
+    'PFD' AS source_system_name, 
+    CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
+    CAST(vendor_email AS VARCHAR) AS vendor_email,
+    CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
+	CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
+    CAST(NULL AS VARCHAR) AS source_system_id, 
+    CAST(NULL AS VARCHAR) AS parent_id, 
+    CAST('1' AS VARCHAR) AS hierarchy_level, 
+    CAST('1' AS VARCHAR) AS hierarchy_identifier, 
+    CAST('1' AS VARCHAR) AS hierarchy_role, 
+    CAST('Y' AS BOOLEAN) AS is_active,
+    CAST(current_timestamp AS TIMESTAMP) AS created_date, 
+    CAST('supplier_directory' AS VARCHAR) AS created_by 
+  FROM sds_landing.analysis_pfd
+),
+hash_values AS (
+  SELECT 
+    t1.*,
+    encode(digest(CONCAT_WS('-', 
+      COALESCE(t1.vendor_name_cleaned, ''), 
+      COALESCE(t1.vendor_email, ''), 
+      COALESCE(t1.vendor_government_id, ''),
+	  COALESCE(t1.vendor_address_ln_1, '')
+    ), 'sha256'), 'hex') AS hash_value
+  FROM t1
+)
+SELECT 
+  substring(hash_value, 1, 8) || '-' ||
+  substring(hash_value, 9, 4) || '-' ||
+  substring(hash_value, 13, 4) || '-' ||
+  substring(hash_value, 17, 4) || '-' ||
+  substring(hash_value, 21, 12) AS stg_business_entity_id,
+  h.source_system_id,
+  h.source_system_name,
+  h.hierarchy_identifier,
+  h.hierarchy_level,
+  h.hierarchy_role,
+  h.parent_id,
+  h.is_active,
+  NULL AS last_updated_by,
+  NULL AS last_updated_date,
+  h.created_by,
+  h.created_date
+FROM hash_values h;
