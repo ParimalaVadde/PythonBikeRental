@@ -85,3 +85,6 @@ SELECT DISTINCT
   CAST(current_timestamp AS TIMESTAMP) AS created_date
 FROM hash_values h
 WHERE h.buying_entity IS NOT NULL;
+
+
+JP Morgan Chase Bank N.A.
