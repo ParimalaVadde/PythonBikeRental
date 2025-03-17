@@ -1,34 +1,40 @@
--- CREATE EXTENSION IF NOT EXISTS pgcrypto;
-INSERT INTO sds_staging.business_entity (
+INSERT INTO sds_staging.business_entity_details (
     stg_business_entity_id,
-    source_system_id,
-    source_system_name,
-    hierarchy_identifier,
-    hierarchy_level,
-    hierarchy_role,
-    parent_id,
+    business_entity_name,
+    company_structure,
+    market_segment_type,
+    year_incorporated,
+    reported_annual_revenue,
     is_active,
     last_updated_by,
     last_updated_date,
     created_by,
-    created_date
+    created_date,
+    business_validation_reason
 )
 WITH t1 AS (
-  SELECT DISTINCT 
-    'PFD' AS source_system_name, 
+  SELECT DISTINCT
     CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
     CAST(vendor_email AS VARCHAR) AS vendor_email,
     CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
-    CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
-    CAST(NULL AS VARCHAR) AS source_system_id, 
-    CAST(NULL AS VARCHAR) AS parent_id, 
-    CAST('1' AS VARCHAR) AS hierarchy_level, 
-    CAST('1' AS VARCHAR) AS hierarchy_identifier, 
-    CAST('1' AS VARCHAR) AS hierarchy_role, 
+	CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
+    CAST(vendor_annualrevenue AS NUMERIC) AS reported_annual_revenue,
+    CAST(year_incorporated AS VARCHAR) AS year_incorporated,
+    CASE
+      WHEN corp_structures IS NOT NULL THEN 
+        -- Extract the corporate_structure value from the JSON
+        CAST(json_extract_path_text(
+          CAST(corp_structures AS json), 
+          '0', 
+          'corporate_structure'
+        ) AS VARCHAR)
+      WHEN filter_individual = 'Y' THEN 'Individual'
+      ELSE NULL
+    END AS company_structure,
+    CAST(NULL AS VARCHAR) AS market_segment_type,
     CAST('Y' AS BOOLEAN) AS is_active,
     CAST(current_timestamp AS TIMESTAMP) AS created_date, 
-    CAST('supplier_directory' AS VARCHAR) AS created_by,
-    CAST(buying_entity AS VARCHAR) AS buying_entity
+    CAST('supplier_directory' AS VARCHAR) AS created_by 
   FROM sds_landing.analysis_pfd
 ),
 hash_values AS (
@@ -37,89 +43,26 @@ hash_values AS (
     encode(digest(CONCAT_WS('-', 
       COALESCE(t1.vendor_name_cleaned, ''), 
       COALESCE(t1.vendor_email, ''), 
-      COALESCE(t1.vendor_government_id, ''),
-      COALESCE(t1.vendor_address_ln_1, '')
-    ), 'sha256'), 'hex') AS hash_value,
-    encode(digest(COALESCE(t1.buying_entity, ''), 'sha256'), 'hex') AS buying_entity_hash
+      COALESCE(t1.vendor_government_id, '')
+	  COALESCE(t1.vendor_address_ln_1, '')
+    ), 'sha256'), 'hex') AS hash_value
   FROM t1
-),
-constant_entity AS (
-  SELECT 
-    'JP Morgan Chase Bank N.A.' AS entity_name,
-    encode(digest('JP Morgan Chase Bank N.A.', 'sha256'), 'hex') AS entity_hash
 )
--- First insert the regular business entities
 SELECT 
   substring(hash_value, 1, 8) || '-' ||
   substring(hash_value, 9, 4) || '-' ||
   substring(hash_value, 13, 4) || '-' ||
   substring(hash_value, 17, 4) || '-' ||
   substring(hash_value, 21, 12) AS stg_business_entity_id,
-  h.source_system_id,
-  h.source_system_name,
-  h.hierarchy_identifier,
-  h.hierarchy_level,
-  h.hierarchy_role,
-  h.parent_id,
+  h.vendor_name_cleaned AS business_entity_name,
+  h.company_structure,
+  h.market_segment_type,
+  h.year_incorporated,
+  h.reported_annual_revenue,
   h.is_active,
-  NULL AS last_updated_by,
-  NULL AS last_updated_date,
+  CAST(NULL AS VARCHAR)last_updated_by,
+  CAST(NULL AS TIMESTAMP)last_updated_date,
   h.created_by,
-  h.created_date
-FROM hash_values h
-
-UNION ALL
-
--- Then insert the buying entities with NULL for most fields
-SELECT DISTINCT
-  substring(buying_entity_hash, 1, 8) || '-' ||
-  substring(buying_entity_hash, 9, 4) || '-' ||
-  substring(buying_entity_hash, 13, 4) || '-' ||
-  substring(buying_entity_hash, 17, 4) || '-' ||
-  substring(buying_entity_hash, 21, 12) AS stg_business_entity_id,
-  NULL AS source_system_id,
-  'PFD' AS source_system_name,
-  NULL AS hierarchy_identifier,
-  NULL AS hierarchy_level,
-  NULL AS hierarchy_role,
-  NULL AS parent_id,
-  CAST('Y' AS BOOLEAN) AS is_active,
-  NULL AS last_updated_by,
-  NULL AS last_updated_date,
-  'supplier_directory' AS created_by,
-  CAST(current_timestamp AS TIMESTAMP) AS created_date
-FROM hash_values h
-WHERE h.buying_entity IS NOT NULL
-
-UNION ALL
-
--- Add the constant entity 'JP Morgan Chase Bank N.A.'
-SELECT
-  substring(entity_hash, 1, 8) || '-' ||
-  substring(entity_hash, 9, 4) || '-' ||
-  substring(entity_hash, 13, 4) || '-' ||
-  substring(entity_hash, 17, 4) || '-' ||
-  substring(entity_hash, 21, 12) AS stg_business_entity_id,
-  NULL AS source_system_id,
-  'PFD' AS source_system_name,
-  NULL AS hierarchy_identifier,
-  NULL AS hierarchy_level,
-  NULL AS hierarchy_role,
-  NULL AS parent_id,
-  CAST('Y' AS BOOLEAN) AS is_active,
-  NULL AS last_updated_by,
-  NULL AS last_updated_date,
-  'supplier_directory' AS created_by,
-  CAST(current_timestamp AS TIMESTAMP) AS created_date
-FROM constant_entity;
-
-
-
-
-
-ERROR:  column "last_updated_date" is of type timestamp without time zone but expression is of type text
-LINE 66:   NULL AS last_updated_date,
-           ^
-HINT:  You will need to rewrite or cast the expression.
-SQL state: 42804
-Character: 2029
+  h.created_date,
+  NULL AS business_validation_reason
+FROM hash_values h;
