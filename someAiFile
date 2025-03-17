@@ -12,29 +12,25 @@ INSERT INTO sds_staging.business_entity_details (
     created_date,
     business_validation_reason
 )
+-- Original query for vendor entries
 WITH t1 AS (
   SELECT DISTINCT
     CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
     CAST(vendor_email AS VARCHAR) AS vendor_email,
     CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
-	CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
+    CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
     CAST(vendor_annualrevenue AS NUMERIC) AS reported_annual_revenue,
     CAST(year_incorporated AS VARCHAR) AS year_incorporated,
-    CASE
-      WHEN corp_structures IS NOT NULL THEN 
-        -- Extract the corporate_structure value from the JSON
-        CAST(json_extract_path_text(
-          CAST(corp_structures AS json), 
-          '0', 
-          'corporate_structure'
-        ) AS VARCHAR)
-      WHEN filter_individual = 'Y' THEN 'Individual'
-      ELSE NULL
-    END AS company_structure,
-    CAST(NULL AS VARCHAR) AS market_segment_type,
-    CAST('Y' AS BOOLEAN) AS is_active,
-    CAST(current_timestamp AS TIMESTAMP) AS created_date, 
-    CAST('supplier_directory' AS VARCHAR) AS created_by 
+    -- Get the corporate structure from JSON if it exists
+    CASE WHEN corp_structures IS NOT NULL THEN 
+      CAST(json_extract_path_text(
+        CAST(corp_structures AS json), 
+        '0', 
+        'corporate_structure'
+      ) AS VARCHAR)
+    ELSE NULL END AS corp_structure_value,
+    CAST(filter_individual AS VARCHAR) AS filter_individual,
+    CAST(NULL AS VARCHAR) AS market_segment_type
   FROM sds_landing.analysis_pfd
 ),
 hash_values AS (
@@ -43,11 +39,26 @@ hash_values AS (
     encode(digest(CONCAT_WS('-', 
       COALESCE(t1.vendor_name_cleaned, ''), 
       COALESCE(t1.vendor_email, ''), 
-      COALESCE(t1.vendor_government_id, '')
-	  COALESCE(t1.vendor_address_ln_1, '')
+      COALESCE(t1.vendor_government_id, ''),
+      COALESCE(t1.vendor_address_ln_1, '')
     ), 'sha256'), 'hex') AS hash_value
   FROM t1
+),
+-- New CTE for buying entities
+buying_entities AS (
+  SELECT DISTINCT
+    CAST(buying_entity AS VARCHAR) AS buying_entity_name,
+    encode(digest(COALESCE(buying_entity, ''), 'sha256'), 'hex') AS hash_value
+  FROM sds_landing.analysis_pfd
+  WHERE buying_entity IS NOT NULL
+),
+-- CTE for JP Morgan Chase constant entity
+jpmc_entity AS (
+  SELECT
+    'JP Morgan Chase Bank N.A.' AS business_entity_name,
+    encode(digest('JP Morgan Chase Bank N.A.', 'sha256'), 'hex') AS hash_value
 )
+-- Regular entries with corp_structure value if it exists
 SELECT 
   substring(hash_value, 1, 8) || '-' ||
   substring(hash_value, 9, 4) || '-' ||
@@ -55,14 +66,75 @@ SELECT
   substring(hash_value, 17, 4) || '-' ||
   substring(hash_value, 21, 12) AS stg_business_entity_id,
   h.vendor_name_cleaned AS business_entity_name,
-  h.company_structure,
+  h.corp_structure_value AS company_structure,
   h.market_segment_type,
   h.year_incorporated,
   h.reported_annual_revenue,
-  h.is_active,
-  CAST(NULL AS VARCHAR)last_updated_by,
-  CAST(NULL AS TIMESTAMP)last_updated_date,
-  h.created_by,
-  h.created_date,
-  NULL AS business_validation_reason
-FROM hash_values h;
+  CAST('Y' AS BOOLEAN) AS is_active,
+  CAST(NULL AS VARCHAR) AS last_updated_by,
+  CAST(NULL AS TIMESTAMP) AS last_updated_date,
+  CAST('supplier_directory' AS VARCHAR) AS created_by,
+  CAST(current_timestamp AS TIMESTAMP) AS created_date,
+  CAST(NULL AS VARCHAR) AS business_validation_reason
+FROM hash_values h
+UNION ALL
+-- Additional entries for entities with filter_individual = 'Y'
+SELECT 
+  substring(hash_value, 1, 8) || '-' ||
+  substring(hash_value, 9, 4) || '-' ||
+  substring(hash_value, 13, 4) || '-' ||
+  substring(hash_value, 17, 4) || '-' ||
+  substring(hash_value, 21, 12) AS stg_business_entity_id,
+  h.vendor_name_cleaned AS business_entity_name,
+  'Individual' AS company_structure,
+  h.market_segment_type,
+  h.year_incorporated,
+  h.reported_annual_revenue,
+  CAST('Y' AS BOOLEAN) AS is_active,
+  CAST(NULL AS VARCHAR) AS last_updated_by,
+  CAST(NULL AS TIMESTAMP) AS last_updated_date,
+  CAST('supplier_directory' AS VARCHAR) AS created_by,
+  CAST(current_timestamp AS TIMESTAMP) AS created_date,
+  CAST(NULL AS VARCHAR) AS business_validation_reason
+FROM hash_values h
+WHERE h.filter_individual = 'Y'
+UNION ALL
+-- New entries for buying entities with all columns as NULL except business_entity_name
+SELECT 
+  substring(hash_value, 1, 8) || '-' ||
+  substring(hash_value, 9, 4) || '-' ||
+  substring(hash_value, 13, 4) || '-' ||
+  substring(hash_value, 17, 4) || '-' ||
+  substring(hash_value, 21, 12) AS stg_business_entity_id,
+  be.buying_entity_name AS business_entity_name,
+  CAST(NULL AS VARCHAR) AS company_structure,
+  CAST(NULL AS VARCHAR) AS market_segment_type,
+  CAST(NULL AS VARCHAR) AS year_incorporated,
+  CAST(NULL AS NUMERIC) AS reported_annual_revenue,
+  CAST('Y' AS BOOLEAN) AS is_active,
+  CAST(NULL AS VARCHAR) AS last_updated_by,
+  CAST(NULL AS TIMESTAMP) AS last_updated_date,
+  CAST('supplier_directory' AS VARCHAR) AS created_by,
+  CAST(current_timestamp AS TIMESTAMP) AS created_date,
+  CAST(NULL AS VARCHAR) AS business_validation_reason
+FROM buying_entities be
+UNION ALL
+-- Adding JP Morgan Chase Bank N.A. with all columns as NULL except business_entity_name
+SELECT 
+  substring(hash_value, 1, 8) || '-' ||
+  substring(hash_value, 9, 4) || '-' ||
+  substring(hash_value, 13, 4) || '-' ||
+  substring(hash_value, 17, 4) || '-' ||
+  substring(hash_value, 21, 12) AS stg_business_entity_id,
+  jpmc.business_entity_name,
+  CAST(NULL AS VARCHAR) AS company_structure,
+  CAST(NULL AS VARCHAR) AS market_segment_type,
+  CAST(NULL AS VARCHAR) AS year_incorporated,
+  CAST(NULL AS NUMERIC) AS reported_annual_revenue,
+  CAST('Y' AS BOOLEAN) AS is_active,
+  CAST(NULL AS VARCHAR) AS last_updated_by,
+  CAST(NULL AS TIMESTAMP) AS last_updated_date,
+  CAST('supplier_directory' AS VARCHAR) AS created_by,
+  CAST(current_timestamp AS TIMESTAMP) AS created_date,
+  CAST(NULL AS VARCHAR) AS business_validation_reason
+FROM jpmc_entity jpmc;
