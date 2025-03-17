@@ -1,3 +1,4 @@
+-- CREATE EXTENSION IF NOT EXISTS pgcrypto;
 INSERT INTO sds_staging.business_entity (
     stg_business_entity_id,
     source_system_id,
@@ -18,7 +19,7 @@ WITH t1 AS (
     CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
     CAST(vendor_email AS VARCHAR) AS vendor_email,
     CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
-	CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
+    CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
     CAST(NULL AS VARCHAR) AS source_system_id, 
     CAST(NULL AS VARCHAR) AS parent_id, 
     CAST('1' AS VARCHAR) AS hierarchy_level, 
@@ -26,7 +27,8 @@ WITH t1 AS (
     CAST('1' AS VARCHAR) AS hierarchy_role, 
     CAST('Y' AS BOOLEAN) AS is_active,
     CAST(current_timestamp AS TIMESTAMP) AS created_date, 
-    CAST('supplier_directory' AS VARCHAR) AS created_by 
+    CAST('supplier_directory' AS VARCHAR) AS created_by,
+    CAST(buying_entity AS VARCHAR) AS buying_entity
   FROM sds_landing.analysis_pfd
 ),
 hash_values AS (
@@ -36,10 +38,12 @@ hash_values AS (
       COALESCE(t1.vendor_name_cleaned, ''), 
       COALESCE(t1.vendor_email, ''), 
       COALESCE(t1.vendor_government_id, ''),
-	  COALESCE(t1.vendor_address_ln_1, '')
-    ), 'sha256'), 'hex') AS hash_value
+      COALESCE(t1.vendor_address_ln_1, '')
+    ), 'sha256'), 'hex') AS hash_value,
+    encode(digest(COALESCE(t1.buying_entity, ''), 'sha256'), 'hex') AS buying_entity_hash
   FROM t1
 )
+-- First insert the regular business entities
 SELECT 
   substring(hash_value, 1, 8) || '-' ||
   substring(hash_value, 9, 4) || '-' ||
@@ -57,4 +61,27 @@ SELECT
   NULL AS last_updated_date,
   h.created_by,
   h.created_date
-FROM hash_values h;
+FROM hash_values h
+
+UNION ALL
+
+-- Then insert the buying entities with NULL for most fields
+SELECT DISTINCT
+  substring(buying_entity_hash, 1, 8) || '-' ||
+  substring(buying_entity_hash, 9, 4) || '-' ||
+  substring(buying_entity_hash, 13, 4) || '-' ||
+  substring(buying_entity_hash, 17, 4) || '-' ||
+  substring(buying_entity_hash, 21, 12) AS stg_business_entity_id,
+  NULL AS source_system_id,
+  'PFD' AS source_system_name,
+  NULL AS hierarchy_identifier,
+  NULL AS hierarchy_level,
+  NULL AS hierarchy_role,
+  NULL AS parent_id,
+  CAST('Y' AS BOOLEAN) AS is_active,
+  NULL AS last_updated_by,
+  NULL AS last_updated_date,
+  'supplier_directory' AS created_by,
+  CAST(current_timestamp AS TIMESTAMP) AS created_date
+FROM hash_values h
+WHERE h.buying_entity IS NOT NULL;
