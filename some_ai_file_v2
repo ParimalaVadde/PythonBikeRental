@@ -1,1 +1,5 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+ERROR:  cannot subscript type record because it does not support subscripting
+LINE 112: ...      WHEN ct.transform_type = 'simple' THEN CAST(eim[ct.sou...
+                                                               ^
+SQL state: 42804
+Character: 5653
