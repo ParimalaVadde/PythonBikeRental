@@ -24,7 +24,7 @@ INSERT INTO sds_main.physical_address
     created_date
 )
 WITH base_data AS (
-    SELECT
+    SELECT DISTINCT
         CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
         CAST(vendor_postcode AS VARCHAR) AS vendor_postcode,
         CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
@@ -35,6 +35,7 @@ WITH base_data AS (
         CAST(vendor_city AS VARCHAR) AS vendor_city,
         CAST(vendor_government_id AS VARCHAR) AS vendor_government_id
     FROM sds_landing.analysis_pfd
+    WHERE vendor_name_cleaned IS NOT NULL
 ),
 entity_hash AS (
     SELECT 
