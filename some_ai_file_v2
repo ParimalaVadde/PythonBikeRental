@@ -1,1 +1,51 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE TABLE IF NOT EXISTS sds_main.physical_address
+(
+    physical_address_id     varchar,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    physical_address_type     varchar,
+    street_line_1             varchar,
+    street_line_2             varchar,
+    street_line_3             varchar,
+    country                   varchar,
+    city                      varchar,
+    state_province            varchar,
+    postal_code               varchar,
+    location_name             varchar,
+    site_identifier           varchar,
+    is_active                 boolean,
+    last_updated_by           varchar,
+    last_updated_date         timestamp,
+    created_by                varchar,
+    created_date              timestamp
+);
+
+
+create physical_address_id using uuid_generate_v4 should be in following format "38a22fba-1bcc-df37-3e5e-cdbb37bf3162" with vendor_name_cleaned,vendor_postcode,vendor_address_ln_1,vendor_email
+
+
+
+physical_address_id_mapping AS (
+    SELECT
+        eim.*,
+        encode(digest(CONCAT_WS('-', COALESCE(eim.vendor_name_cleaned, ''), 
+		add other columns too
+		uuid_generate_v4()::text), 'sha256'), 'hex') AS char_hash
+    FROM entity_id_mapping eim
+),
+
+2)related_identifier is stg_business_entity_id logic
+
+3)constant mapping for related_identifier_source
+"business_entity" as related_identifier_source
+
+CAST("business_entity" AS VARCHAR) AS related_identifier_source,
+
+4) NULL as physical_address_type
+
+5) for vendor_country from country column of src table sds_landing.analysis_pfd
+6) simillally for vendor_state	from	state_province
+7) simillally forvendor_postcode	from	postal_code
+8) simillally forvendor_address_ln_1	from	street_line1
+9) simillally forvendor_address_ln_2	from	street_line2
+10) simillally forvendor_address_ln_3	from	city
