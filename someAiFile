@@ -1,3 +1,13 @@
+-- select * from sds_staging.business_entity_characteristics order by stg_business_entity_id
+
+-- select * from sds_main.physical_address
+
+-- select * from sds_staging.business_entity
+
+-- select * from sds_staging.business_entity_details
+
+
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 INSERT INTO sds_staging.business_entity_characteristics
