@@ -1,140 +1,80 @@
-INSERT INTO sds_staging.business_entity_details (
-    stg_business_entity_id,
-    business_entity_name,
-    company_structure,
-    market_segment_type,
-    year_incorporated,
-    reported_annual_revenue,
-    is_active,
-    last_updated_by,
-    last_updated_date,
-    created_by,
-    created_date,
-    business_validation_reason
-)
--- Original query for vendor entries
-WITH t1 AS (
-  SELECT DISTINCT
-    CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
-    CAST(vendor_email AS VARCHAR) AS vendor_email,
-    CAST(vendor_government_id AS VARCHAR) AS vendor_government_id,
-    CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
-    CAST(vendor_annualrevenue AS NUMERIC) AS reported_annual_revenue,
-    CAST(year_incorporated AS VARCHAR) AS year_incorporated,
-    -- Get the corporate structure from JSON if it exists
-    CASE WHEN corp_structures IS NOT NULL THEN 
-      CAST(json_extract_path_text(
-        CAST(corp_structures AS json), 
-        '0', 
-        'corporate_structure'
-      ) AS VARCHAR)
-    ELSE NULL END AS corp_structure_value,
-    CAST(filter_individual AS VARCHAR) AS filter_individual,
-    CAST(NULL AS VARCHAR) AS market_segment_type
-  FROM sds_landing.analysis_pfd
-),
-hash_values AS (
-  SELECT 
-    t1.*,
-    encode(digest(CONCAT_WS('-', 
-      COALESCE(t1.vendor_name_cleaned, ''), 
-      COALESCE(t1.vendor_email, ''), 
-      COALESCE(t1.vendor_government_id, ''),
-      COALESCE(t1.vendor_address_ln_1, '')
-    ), 'sha256'), 'hex') AS hash_value
-  FROM t1
-),
--- New CTE for buying entities
-buying_entities AS (
-  SELECT DISTINCT
-    CAST(buying_entity AS VARCHAR) AS buying_entity_name,
-    encode(digest(COALESCE(buying_entity, ''), 'sha256'), 'hex') AS hash_value
-  FROM sds_landing.analysis_pfd
-  WHERE buying_entity IS NOT NULL
-),
--- CTE for JP Morgan Chase constant entity
-jpmc_entity AS (
-  SELECT
-    'JP Morgan Chase Bank N.A.' AS business_entity_name,
-    encode(digest('JP Morgan Chase Bank N.A.', 'sha256'), 'hex') AS hash_value
-)
--- Regular entries with corp_structure value if it exists
-SELECT 
-  substring(hash_value, 1, 8) || '-' ||
-  substring(hash_value, 9, 4) || '-' ||
-  substring(hash_value, 13, 4) || '-' ||
-  substring(hash_value, 17, 4) || '-' ||
-  substring(hash_value, 21, 12) AS stg_business_entity_id,
-  h.vendor_name_cleaned AS business_entity_name,
-  h.corp_structure_value AS company_structure,
-  h.market_segment_type,
-  h.year_incorporated,
-  h.reported_annual_revenue,
-  CAST('Y' AS BOOLEAN) AS is_active,
-  CAST(NULL AS VARCHAR) AS last_updated_by,
-  CAST(NULL AS TIMESTAMP) AS last_updated_date,
-  CAST('supplier_directory' AS VARCHAR) AS created_by,
-  CAST(current_timestamp AS TIMESTAMP) AS created_date,
-  CAST(NULL AS VARCHAR) AS business_validation_reason
-FROM hash_values h
-UNION ALL
--- Additional entries for entities with filter_individual = 'Y'
-SELECT 
-  substring(hash_value, 1, 8) || '-' ||
-  substring(hash_value, 9, 4) || '-' ||
-  substring(hash_value, 13, 4) || '-' ||
-  substring(hash_value, 17, 4) || '-' ||
-  substring(hash_value, 21, 12) AS stg_business_entity_id,
-  h.vendor_name_cleaned AS business_entity_name,
-  'Individual' AS company_structure,
-  h.market_segment_type,
-  h.year_incorporated,
-  h.reported_annual_revenue,
-  CAST('Y' AS BOOLEAN) AS is_active,
-  CAST(NULL AS VARCHAR) AS last_updated_by,
-  CAST(NULL AS TIMESTAMP) AS last_updated_date,
-  CAST('supplier_directory' AS VARCHAR) AS created_by,
-  CAST(current_timestamp AS TIMESTAMP) AS created_date,
-  CAST(NULL AS VARCHAR) AS business_validation_reason
-FROM hash_values h
-WHERE h.filter_individual = 'Y'
-UNION ALL
--- New entries for buying entities with all columns as NULL except business_entity_name
-SELECT 
-  substring(hash_value, 1, 8) || '-' ||
-  substring(hash_value, 9, 4) || '-' ||
-  substring(hash_value, 13, 4) || '-' ||
-  substring(hash_value, 17, 4) || '-' ||
-  substring(hash_value, 21, 12) AS stg_business_entity_id,
-  be.buying_entity_name AS business_entity_name,
-  CAST(NULL AS VARCHAR) AS company_structure,
-  CAST(NULL AS VARCHAR) AS market_segment_type,
-  CAST(NULL AS VARCHAR) AS year_incorporated,
-  CAST(NULL AS NUMERIC) AS reported_annual_revenue,
-  CAST('Y' AS BOOLEAN) AS is_active,
-  CAST(NULL AS VARCHAR) AS last_updated_by,
-  CAST(NULL AS TIMESTAMP) AS last_updated_date,
-  CAST('supplier_directory' AS VARCHAR) AS created_by,
-  CAST(current_timestamp AS TIMESTAMP) AS created_date,
-  CAST(NULL AS VARCHAR) AS business_validation_reason
-FROM buying_entities be
-UNION ALL
--- Adding JP Morgan Chase Bank N.A. with all columns as NULL except business_entity_name
-SELECT 
-  substring(hash_value, 1, 8) || '-' ||
-  substring(hash_value, 9, 4) || '-' ||
-  substring(hash_value, 13, 4) || '-' ||
-  substring(hash_value, 17, 4) || '-' ||
-  substring(hash_value, 21, 12) AS stg_business_entity_id,
-  jpmc.business_entity_name,
-  CAST(NULL AS VARCHAR) AS company_structure,
-  CAST(NULL AS VARCHAR) AS market_segment_type,
-  CAST(NULL AS VARCHAR) AS year_incorporated,
-  CAST(NULL AS NUMERIC) AS reported_annual_revenue,
-  CAST('Y' AS BOOLEAN) AS is_active,
-  CAST(NULL AS VARCHAR) AS last_updated_by,
-  CAST(NULL AS TIMESTAMP) AS last_updated_date,
-  CAST('supplier_directory' AS VARCHAR) AS created_by,
-  CAST(current_timestamp AS TIMESTAMP) AS created_date,
-  CAST(NULL AS VARCHAR) AS business_validation_reason
-FROM jpmc_entity jpmc;
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_characteristics
+(
+    characteristics_id   varchar,
+    stg_business_entity_id   varchar,
+    characteristics_type varchar,
+    characteristic_value varchar,
+    is_active            boolean,
+    last_updated_by      varchar,
+    last_updated_date    timestamp,
+    created_by           varchar,
+    created_date         timestamp,
+	business_validation_reason varchar
+);
+
+stg_business_entity_id = same logic
+
+characteristics_id = create logic generate id in format "62361987-7123-e339-7e86-f26cd5a32924" based on vendor_name_cleaned from sds_landing.analysis_pfd 
+
+1)characteristic_value 
+the value for above column should come from following columns, 
+suppose for a specific characteristics_id or stg_business_entity_id, create row entry for industry_sector_dso_25, if value is null for industry_sector_dso_25 dont create an entry in row
+
+simillary , for below columns from source
+
+industry_sector_dso_50
+industry_sector_dso_75
+industry_group_dso_25
+industry_group_dso_50
+industry_group_dso_75
+
+
+2) here also below columns to be mapped with characteristic_value
+vendor_credit_rating_moody
+AA
+AA
+ABA
+
+vendor_credit_rating_sp
+null
+null
+null
+
+create again new row entry with different characteristic_value
+characteristic_value="Rating;Provider;Date"
+where characteristic= "Credit_Rating_Provider_Date" and Provider here is "Moody";(mean in source column "vendor_credit_rating_moody" we have moody keyword)  Record the provider , date and rating as a single data element in SDS. Here the value will be like "<rating>;<date>;moody"
+
+example = AA;<todays date>;moody
+
+where characteristic= "Credit_Rating_Provider_Date" and Provider here is "SP";  Record the provider , date and rating as a single data element in SDS. Here the value will be like "<rating>;<date>;sp"
+
+if vendor_credit_rating_sp values are null then ignore
+
+
+3) for below columns also map data to characteristic_value
+
+vendor_credit_revolver_rate
+vendor_cogs
+
+
+ind_vc_campaign 
+binary output -> if   ind_vc_campaign 
+ = Y then "Y" else "N"
+
+
+2)characteristic_type = map below column values to characteristic_type, row by row 
+
+virtualcard_accpetance_tier_legacy
+virtualcard_accpetance_tier_model
+virtualcard_accpetance_tier_userdefined
+ind_virtual_card_campaign_count
+vc_campaign_accepts
+registered_agents , sample values = "[ "ADVANCED WINDOWS LLC", "CORPORATION SERVICE COMPANY" ]"
+
+
+for registered_agents need to split values , its list of elements , then need create 2 same rows except for characteristic_type . for one row it will be "ADVANCED WINDOWS LLC" and next row "CORPORATION SERVICE COMPANY"
+
+
+
+
+
