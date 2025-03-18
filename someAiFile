@@ -1,80 +1,171 @@
-CREATE TABLE IF NOT EXISTS sds_staging.business_entity_characteristics
+-- First, make sure the UUID extension is available
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Now create the insert statement
+INSERT INTO sds_main.physical_address
 (
-    characteristics_id   varchar,
-    stg_business_entity_id   varchar,
-    characteristics_type varchar,
-    characteristic_value varchar,
-    is_active            boolean,
-    last_updated_by      varchar,
-    last_updated_date    timestamp,
-    created_by           varchar,
-    created_date         timestamp,
-	business_validation_reason varchar
-);
+    physical_address_id,
+    related_identifier,
+    related_identifier_source,
+    physical_address_type,
+    street_line_1,
+    street_line_2,
+    street_line_3,
+    country,
+    city,
+    state_province,
+    postal_code,
+    location_name,
+    site_identifier,
+    is_active,
+    last_updated_by,
+    last_updated_date,
+    created_by,
+    created_date
+)
+WITH base_data AS (
+    SELECT DISTINCT
+        CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
+        CAST(vendor_postcode AS VARCHAR) AS vendor_postcode,
+        CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
+        CAST(vendor_address_ln_2 AS VARCHAR) AS vendor_address_ln_2,
+        CAST(vendor_email AS VARCHAR) AS vendor_email,
+        CAST(vendor_country AS VARCHAR) AS vendor_country,
+        CAST(vendor_state AS VARCHAR) AS vendor_state,
+        CAST(vendor_city AS VARCHAR) AS vendor_city,
+        CAST(vendor_government_id AS VARCHAR) AS vendor_government_id
+    FROM sds_landing.analysis_pfd
+    WHERE vendor_name_cleaned IS NOT NULL
+),
+entity_hash AS (
+    SELECT 
+        bd.*,
+        encode(digest(CONCAT_WS('-', 
+            COALESCE(bd.vendor_name_cleaned, ''), 
+            COALESCE(bd.vendor_email, ''), 
+            COALESCE(bd.vendor_government_id, ''),
+            COALESCE(bd.vendor_address_ln_1, '')
+        ), 'sha256'), 'hex') AS entity_hash_value
+    FROM base_data bd
+),
+entity_id_mapping AS (
+    SELECT
+        eh.*,
+        substring(entity_hash_value, 1, 8) || '-' ||
+        substring(entity_hash_value, 9, 4) || '-' ||
+        substring(entity_hash_value, 13, 4) || '-' ||
+        substring(entity_hash_value, 17, 4) || '-' ||
+        substring(entity_hash_value, 21, 12) AS stg_business_entity_id
+    FROM entity_hash eh
+),
+-- CTE for JP Morgan Chase constant entity
+jpmc_entity AS (
+    SELECT
+        'JP Morgan Chase Bank N.A.' AS business_entity_name,
+        encode(digest('JP Morgan Chase Bank N.A.', 'sha256'), 'hex') AS hash_value
+),
+-- CTE for buying entities
+buying_entities AS (
+    SELECT DISTINCT
+        CAST(buying_entity AS VARCHAR) AS buying_entity_name,
+        encode(digest(COALESCE(buying_entity, ''), 'sha256'), 'hex') AS hash_value
+    FROM sds_landing.analysis_pfd
+    WHERE buying_entity IS NOT NULL
+),
+-- Add mapping for JPMC
+jpmc_mapping AS (
+    SELECT
+        business_entity_name,
+        hash_value,
+        -- For entity ID, keep the same approach
+        substring(hash_value, 1, 8) || '-' ||
+        substring(hash_value, 9, 4) || '-' ||
+        substring(hash_value, 13, 4) || '-' ||
+        substring(hash_value, 17, 4) || '-' ||
+        substring(hash_value, 21, 12) AS stg_business_entity_id
+    FROM jpmc_entity
+),
+-- Add mappings for buying entities
+buying_entity_mappings AS (
+    SELECT
+        buying_entity_name,
+        hash_value,
+        -- For entity ID, keep the same approach
+        substring(hash_value, 1, 8) || '-' ||
+        substring(hash_value, 9, 4) || '-' ||
+        substring(hash_value, 13, 4) || '-' ||
+        substring(hash_value, 17, 4) || '-' ||
+        substring(hash_value, 21, 12) AS stg_business_entity_id
+    FROM buying_entities
+)
 
-stg_business_entity_id = same logic
+-- Regular vendor addresses
+SELECT
+    uuid_generate_v4() AS physical_address_id,
+    stg_business_entity_id AS related_identifier,
+    CAST('business_entity' AS VARCHAR) AS related_identifier_source,
+    CAST(NULL AS VARCHAR) AS physical_address_type,
+    vendor_address_ln_1 AS street_line_1,
+    vendor_address_ln_2 AS street_line_2,
+    vendor_city AS street_line_3,
+    vendor_country AS country,
+    vendor_city AS city,
+    vendor_state AS state_province,
+    vendor_postcode AS postal_code,
+    CAST(NULL AS VARCHAR) AS location_name,
+    CAST(NULL AS VARCHAR) AS site_identifier,
+    CAST('Y' AS BOOLEAN) AS is_active,
+    CAST(NULL AS VARCHAR) AS last_updated_by,
+    CAST(NULL AS TIMESTAMP) AS last_updated_date,
+    CAST('supplier_directory' AS VARCHAR) AS created_by,
+    CAST(current_timestamp AS TIMESTAMP) AS created_date
+FROM entity_id_mapping
+WHERE vendor_address_ln_1 IS NOT NULL
 
-characteristics_id = create logic generate id in format "62361987-7123-e339-7e86-f26cd5a32924" based on vendor_name_cleaned from sds_landing.analysis_pfd 
+UNION ALL
 
-1)characteristic_value 
-the value for above column should come from following columns, 
-suppose for a specific characteristics_id or stg_business_entity_id, create row entry for industry_sector_dso_25, if value is null for industry_sector_dso_25 dont create an entry in row
+-- JP Morgan Chase address
+SELECT
+    uuid_generate_v4() AS physical_address_id,
+    stg_business_entity_id AS related_identifier,
+    CAST('business_entity' AS VARCHAR) AS related_identifier_source,
+    CAST(NULL AS VARCHAR) AS physical_address_type,
+    CAST('383 Madison Avenue' AS VARCHAR) AS street_line_1,
+    CAST(NULL AS VARCHAR) AS street_line_2,
+    CAST('New York' AS VARCHAR) AS street_line_3,
+    CAST('United States' AS VARCHAR) AS country,
+    CAST('New York' AS VARCHAR) AS city,
+    CAST('NY' AS VARCHAR) AS state_province,
+    CAST('10179' AS VARCHAR) AS postal_code,
+    CAST(NULL AS VARCHAR) AS location_name,
+    CAST(NULL AS VARCHAR) AS site_identifier,
+    CAST('Y' AS BOOLEAN) AS is_active,
+    CAST(NULL AS VARCHAR) AS last_updated_by,
+    CAST(NULL AS TIMESTAMP) AS last_updated_date,
+    CAST('supplier_directory' AS VARCHAR) AS created_by,
+    CAST(current_timestamp AS TIMESTAMP) AS created_date
+FROM jpmc_mapping
 
-simillary , for below columns from source
+UNION ALL
 
-industry_sector_dso_50
-industry_sector_dso_75
-industry_group_dso_25
-industry_group_dso_50
-industry_group_dso_75
-
-
-2) here also below columns to be mapped with characteristic_value
-vendor_credit_rating_moody
-AA
-AA
-ABA
-
-vendor_credit_rating_sp
-null
-null
-null
-
-create again new row entry with different characteristic_value
-characteristic_value="Rating;Provider;Date"
-where characteristic= "Credit_Rating_Provider_Date" and Provider here is "Moody";(mean in source column "vendor_credit_rating_moody" we have moody keyword)  Record the provider , date and rating as a single data element in SDS. Here the value will be like "<rating>;<date>;moody"
-
-example = AA;<todays date>;moody
-
-where characteristic= "Credit_Rating_Provider_Date" and Provider here is "SP";  Record the provider , date and rating as a single data element in SDS. Here the value will be like "<rating>;<date>;sp"
-
-if vendor_credit_rating_sp values are null then ignore
-
-
-3) for below columns also map data to characteristic_value
-
-vendor_credit_revolver_rate
-vendor_cogs
-
-
-ind_vc_campaign 
-binary output -> if   ind_vc_campaign 
- = Y then "Y" else "N"
-
-
-2)characteristic_type = map below column values to characteristic_type, row by row 
-
-virtualcard_accpetance_tier_legacy
-virtualcard_accpetance_tier_model
-virtualcard_accpetance_tier_userdefined
-ind_virtual_card_campaign_count
-vc_campaign_accepts
-registered_agents , sample values = "[ "ADVANCED WINDOWS LLC", "CORPORATION SERVICE COMPANY" ]"
-
-
-for registered_agents need to split values , its list of elements , then need create 2 same rows except for characteristic_type . for one row it will be "ADVANCED WINDOWS LLC" and next row "CORPORATION SERVICE COMPANY"
-
-
-
-
-
+-- Buying entity addresses (we'll use a placeholder address since we don't have real ones)
+SELECT
+    uuid_generate_v4() AS physical_address_id,
+    stg_business_entity_id AS related_identifier,
+    CAST('business_entity' AS VARCHAR) AS related_identifier_source,
+    CAST(NULL AS VARCHAR) AS physical_address_type,
+    CAST('1 ' || buying_entity_name || ' Headquarters' AS VARCHAR) AS street_line_1,
+    CAST(NULL AS VARCHAR) AS street_line_2,
+    CAST(NULL AS VARCHAR) AS street_line_3,
+    CAST('United States' AS VARCHAR) AS country,
+    CAST(NULL AS VARCHAR) AS city,
+    CAST(NULL AS VARCHAR) AS state_province,
+    CAST(NULL AS VARCHAR) AS postal_code,
+    CAST(NULL AS VARCHAR) AS location_name,
+    CAST(NULL AS VARCHAR) AS site_identifier,
+    CAST('Y' AS BOOLEAN) AS is_active,
+    CAST(NULL AS VARCHAR) AS last_updated_by,
+    CAST(NULL AS TIMESTAMP) AS last_updated_date,
+    CAST('supplier_directory' AS VARCHAR) AS created_by,
+    CAST(current_timestamp AS TIMESTAMP) AS created_date
+FROM buying_entity_mappings;
