@@ -6,6 +6,13 @@
 
 -- select * from sds_staging.business_entity_details
 
+Loaded sample data from landing to staging using SQL queries for the following tables:
+
+sds_staging.business_entity_characteristics
+sds_main.physical_address
+sds_staging.business_entity
+sds_staging.business_entity_details
+
 
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
