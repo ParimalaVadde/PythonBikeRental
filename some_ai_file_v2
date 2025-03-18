@@ -1,3 +1,5 @@
+0b8ab894-b72a-8720-cd3b-2ba829ed16aa
+
 -- First, make sure the UUID extension is available
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
