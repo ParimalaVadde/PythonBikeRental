@@ -1,20 +1,8 @@
-Based on the FARM finding you've been assigned, here's what needs to be done:
+Parimala		FARM.Finding.75949351	Prod	Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-utils> <0.5.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>	ecs-utils 0.5.0 [Prohibited] → ecs-utils 1.1.0 [Invest]			
 
-1. You need to upgrade the EAC version to 0.14.1 for the terraform-v812871-postgresql workspace.
 
-2. The finding indicates that the application is using Terraform Module <lightswitch-job> version 2.1.0, which is in a "Prohibited" lifecycle status. This module is being used by the Lambda Function named "app-lightswitch-lambda-d5c34506889d".
+The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-utils> <0.5.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>. This indicates a violation of the firm's control objective regarding the use of technology products in a product lifecycle status that is not approved for use.
 
-3. The instruction "Follow the steps mentioned in FarmFinding. Multiple Components has to be upgraded" suggests that:
-   - You should review the detailed steps in the FARM finding documentation
-   - Multiple components related to this Lambda function need to be upgraded, not just the lightswitch-job module
+What is the impact of this Finding?
 
-4. Since this is marked as "Seems to be for infra - One time activity", it appears to be an infrastructure update that only needs to be done once rather than an ongoing change.
-
-5. Typical steps would include:
-   - Accessing the terraform-v812871-postgresql workspace
-   - Updating the reference to the lightswitch-job module to use an approved version
-   - Upgrading the EAC version to 0.14.1
-   - Testing the changes in a lower environment before applying
-   - Applying the changes and verifying the FARM finding is resolved
-
-You should check the specific steps in the FARM finding documentation as they may include exact version numbers to upgrade to and any specific procedures to follow for this particular module.
+The use of a Terraform Module in Prohibited lifecycle status can leave the firm vulnerable to long recovery times from system failures and cyber-attacks if vendor support is no longer available. Additionally, it may lead to information loss if not disposed of securely and could result in unnecessary expenses if the asset is not purchased through approved vendors.
