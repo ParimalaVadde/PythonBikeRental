@@ -1,11 +1,13 @@
-Team,
-Please find attached the updated FARM findings excel with "New Assignee" column. These FARM findings must be resolved as a top priority.
-The assignment logic:
+Action to be taken	Farm No.	AWS Account	Description	Version Upgrade to	Module caused this issue	Terraform Workspace 	Are we currently using
+EAC version Upgrade to 0.14.1	FARM.Finding.83769632	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <lightswitch-job> <2.1.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Follow the steps mentioned in FarmFinding. Multiple Components has to be upgraded	Lambda Function - app-lightswitch-lambda-d5c34506889d	terraform-v812871-postgresql	Seems to be for infra - One time activity
 
-If the same finding exists across DEV, TEST and PROD, I've assigned the same person to handle all environments
-Everyone has been assigned 2-3 findings, except those handling the same finding across all 3 environments
-I've taken 5 findings under my own responsibility
 
-We will have daily catch up calls for status progress and any blocker discussion from tomorrow.
-Please begin analysis and work on your assigned items immediately. If you have any genuine concerns about your assignments, please reach out to me with valid reasons.
-Thank you,
+I have been assigned with above farm finding
+
+Why was this Finding raised?
+
+The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <lightswitch-job> <2.1.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>. This indicates a violation of the firm's lifecycle management control, which aims to ensure that technology products are not used in a status that is not approved for use.
+
+What is the impact of this Finding?
+
+The use of a Terraform Module in Prohibited lifecycle status can leave the firm vulnerable to long recovery times from system failures and cyber-attacks if vendor support is no longer available. Additionally, it may lead to information loss if not disposed of securely and could result in unnecessary expenses if the asset was not purchased through approved vendors.
