@@ -1,51 +1,11 @@
-S.No	Analysed by	New Assignee	Action to be taken	Farm No.	AWS Account	Description	Version Upgrade to	Module caused this issue	Terraform Workspace 	Are we currently using	Repo	Branch name
-1	Mounika B	Parimala	EAC version Upgrade to 0.14.1	FARM.Finding.83769632	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <lightswitch-job> <2.1.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Follow the steps mentioned in FarmFinding. Multiple Components has to be upgraded	Lambda Function - app-lightswitch-lambda-d5c34506889d	terraform-v812871-postgresql	Seems to be for infra - One time activity		
-2	Mounika B	Priyanka	delete cluster	FARM.Finding.75949318	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-cluster> <2.22.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	"Existing ecs-fargate-cluster 2.1.1
-ecs-fargate-cluster 2.9.0"	"ECS Cluster - 
-xbsd-api-pull-ecs"	xbsd-api-pull-ecs-terraform-ecs-use1	Not sure. API clusters		
-3	Mounika B	Mounika B		FARM.Finding.84546998	TEST	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (15.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <533267018973>	"
+Team,
+Please find attached the updated FARM findings excel with "New Assignee" column. These FARM findings must be resolved as a top priority.
+The assignment logic:
 
-Follow steps mentioned in FarmFinding
+If the same finding exists across DEV, TEST and PROD, I've assigned the same person to handle all environments
+Everyone has been assigned 2-3 findings, except those handling the same finding across all 3 environments
+I've taken 5 findings under my own responsibility
 
-
-job-schedule 1.2.1 [Divest] → job-schedule 2.0.1 [Invest]
-Have to check if RDS cluster configuration -15.3 works for job-schedule 2.0.1"		xbsddbts-533267018973-us-east-1-xbsdtestdb-auroratsdb-v1	Yes	xbsd-aurora-postgresql	revert_aurora_rds_changes
-4	Mounika B	Mounika B	EAC version Upgrade to 0.14.1	FARM.Finding.84547325	DEV	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (15.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	"
-
-Follow steps mentioned in FarmFinding
-
-
-job-schedule 1.2.1 [Divest] → job-schedule 2.0.1 [Invest]
-Have to check if RDS cluster configuration -15.3 works for job-schedule 2.0.1"		xbsddbts-484862117635-us-east-1-xbsdtestdb-auroratdb-v1	Yes	xbsd-aurora-postgresql	develop
-5	Mounika B	Abhishek		FARM.Finding.75951634	TEST	 Application <111597> has provisioned asset(s) using Terraform Module <ecs-application> <2.14.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <533267018973>	ecs-application 2.14.0 [Prohibited] → ecs-application 2.38.0 [Invest]	"ECS Task Definition - 
-ecs6a44-xbsd-v1-ecsapp"	xbsdecsd-533267018973-us-east-1-ecsapp-xbsdapp-v1	No	xbsd-ecs-aws-app	"Deplyment name - xbsdecsd (Check in EAC UI)
-release/xbsd-ecs-app-20"
-6	Mounika B	Mounika B		FARM.Finding.84548519	Prod	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (15.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>	15.3 is prohibited. Have to check suitable version in TFE and upgrade	rdsapg86a8-auroraprdb-v1-cluster	TFE Workspace link is invalid	Yes		
-7	Mounika B	Parimala		FARM.Finding.75949351	Prod	Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-utils> <0.5.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>	ecs-utils 0.5.0 [Prohibited] → ecs-utils 1.1.0 [Invest]					
-8	Priyanka	Srinivas	delete cluster	FARM.Finding.75951779	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <2.14.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	version up of ecs fargate cluster from 2.14.0 to 2.9.0	ecs-cluster -> ecs-fargate-cluster:2.2.0 -> xbsd-ecs-apigw-dev	xbsd-ecs-apigw-dev-terraform-ecs-use1			
-9	Priyanka	Abhishek	delete 	FARM.Finding.75953308	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <2.14.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	version up of ecs-application from 2.14.0 to 2.38.0	ecs-application,job-schedule ->(xbsddbtest_cluster_off,xbsddbtest_cluster_on)	"xbsdecs3-484862117635-us-east-1-ecsapp-xbsdapp-v1
-
-xbsd-ecs-apigw-dev-xbsd-proj-apps-terraform-use1
-"			
-10	Priyanka	Priyanka		FARM.Finding.75962030	DEV	Application <111597> has provisioned asset(s) utilizing infrastructure component <3.8>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	job-schedule 1.1.0 [Divest] → job-schedule 2.0.0 [Invest]	Lambda Function - app-lightswitch-lambda-d5c34506889d  ,job-schedule ->(xbsddbtest_cluster_off,xbsddbtest_cluster_on)	"terraform-v812871-postgresql
-base-484862117635-us-east-1-XRAYBase
-xbsd-xray-setup"			
-11	Priyanka	Ramsai	delete	FARM.Finding.75949316	DEV	 Application <111597> has provisioned asset(s) utilizing Terraform Module <2.12.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	ecs-application 2.12.0 [Prohibited] → ecs-application 2.37.0 [Invest]	ecs-applicationecs-application - > ecs_v812871_python_app_deployment (invertory name)	ecs-api-app			
-12	Priyanka	Mounika G	delete cluster	FARM.Finding.75949317	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <2.15.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	ecs-cluster 2.15.0 [Prohibited] → ecs-cluster 2.27.0 [Invest]	ecs-cluster ->ECS_CLUSTER = ecs8eb9-xbsds3-v1	ecss3-484862117635-us-east-1-xbsdecs-xbsds3-v1			
-13	Mounika G	Rakesh		FARM.Finding.75962034	Prod	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon AWS Lambda for Python 3.8>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>.			https://tfe.jpmchase.net/session?redirect_to=%2Fapp%2F111597-114116-PRD%2Fworkspaces%2F111597-terraform-glue-job-deployer-992382575964			
-14	Mounika G	Rakesh		FARM.Finding.75962032	Test	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon AWS Lambda for Python 3.8>, which is in Prohibited lifecycle status, in the Atlas AWS Account <533267018973>.		"Updated 9 months ago
-111597-terraform-glue-job-deployer-533267018973"	https://tfe.jpmchase.net/session?redirect_to=%2Fapp%2F111597-114116-TEST%2Fworkspaces%2F111597-terraform-glue-job-deployer-533267018973			
-15	Mounika G	Parimala		FARM.Finding.75962031	DEV	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (14.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.		"Updated a year ago
-terraform-v812871-postgresql"	https://tfe.jpmchase.net/session?redirect_to=%2Fapp%2F111597-114116-DEV%2Fworkspaces%2Fterraform-v812871-postgresql			
-16	Parimala	Ramsai	delete	FARM.Finding.75949311	DEV	The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <api-gateway-deployment> <4.2.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	current version 4.2.0	LambdaCalc				
-17	Parimala	Parimala	delete	FARM.Finding.75949313	DEV	The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <api-gateway-deployment> <4.2.1>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	current version 4.2.1	nlb-alb-xbsd-api				
-18	Parimala	Srinivas		FARM.Finding.75949315	DEV	The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <kms> <3.2.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	"current version 3.2.0
-
-kms 3.2.0 [Prohibited] → kms 4.2.0 [Invest]"	Unable to find exact resouce name for KMS				
-19	Srinivas	Parimala	delete	FARM.Finding.75949319	DEV	"Terraform Module <api-gateway-setup> <4.0.1>, which is in Prohibited lifecycle status, 
-  in the Atlas AWS Account <484862117635>"	"api_gateway_setup 4.0.1 to 5.1.1
-api_gateway_deployment 4.2.1 to 4.3.0"		"	xbsd-ui-apigw
-xbsd-apigw-setup-ecs"			
-20	Srinivas	Mounika G	delete	FARM.Finding.75949350	TEST	"Terraform Module <ecs-cluster> <2.15.0>, which is in Prohibited lifecycle status,
-in the Atlas AWS Account <533267018973>"	"ecs6a44-xbsd-v1 -->cluster name
-ecs-cluster 2.15.0 to 2.25.0"					
+We will have daily catch up calls for status progress and any blocker discussion from tomorrow.
+Please begin analysis and work on your assigned items immediately. If you have any genuine concerns about your assignments, please reach out to me with valid reasons.
+Thank you,
