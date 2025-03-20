@@ -1,3 +1,7 @@
+# Acceptance Criteria
+
+All identified FARM findings must be resolved with prohibited components either upgraded to approved versions or deleted, with validation performed in each environment (DEV, TEST, PROD) to confirm compliance.
+
 JIRA Story Title
 "Resolve FARM Findings for Application 111597 - Infrastructure Component and Terraform Module Upgrades"
 
