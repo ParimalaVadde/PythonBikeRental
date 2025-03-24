@@ -1,724 +1,90 @@
-"stg_business_entity_id","source_system_id","source_system_name","hierarchy_identifier","hierarchy_level","hierarchy_role","parent_id","is_active","last_updated_by","last_updated_date","created_by","created_date","business_validation_reason"
-"ffe73275-5a6d-0968-d835-67cbe203d726","0013k00002fBzeRAAS","scf_salesforce",NULL,NULL,NULL,"000000000000000AAA",False,"supplier_directory","2024-11-19 11:02:59.810886","supplier_directory","2024-11-19 11:02:59.905404","DQ reject"
-"f5c5f707-82e5-c68c-ddd7-34a03ddf7af7","0013k00002fC1zNAAS","scf_salesforce",NULL,NULL,NULL,"000000000000000AAA",False,"supplier_directory","2024-11-19 11:02:59.810886","supplier_directory","2024-11-19 11:02:59.905404","DQ reject"
-"8c3ce314-6e36-7540-4023-80d5616f7085","0013k00002fC2JnAAK","scf_salesforce",NULL,NULL,NULL,"000000000000000AAA",False,"supplier_directory","2024-11-19 
-
-SOURCE_SYSTEM_NAME,SOURCE_SYSTEM_TABLE,SOURCE_SYSTEM_COLUMN,TARGET_TABLE,TARGET_COLUMN,FUNCTION_TYPE,TRANSFORMATION,Filter_Condition,IS_KEY,DQ_CHECK,DQ_FUNC,DQ_RULE,DQ_ACTION,COLLATE_STATEMENT
-SCF,account_scf,IsDeleted,,,FILTER,,IsDeleted != 1,,,,,,
-SCF,account_scf,Record_Status__c,,,FILTER,,"Record_Status__c != ""To be Deleted""",,,,,,
-SCF,contact_scf,IsDeleted,,,FILTER,,IsDeleted != 1,,,,,,
-SCF,,,business_entity,stg_business_entity_id,SOURCE_KEY,"id, source_system_name",,Y,N,,,,
-SCF,account_scf,Id,business_entity,source_system_id,F2F,,,N,N,,,,
-SCF,,,business_entity,source_system_name,CONSTANT,SCF_Salesforce,,N,N,,,,
-SCF,,,business_entity,hierarchy_identifier,,,,N,N,,,,
-SCF,,,business_entity,hierarchy_level,CONDITION,,,N,N,,,,
-SCF,,,business_entity,hierarchy_role,CONDITION,,,N,N,,,,
-SCF,account_scf,ParentId,business_entity,parent_id,F2F,,,N,N,,,,
-SCF,,,business_entity,is_active,CONSTANT,Y,,N,N,,,,
-SCF,,,business_entity,last_updated_by,CONSTANT,SUPPLIER_DIRECTORY,,N,N,,,,
-SCF,,,business_entity,last_updated_date,CONSTANT,DATETIME,,N,N,,,,
-SCF,,,business_entity,created_by,CONSTANT,SUPPLIER_DIRECTORY,,N,N,,,,
-SCF,,,business_entity,created_date,CONSTANT,DATETIME,,N,N,,,,
-
-etl_trnsformtion.py
-
-# Libraries for setting up Glue Job
-import sys
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from awsglue.context import GlueContext
-from awsglue.job import Job
-from awsglue.dynamicframe import DynamicFrame
-from awsglue.dynamicframe import DynamicFrameCollection
-from pyspark.sql import functions as SqlFuncs
-from pyspark.sql.types import *
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import when, col, broadcast, regexp_replace, expr, concat_ws, coalesce, nanvl, trim, isnan, length
-
-# Libraries for running the the ETL framework
-import base64
-import time
-import boto3
-from botocore.exceptions import NoCredentialsError
-import psycopg2
-import pandas as pd
-import numpy as np
-from io import StringIO # python3; python2: BytesIO
-import yaml
-from functools import reduce
-from etl_utils import rds_ops
-
-import datetime
-import uuid
-import hashlib
-from pyspark.sql.functions import lit
-from pyspark.sql import functions as F
-from pyspark.sql.types import StringType
-from pyspark.sql.functions import concat, col 
-from pyspark.sql.functions import row_number, monotonically_increasing_id 
-from pyspark.sql.window import Window 
-
-class etl_transform:
-    
-    def __init__(self, config_data, map_df, spark, glueContext, land_tables):
-        # Spark session initiation and setting landing tables
-        self.spark = spark
-        self.glueContext = glueContext
-        self.land_tables = land_tables
-
-        # Setting configuration and mapping file 
-        self.config_data = config_data
-        self.map_df = map_df
-
-        # Running the whole transformation pipeline
-        # self.transformation()
-
-        
-    def transformation(self):
-
-        print(f"{'*'*20} Data transformation started...{'*'*20}")
-        # Dictionary to persist all the transformed tables
-        self.collated_op = {}
-        self.land_tables_id = {}
-
-        # Process for Id generation
-        for table_name, table in self.land_tables.items():
-            table = table.withColumn(f"source_system_name", lit(f"{self.config_data['source_system_name']}"))
-            # Extracting the ID names to be generated for the table from the mapping file
-            id_map_dict = {k:v for k,v in self.config_data['source_id_map'][table_name].items()}
-            print("id_map_dict:",id_map_dict)
-            print(f"{'*'*20} Source ID generation for {table_name} started {'*'*20}")
-            self.land_tables_id[f"{table_name}"] = self.id_generate(table,id_map_dict)
-
-        # Begin the transformation procedure
-        # Ask is data producer is to be added to the below condition
-        for target_table in self.config_data['target_table_names']:
-
-            self.map_file_table = self.map_df.loc[(self.map_df['TARGET_TABLE'] == target_table)]
-            print("map file table", self.map_file_table)
-            cleanedSource_unique = [x for x in self.map_df.loc[(self.map_df['TARGET_TABLE'] == target_table)]['SOURCE_SYSTEM_TABLE'].unique().tolist() if str(x) != 'nan']
-            print("unique source table list rquired:", cleanedSource_unique)
-            
-            if len(cleanedSource_unique)>1:
-                if target_table not in self.config_data['pattern_type_table']:
-                    # perform join before the transform
-                    print("more than 1 source table needed")
-                    print(f"{self.map_file_table['COLLATE_STATEMENT'].tolist()[0]}")
-                    
-                    # define a function on how to treat this
-                    # try:
-                    for x in cleanedSource_unique:
-                        self.land_tables_id[f"{x}"].createOrReplaceTempView(f"{x}")
-                    table_for_batch = self.spark.sql(f"{self.map_file_table['COLLATE_STATEMENT'].tolist()[0]}")
-                    print("table_for_batch", table_for_batch.show())
-                    # except Exception as err:
-                    #     print("SQL statement could not be executed!!!")
-                    #     print(repr(err))
-                    
-            elif len(cleanedSource_unique)>0:
-                if target_table not in self.config_data['pattern_type_table']:
-                    print("1 source table needed")
-
-                    # Iterate over the map file for individual tables
-                    table_for_batch = self.land_tables_id[f"{cleanedSource_unique[0]}"]
-                
-            # Performing Batching on tables
-            # batched_list_ip = []
-            # for table_name in cleanedSource_unique:
-            #     print(f"{'*'*20} Batch-sizing the data started {'*'*20}")
-            #     batched_list_ip = self.batch_table(self.config_data['batch_size'], table_for_batch)
-            #     print('Number of batches of records after batch sizing for batchsize {} for table {} is {}'.format(self.config_data['batch_size'], table_name, len(batched_list_ip)))
-            #     print(f"{'*'*50}")
-            #     print('\n'*2)
-            
-            if target_table in self.config_data['pattern_type_table']:
-                
-                # Performing the mapping for pattern type transformation
-                batched_list_op = self.pattern_type_transform(self.land_tables_id)
-                self.collated_op[f'{target_table}'] = batched_list_op
-                print("Target_Table:", batched_list_op.show())
-                # print(f'Step 6 (Before Transformation):- Table Name -> {target_table} \t no. of records -> {table_for_batch.count()} \t no. of fields -> {len(table_for_batch.columns)}')
-                print(f'Step 7 (After Transformation):- Table Name -> {target_table} \t no. of records -> {batched_list_op.count()} \t no. of fields -> {len(batched_list_op.columns)}')
-
-
-
-            else:
-                # Performing the mapping for F2F values
-                print(f'Step 6 (Before Transformation):- Table Name -> {target_table} \t no. of records -> {table_for_batch.count()} \t no. of fields -> {len(table_for_batch.columns)}')
-                batched_list_op = self.map_it(table_for_batch)
-                print(f'Step 7 (After Transformation):- Table Name -> {target_table} \t no. of records -> {batched_list_op.count()} \t no. of fields -> {len(batched_list_op.columns)}')
-                # Concatanating all the batches into 1 spark dataframe
-                # self.collated_op[f'{target_table}'] = self.stackDF(batched_list_op)
-                self.collated_op[f'{target_table}'] = batched_list_op
-                print("Target_Table:", batched_list_op.show())
-
-            print(f"Transformation Outputs Collated for {target_table}")
-            print(f"{'*'*50}")
-            print('\n'*2)
-
-        # Create synthetically created records for JPMC in tables required as per the business rules
-        if self.config_data['source_system_name'] == "CC_SE_Salesforce":
-            self.create_jpmc_records()
-
-        # Create business_entity_relatioships using this method
-        # self.business_entity_relatioships()
-        # 0/0
-        print('Completed Successfully!')
-        return self.collated_op
-        # Step last: Reconcile the columns from mapping file with the attibutes present in the DB
-    
-
-    def id_generate(self, source_table:DataFrame, id_generate_dict:dict)->DataFrame:
-        
-        print(f"{'*'*20} ID generation started {'*'*20}")        
-        for i_id, i_keys in id_generate_dict.items():            
-            print("keys_reqd:", i_keys)           
-            atts_req_ids = [x.strip() for x in i_keys]
-            print("atts_req_ids:", atts_req_ids)
-            
-            # concatenate source system name and ID to generate UUID and drop the field.
-            # concat_id = reduce(lambda a, b: concat(col(a), col(b)), atts_req_ids)
-        
-            # source_table = source_table.withColumn("concat_sys_id_name", concat_id)
-
-            source_table = source_table.withColumn("concat_sys_id_name", concat(*atts_req_ids))
-            source_table = source_table.na.drop(subset=["concat_sys_id_name"])
-
-            # concat_sys_id_name=[str(i.concat_sys_id_name) for i in source_table.select("concat_sys_id_name").collect()]
-            # uuid_source_system_list=[self.compute_uuid(i.concat_sys_id_name) for i in source_table.select("concat_sys_id_name").collect()]
-
-            # uuid_dict = {str(i.concat_sys_id_name):self.compute_uuid(i.concat_sys_id_name) for i in source_table.select("concat_sys_id_name").collect()}
-            # print("concat_sys_id_name:", concat_sys_id_name)
-            # print("uuid_source_system_list", uuid_source_system_list)
-            # print("uuid_dict", uuid_dict)
-            # Create a user defined function to assign UUID according to the row index by subtracting row number from 1 
-            # labels_udf = F.udf(lambda indx: uuid_source_system_list[indx-1], StringType())
-            # labels_udf = F.udf(lambda x: uuid_dict[x], StringType())
-            labels_udf = F.udf(lambda x: str(uuid.UUID(bytes=hashlib.md5(x.encode()).digest())))
-
-            # Create a column with continuous increasing Id's
-            # source_table = source_table.withColumn("num_id", row_number().over( 
-            #     Window.orderBy(monotonically_increasing_id())))
-        
-            # Create a new column by calling the user defined function 
-            source_table = source_table.withColumn(f'{i_id}', labels_udf('concat_sys_id_name'))
-
-            source_table = source_table.drop('concat_sys_id_name')
-            # source_table = source_table.drop('num_id')
-            print("source table:",source_table.show())
-            # 0/0
-            print(f"{'*'*20} ID generation completed {'*'*20}")
-        return source_table
-            
-    
-    def batch_table(self, batch_size:int, table)->list:
-        print(f'Batchsizing the tables into a batch size of {batch_size}')
-        batched_lst = []
-
-        # Schema generation for pyspark
-        schema_list = []
-        for col_name in table.columns:
-            schema_list.append(StructField(f"{col_name}", StringType(), True))
-        schema = StructType(schema_list)
-
-        if table.count() < batch_size:
-            batched_lst.append(table)
-        else:
-            # batched_lst = [table[i:i+self.batch_size] for i in range(0,len(table),self.batch_size)]
-            row_obj = table.collect()
-            batched_lst = [self.spark.createDataFrame(row_obj[i:i+batch_size], schema) for i in range(0,table.count(),batch_size)]
-                
-        print(f'Batchsizing the table for {table} is completed!')
-        # print(f'Batchsizing the DFs  for {eUniversalTable} is completed!')
-        return batched_lst
-    
-    def drop_dups(self, sparkDF):
-        # Script generated for node Drop Duplicates
-        drop_df = DynamicFrame.fromDF(sparkDF.dropDuplicates(), self.glueContext, "drop_df",)
-        print("Type for node:",type(drop_df))
-        return drop_df
-    
-    def stackDF(self, dfList:list):
-        allDFs = reduce(lambda df1, df2: df1.union(df2), dfList)
-        return allDFs
-    
-    def stackDF_unequalcols(self, dfList:list):
-        allDFs = reduce(lambda df1, df2: df1.unionByName(df2, allowMissingColumns=True), dfList)
-        return allDFs
-    
-    # Helper function to build the expression string for concatenation 
-    def build_concat_expr(self, columns, separator=" "): 
-
-        colase_lst = [f'COALESCE(CASE WHEN {col} = "nan" THEN "" ELSE {col} END, "")' for col in columns]
-        coalse_str = " , ".join(colase_lst)
-        print("coalse_str: ",coalse_str)
-        concat_expr = f"CONCAT_WS('{separator}', {coalse_str})"
-        print("concat_expr",concat_expr)
-        return concat_expr  
-
-
-    def map_it(self, source_table:DataFrame)->DataFrame:
-        
-        # Create a list of source columns needed to create the target table
-        print(f"{'*'*20} F2F mapping started {'*'*20}")
-        target_col_list = self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'f2f']['TARGET_COLUMN'].tolist() + self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'source_key']['TARGET_COLUMN'].tolist() + self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'concat']['TARGET_COLUMN'].unique().tolist()
-        print(f"target_col_list :",target_col_list)
-        target_typ_list = ["string"]*len(target_col_list)
-        print(f"target_typ_list :",target_typ_list)
-
-        # Populating concatenate value fields
-        for i in self.map_file_table.index:
-            if self.map_file_table['FUNCTION_TYPE'][i] == 'concat':
-                concat_col = self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'concat']['TARGET_COLUMN'].unique().tolist()
-                concat_src_cols = self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'concat']['SOURCE_SYSTEM_COLUMN'].unique().tolist()
-                
-                # Data Cleaning
-                for col_name in concat_src_cols:
-                    source_table = source_table.withColumn(col_name, when(col(col_name) == 'nan', lit('')).otherwise(col(col_name)))
-                # Build the final expression 
-                final_expr = self.build_concat_expr(concat_src_cols)
-                # Apply the expression to create the new column 
-                source_table = source_table.withColumn(f"{concat_col[0]}", expr(final_expr))
-
-        print("spark df", source_table.show())
-        
-        # Creating an instance of rds operations to perform RDS DB actions
-        self.utils_obj = rds_ops(self.spark, self.config_data, self.map_df)
-
-        # Create a new dataframe for housing the mapped and transformed data
-        target_table_batched = self.utils_obj.create_sparkDF(target_col_list, target_typ_list)
-        print("target_table_batched: ", target_table_batched.show())
-               
-        # Creating a mapping dictionary from the mapping file
-        col_map_dict = dict(zip(self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'f2f']['SOURCE_SYSTEM_COLUMN'], self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'f2f']['TARGET_COLUMN']))
-        sel_cols_f2f = [source_table[col].alias(col_map_dict.get(col, col)) for col in self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'f2f']['SOURCE_SYSTEM_COLUMN'].tolist() if str(col) != 'nan']
-        sel_cols_id = [source_table[col].alias(col_map_dict.get(col, col)) for col in self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'source_key']['TARGET_COLUMN'].tolist() if str(col) != 'nan']
-        concat_lst = [source_table[col].alias(col_map_dict.get(col, col)) for col in self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'concat']['TARGET_COLUMN'].unique().tolist() if str(col) != 'nan']
-        sel_cols = sel_cols_f2f + sel_cols_id + concat_lst
-        print("sel_cols:", sel_cols)
-        print("col_map_dict:", col_map_dict)
-
-        result_df = target_table_batched.union(source_table.select(sel_cols))
-        # print("result DF:", result_df.show())
-        
-        print(f"{'*'*20} F2F mapping completed {'*'*20}")
-        
-        # Populating constant value fields
-        for i in self.map_file_table.index:
-            if self.map_file_table['FUNCTION_TYPE'][i] == 'constant':
-                if self.map_file_table['TRANSFORMATION'][i] == 'datetime':
-                    result_df = result_df.withColumn(f"{self.map_file_table['TARGET_COLUMN'][i]}", lit(datetime.datetime.now()))
-                    continue
-                print(f"{self.map_file_table['TARGET_COLUMN'][i]}")
-                print(f"{self.map_file_table['TRANSFORMATION'][i]}")
-
-                if self.map_file_table['TARGET_COLUMN'][i] == "is_active":
-                    result_df = result_df.withColumn(f"{self.map_file_table['TARGET_COLUMN'][i]}", when(col('business_validation_reason') == "accept", "y").otherwise("n"))
-                    continue
-                
-                result_df = result_df.withColumn(f"{self.map_file_table['TARGET_COLUMN'][i]}", lit(f"{self.map_file_table['TRANSFORMATION'][i]}"))
-
-            elif self.map_file_table['FUNCTION_TYPE'][i] == 'condition':
-                if self.map_file_table[self.map_file_table['FUNCTION_TYPE']=='condition']['TARGET_COLUMN'][i] == 'hierarchy_level':
-                    if self.config_data['source_system_name'] == 'CC_SE_Salesforce':
-                        result_df = result_df.withColumn("hierarchy_level", when(col('parent_id').isNull(), 1).otherwise(2))
-                    elif self.config_data['source_system_name'] == 'SCF_Salesforce':
-                        result_df = result_df.withColumn("hierarchy_level", when(col('parent_id') == "000000000000000AAA", 1).otherwise(2))
-                elif self.map_file_table[self.map_file_table['FUNCTION_TYPE']=='condition']['TARGET_COLUMN'][i] == 'hierarchy_role':
-                    if self.config_data['source_system_name'] == 'CC_SE_Salesforce':
-                        result_df = result_df.withColumn("hierarchy_role", when(col('parent_id').isNull(), "parent").otherwise("child"))
-                    elif self.config_data['source_system_name'] == 'SCF_Salesforce':
-                        result_df = result_df.withColumn("hierarchy_role", when(col('parent_id') == "000000000000000AAA", "parent").otherwise("child"))           
-        result_df.show()
-        print(f"{'*'*20} ID generation started {'*'*20}")
-        # Extracting the ID names to be generated for the table from the mapping file
-        id_list = self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'derived_key']['TARGET_COLUMN'].tolist()
-        print("id_list:", id_list)
-        id_map_dict = {}
-        for i_id in id_list:            
-            # [x for x in self.map_file_table['SOURCE_SYSTEM_TABLE'].unique().tolist() if str(x) != 'nan']
-            keys_reqd = self.map_file_table.loc[self.map_file_table['TARGET_COLUMN'] == i_id]['TRANSFORMATION'].unique().tolist()[0]
-            atts_req_ids = [x.strip() for x in keys_reqd.split(',')]
-            id_map_dict[f'{i_id}'] = atts_req_ids
-        result_df = self.id_generate(result_df, id_map_dict)
-        print(f"{'*'*20} ID generation completed {'*'*20}")
-
-
-        # print("result DF:", result_df.show())
-        print(f"{'*'*20} Constant mapping completed {'*'*20}")
-        
-        # Applying regex to clean up the data and remove any unwanted special characters
-        # result_df = result_df.replace('\'','',regex=True)
-        for col_name in result_df.columns:
-            result_df = result_df.withColumn(col_name, regexp_replace(col(col_name), '\'', ''))
-            
-        print("result DF:", result_df.show())
-        
-        return result_df
-    
-    def pattern_type_transform(self, all_source_table:dict)->DataFrame:
-        
-        source_unique_list = [x for x in self.map_file_table['SOURCE_SYSTEM_TABLE'].unique().tolist() if str(x) != 'nan']
-        print("source_unique_list:",source_unique_list)
-        # 0/0
-        op_list = []
-        for source_table_name in source_unique_list:
-            print(f"{'*'*20} Pivoting started for {source_table_name} {'*'*20}")
-            source_table = all_source_table[source_table_name]
-            map_file_unique_table = self.map_file_table.loc[self.map_file_table['SOURCE_SYSTEM_TABLE']==source_table_name]
-
-            key = map_file_unique_table.loc[(map_file_unique_table['FUNCTION_TYPE']=='pivot_key') | (map_file_unique_table['FUNCTION_TYPE']=='reject_key')]['TARGET_COLUMN'].unique().tolist()
-            key_map = map_file_unique_table.loc[(map_file_unique_table['FUNCTION_TYPE']=='pivot_key') | (map_file_unique_table['FUNCTION_TYPE']=='reject_key')]['TRANSFORMATION'].unique().tolist()
-
-            rename_dict = dict(zip(key_map,key))
-            # source_table = source_table.withColumnRenamed(key_map, key)
-            source_table = source_table.select([col(c).alias(rename_dict.get(c,c)) for c in source_table.columns])
-            # print("source_table:",source_table.show())
-            print("key:",key)
-            print("key_map:",key_map)
-            
-            #    VVI code below. Do not remove
-            # attr_list_stack = []
-            # n_types = len([x for x in map_file_unique_table.loc[map_file_unique_table['FUNCTION_TYPE']=='id_value']['TRANSFORMATION'].unique().tolist() if str(x) != 'nan'])
-            # print(f"n_types for {source_table_name}: {n_types}")
-            # if n_types==0:
-            #     continue
-
-            # for v in [x for x in map_file_unique_table.loc[map_file_unique_table['FUNCTION_TYPE']=='id_value']['TRANSFORMATION'].unique().tolist() if str(x) != 'nan']:
-            #     source_cols_types = map_file_unique_table.loc[map_file_unique_table['TRANSFORMATION']==v]['SOURCE_SYSTEM_COLUMN'].tolist()
-            #     init_str = f"'{v}',"
-            #     convert_str = ",".join(f"{x}" for x in source_cols_types)
-            #     final_str = init_str+convert_str
-            #     print("concat string:", final_str)
-            #     attr_list_stack.append(final_str)
-            
-            # id_type_name = map_file_unique_table.loc[map_file_unique_table['FUNCTION_TYPE']=='id_type']['TARGET_COLUMN'].unique().tolist()[0]
-            # target_cols = [x for x in map_file_unique_table.loc[(map_file_unique_table['FUNCTION_TYPE']=='id_value') & (map_file_unique_table['TRANSFORMATION']!='nan')]['TARGET_COLUMN'].unique().tolist() if str(x) != 'nan']
-
-            # str1 = ",".join(f"{x.strip()}" for x in attr_list_stack)
-            # str2 = ",".join(x.strip() for x in target_cols)
-            # # str2 = "street_line_1,country"
-            # exp_str = f"{key}",f"stack({n_types},{str1}) as ({id_type_name.strip()},{str2})"
-            # print("exp_str:",exp_str)
-
-            # # Stack the columns to create key-value pairs for identifier_type and identifier_value
-            # source_table = source_table.selectExpr(f"{key}",f"stack({n_types},{str1}) as ({id_type_name.strip()},{str2})")
-
-
-            cat_df_lst = []
-            categories_lst = [x for x in map_file_unique_table.loc[map_file_unique_table['FUNCTION_TYPE']=='id_value']['TRANSFORMATION'].unique().tolist() if str(x) != 'nan']
-            n_types = len(categories_lst)
-            print(f"n_types for {source_table_name}: {n_types}")
-            if n_types==0:
-                continue
-
-            for v in categories_lst:
-
-                source_cols_types = [x for x in map_file_unique_table.loc[map_file_unique_table['TRANSFORMATION']==v]['SOURCE_SYSTEM_COLUMN'].unique().tolist() if str(x) != 'nan']
-                init_str = f"'{v}',"
-                convert_str = ",".join(f"{x}" for x in source_cols_types)
-                final_str = init_str+convert_str
-                print("concat string:", final_str)
-                
-            
-                id_type_name = map_file_unique_table.loc[map_file_unique_table['FUNCTION_TYPE']=='id_type']['TARGET_COLUMN'].unique().tolist()[0]
-                target_cols = [x for x in map_file_unique_table.loc[map_file_unique_table['TRANSFORMATION']==v]['TARGET_COLUMN'].unique().tolist() if str(x) != 'nan']
-
-                str2 = ",".join(x.strip() for x in target_cols)
-                exp_str = key[0], key[1], f"stack(1,{final_str}) as ({id_type_name.strip()},{str2})"
-                print("exp_str:",exp_str)
-                
-                # Stack the columns to create key-value pairs for identifier_type and identifier_value
-                source_table_temp = source_table.selectExpr(key[0], key[1], f"stack(1,{final_str}) as ({id_type_name.strip()},{str2})")
-                # print("source_table_temp:",source_table_temp.show())
-                cat_df_lst.append(source_table_temp)
-            
-            # Stacking the output for categories of the tables
-            source_table = self.stackDF_unequalcols(cat_df_lst)
-            print("source_table_final:",source_table.show())
-
-            # Populate the values of related identifier source
-            const_col_name = map_file_unique_table.loc[map_file_unique_table["FUNCTION_TYPE"]=='constant_table']['TARGET_COLUMN'].unique().tolist()
-            const_col_value = map_file_unique_table.loc[map_file_unique_table["FUNCTION_TYPE"]=='constant_table']['TRANSFORMATION'].unique().tolist()
-
-            print(f"const_col_name : {const_col_name} \n const_col_value : {const_col_value}")
-            
-            if (len(const_col_name)>0 and len(const_col_value)>0):
-                source_table = source_table.withColumn(f"{const_col_name[0]}", lit(f"{const_col_value[0]}"))
-            # Display the resulting DataFrame
-            print("source_table:",source_table.show())
-            op_list.append(source_table)
-        
-        # Stacking the output for all the tables
-        source_table = self.stackDF_unequalcols(op_list)
-        print("source_table_final:",source_table.show())
-
-        # Removing records having id values as null values 
-        cols_for_id_values = [x for x in self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE']=='id_value']['TARGET_COLUMN'].unique().tolist() if str(x) != 'nan']
-        print("cols_for_id_values:",cols_for_id_values)
-        if len(cols_for_id_values)==1:
-            source_table = source_table.filter((col(cols_for_id_values[0]).isNotNull()) & (~isnan(col(cols_for_id_values[0]))) & (trim(col(cols_for_id_values[0])) != ""))
-        if len(cols_for_id_values)==2:
-            print(f"Source table columns__@: {source_table.columns}")
-            print(f"Source table columns__type: {type(source_table.columns)}")
-            # source_table = source_table.filter((col(f"{cols_for_id_values[0]}").isNotNull()) & (col(f"{cols_for_id_values[1]}").isNotNull()))
-            col_list = source_table.columns
-            source_table = source_table.withColumn(cols_for_id_values[0], when((col(col_list[1]) == "dns on product") & (col(cols_for_id_values[1]).isNull()), "false").when((col(col_list[1]) == "dns on product") & isnan(col(cols_for_id_values[1])), "false").when((col(col_list[1]) == "dns on product") & (trim(col(cols_for_id_values[1])) == ""), "false").otherwise(when(col(col_list[1]) == "dns on product", "true").otherwise(col(cols_for_id_values[0]))))
-            # source_table = source_table.withColumn(f"{cols_for_id_values[0]}", when(col(f"{cols_for_id_values[1]}").isNotNull(), "true").otherwise("false"))
-            source_table = source_table.filter((col(cols_for_id_values[0]) != "false"))
-            source_table = source_table.filter((col(cols_for_id_values[0]).isNotNull()) & (~isnan(col(cols_for_id_values[0]))) & (trim(col(cols_for_id_values[0])) != ""))
-
-        # Removing records having id values as null values 
-        # cols_for_id_values = [x for x in self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE']=='id_value']['TARGET_COLUMN'].unique().tolist() if str(x) != 'nan']
-        # print("cols_for_id_values:",cols_for_id_values)
-        # if len(cols_for_id_values)==1:
-        #     source_table = source_table.filter((col(f"{cols_for_id_values[0]}").isNotNull()) & (~isnan(col(f"{cols_for_id_values[0]}"))) & (trim(col(f"{cols_for_id_values[0]}")) != ""))
-        # if len(cols_for_id_values)==2:
-        #     print(f"Source table columns__@: {source_table.columns}")
-        #     print(f"Source table columns__type: {type(source_table.columns)}")
-        #     # source_table = source_table.filter((col(f"{cols_for_id_values[0]}").isNotNull()) & (col(f"{cols_for_id_values[1]}").isNotNull()))
-        #     col_list = source_table.columns
-        #     source_table = source_table.withColumn(f"{cols_for_id_values[0]}", when((col(f"{col_list[1]}") == "dns on product") & (col(f"{cols_for_id_values[1]}").isNull()), "false").when((col(f"{col_list[1]}") == "dns on product") & isnan(col(f"{cols_for_id_values[1]}")), "false").when((col(f"{col_list[1]}") == "dns on product") & (trim(col(f"{cols_for_id_values[1]}")) == ""), "false").otherwise(when(col(f"{col_list[1]}") == "dns on product", "true").otherwise(col(f"{cols_for_id_values[0]}"))))
-        #     # source_table = source_table.withColumn(f"{cols_for_id_values[0]}", when(col(f"{cols_for_id_values[1]}").isNotNull(), "true").otherwise("false"))
-        #     source_table = source_table.filter((col(f"{cols_for_id_values[0]}") != "false"))
-        #     source_table = source_table.filter((col(f"{cols_for_id_values[0]}").isNotNull()) & (~isnan(col(f"{cols_for_id_values[0]}"))) & (trim(col(f"{cols_for_id_values[0]}")) != ""))
-            # pass
-        print("source_table after cleansing:",source_table.show())
-
-        # Populating constant value fields
-        for i in self.map_file_table.index:
-            if self.map_file_table['FUNCTION_TYPE'][i] == 'constant':
-                if self.map_file_table['TRANSFORMATION'][i] == 'datetime':
-                    source_table = source_table.withColumn(f"{self.map_file_table['TARGET_COLUMN'][i]}", lit(datetime.datetime.now()))
-                    continue
-                if self.map_file_table['TARGET_COLUMN'][i] == "is_active":
-                    source_table = source_table.withColumn(f"{self.map_file_table['TARGET_COLUMN'][i]}", when(col('business_validation_reason') == "accept", "y").otherwise("n"))
-                    continue
-                print(f"{self.map_file_table['TARGET_COLUMN'][i]}")
-                print(f"{self.map_file_table['TRANSFORMATION'][i]}")
-                source_table = source_table.withColumn(f"{self.map_file_table['TARGET_COLUMN'][i]}", lit(f"{self.map_file_table['TRANSFORMATION'][i]}"))
-
-        print("result DF:", source_table.show())
-        print(f"{'*'*20} Constant mapping completed {'*'*20}")
-
-        print(f"{'*'*20} ID generation started {'*'*20}")
-        # Extracting the ID names to be generated for the table from the mapping file
-        id_list = self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'derived_key']['TARGET_COLUMN'].tolist()
-        id_map_dict = {}
-        for i_id in id_list:            
-            keys_reqd = self.map_file_table.loc[self.map_file_table['TARGET_COLUMN'] == i_id]['TRANSFORMATION'].to_string(index=False)
-            print("keys_reqd:", keys_reqd)            
-            atts_req_ids = [x.strip() for x in keys_reqd.split(',')]
-            print("atts_req_ids:", atts_req_ids)
-            id_map_dict[f'{i_id}'] = atts_req_ids
-            
-        transformed_table = self.id_generate(source_table, id_map_dict)
-        print(f"{'*'*20} ID generation completed {'*'*20}")
-
-        # Cleaning the data to upsert into the table
-        # transformed_table = transformed_table.replace('\'','',regex=True)
-        for col_name in transformed_table.columns:
-            transformed_table = transformed_table.withColumn(col_name, regexp_replace(col(col_name), '\'', ''))
-
-        # Sort the dataframe by ascending order
-        type_var = [x.strip() for x in self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE']=='id_type']['TARGET_COLUMN'].unique().tolist() if str(x)!='nan']
-        print("type_var:",type_var[0])        
-        # transformed_table = transformed_table.sort([key[0], key[1], type_var[0]], ascending = [True])
-        
-        print("result DF:", transformed_table.show()) 
-        
-        return transformed_table
-    
-    def create_jpmc_records(self):
-        
-        table_list = self.map_df.loc[self.map_df['JPMC_VALUE']!='nan']['TARGET_TABLE'].unique().tolist()
-        print("JPMC row create table:",table_list)
-
-        for table_name in table_list:
-            
-            if table_name in self.config_data['target_table_names']:
-
-                if table_name not in self.config_data['pattern_type_table']:            
-                    # mapping_table_jpmc = self.map_df.loc[self.map_df['JPMC_VALUE']!='nan']
-                    # Mapping file for individual table
-                    mapping_table_jpmc = self.map_df.loc[(self.map_df['TARGET_TABLE']==table_name) & (self.map_df['JPMC_VALUE']!='nan')]
-                                        
-                    keys_table = mapping_table_jpmc.loc[(mapping_table_jpmc['FUNCTION_TYPE']=='source_key') | (mapping_table_jpmc['FUNCTION_TYPE']=='derived_key')]['JPMC_VALUE'].tolist()
-
-                    for key in keys_table:
-                        key_value =  reduce(lambda a,b: a+b,[x.strip() for x in key.split(',')])
-                        key_id_gen = self.compute_uuid(key_value)
-                        mapping_table_jpmc.replace(to_replace=key, value=key_id_gen, inplace=True)
-
-
-                    mapping_table_jpmc.replace(to_replace='datetime', value=datetime.datetime.now().strftime(r'%Y-%m-%d %H:%M:%S'), inplace=True)
-
-                    jpmc_record_values = tuple(mapping_table_jpmc['JPMC_VALUE'])
-                    print(f"jpmc_record_values for table {table_name}: {jpmc_record_values}")
-                
-                else:
-                    # Mapping file for patter individual table
-                    mapping_table_jpmc = self.map_df.loc[self.map_df['TARGET_TABLE']==table_name]
-                    mapping_table_jpmc.replace('nan', np.nan, inplace=True)
-                    mapping_table_jpmc = mapping_table_jpmc.dropna(subset=['JPMC_VALUE'])
-                    # print("mapping_table_jpmc:",mapping_table_jpmc)
-                    pivot_keys_table = mapping_table_jpmc.loc[mapping_table_jpmc['FUNCTION_TYPE']=='pivot_key']['JPMC_VALUE'].tolist()
-                    derived_keys_table = mapping_table_jpmc.loc[mapping_table_jpmc['FUNCTION_TYPE']=='derived_key']['JPMC_VALUE'].tolist()
-                    # print("pivot_keys_table:",pivot_keys_table)
-                    # print("derived_keys_table:",derived_keys_table)
-                    
-                    for key in pivot_keys_table:
-                        key_value =  reduce(lambda a,b: a+b,[x.strip() for x in key.split(',')])
-                        key_id_gen = self.compute_uuid(key_value)
-                        mapping_table_jpmc.replace(to_replace=key, value=key_id_gen, inplace=True)
-                    for key in derived_keys_table:
-                        key_value = str(mapping_table_jpmc.loc[mapping_table_jpmc['TARGET_COLUMN']=='related_identifier']['JPMC_VALUE'].tolist()[0]) + str(mapping_table_jpmc.loc[mapping_table_jpmc['FUNCTION_TYPE']=='id_type']['JPMC_VALUE'].tolist()[0])
-                        key_id_gen = self.compute_uuid(key_value)
-                        mapping_table_jpmc.replace(to_replace='jpmc', value=key_id_gen, inplace=True)
-
-
-
-                    mapping_table_jpmc.replace(to_replace='datetime', value=datetime.datetime.now().strftime(r'%Y-%m-%d %H:%M:%S'), inplace=True)
-
-                    jpmc_record_values = tuple(mapping_table_jpmc['JPMC_VALUE'])
-                    print(f"jpmc_record_values for table {table_name}: {jpmc_record_values}")
-
-                col_names = mapping_table_jpmc['TARGET_COLUMN'].tolist()
-                struct_list = []
-                for col in col_names:
-                    struct_list.append(StructField(col, StringType()))
-                new_row = self.spark.createDataFrame([jpmc_record_values], StructType(struct_list))
-                print("new_row:",new_row.show())
-                self.collated_op[f'{table_name}'] = self.stackDF_unequalcols([self.collated_op[f'{table_name}'], new_row])
-                print(f"self.collated_op[f'{table_name}']: \n {self.collated_op[f'{table_name}'].show()}")
-        
-    def business_entity_relatioships(self):
-        # Logic 2
-
-        accts = self.land_tables_id[f"{self.config_data['source_table_names'][0]}"]
-        conts = self.land_tables_id[f"{self.config_data['source_table_names'][1]}"]
-        print("accts_v1:",accts.show())
-        accts = accts.filter(length(accts["ecid_cln__c"]) == 50)
-        print("accts_v2:",accts.show())
-
-
-        accts.createOrReplaceTempView("accts")
-        conts.createOrReplaceTempView("conts")
-        merge_df = self.spark.sql( "select accts.*, conts.business_entity_contact_id from accts left join conts where accts.id == conts.accountid")
-
-        # merge_df = accts.join(conts, accts.id == conts.accountid, "left")
-        print("merge_df", merge_df.show())
-
-        jpmc_df = self.collated_op[f"{self.config_data['target_table_names'][0]}"]
-        jpmc_df = jpmc_df.filter(col('source_system_name') == 'jpmc')
-
-        print("jpmc_df", jpmc_df.show())
-
-        merge_df = merge_df.select(['stg_business_entity_id','business_entity_contact_id'])
-        jpmc_id = [str(i.stg_business_entity_id) for i in jpmc_df.select("stg_business_entity_id").collect()][0]
-        jpmc_cont_id = [str(i.business_entity_contact_id) for i in jpmc_df.select("business_entity_contact_id").collect()][0]
-
-        merge_df = merge_df.withColumn("stg_related_business_entity_id",lit(jpmc_id))
-        merge_df = merge_df.withColumn("related_business_entity_contact_id",lit(jpmc_cont_id))
-        result_df = merge_df
-
-        self.map_file_table = self.map_df.loc[(self.map_df['TARGET_TABLE'] == 'business_entity_relationship')]
-
-        result_df = result_df.withColumn("business_entity_role", lit("client"))
-        result_df = result_df.withColumn("related_business_entity_role", lit("firm"))
-
-        # Populating constant value fields
-        for i in self.map_file_table.index:
-            if self.map_file_table['FUNCTION_TYPE'][i] == 'constant':
-                if self.map_file_table['TRANSFORMATION'][i] == 'datetime':
-                    result_df = result_df.withColumn(f"{self.map_file_table['TARGET_COLUMN'][i]}", lit(datetime.datetime.now()))
-                    continue
-                print(f"{self.map_file_table['TARGET_COLUMN'][i]}")
-                print(f"{self.map_file_table['TRANSFORMATION'][i]}")
-                
-                result_df = result_df.withColumn(f"{self.map_file_table['TARGET_COLUMN'][i]}", lit(f"{self.map_file_table['TRANSFORMATION'][i]}"))
-         
-
-
-
-        print(f"{'*'*20} ID generation started {'*'*20}")
-        # Extracting the ID names to be generated for the table from the mapping file
-        id_list = self.map_file_table.loc[self.map_file_table['FUNCTION_TYPE'] == 'derived_key']['TARGET_COLUMN'].tolist()
-        id_map_dict = {}
-        for i_id in id_list:            
-            keys_reqd = self.map_file_table.loc[self.map_file_table['TARGET_COLUMN'] == i_id]['TRANSFORMATION'].to_string(index=False)
-            print("keys_reqd:", keys_reqd)            
-            atts_req_ids = [x.strip() for x in keys_reqd.split(',')]
-            print("atts_req_ids:", atts_req_ids)
-            id_map_dict[f'{i_id}'] = atts_req_ids
-            
-        result_df = self.id_generate(result_df, id_map_dict)
-        print(f"{'*'*20} ID generation completed {'*'*20}")
-
-
-        # print("result DF:", result_df.show())
-        print(f"{'*'*20} Constant mapping completed {'*'*20}")
-        
-        # Applying regex to clean up the data and remove any unwanted special characters
-        # result_df = result_df.replace('\'','',regex=True)
-        for col_name in result_df.columns:
-            result_df = result_df.withColumn(col_name, regexp_replace(col(col_name), '\'', ''))
-            
-        print("result DF:", result_df.show())
-
-
-        # 0/0
-        
-    
-    def drop_cols(self, df, drop_list):
-        # Script generated for node Drop Fields
-        drop_df = DropFields.apply(frame=df, paths=drop_list, transformation_ctx="drop_df")
-        return drop_df
-    
-    def change_schema(self, df, lst_of_tups):
-        
-        # Script generated for changing the schema
-        sch_chng_df = ApplyMapping.apply(frame=df, mappings=lst_of_tups, transformation_ctx="sch_chng_df")
-        return sch_chng_df
-    
-    def compute_uuid(self, name: str) -> str:
-        digest = hashlib.md5(name.encode()).digest()
-        return str(uuid.UUID(bytes=digest))
-    
-    def rowstocolumn_convertion(newdf, converted_from,converted_to) :
-        arr_converted_to=converted_to.split(',')
-        identifier_type=arr_converted_to[0]
-        identifier_value=arr_converted_to[1]
-        newdf = newdf.withColumn(identifier_type, lit("NaN"))
-        newdf = newdf.withColumn(identifier_value, lit("NaN"))
-        newdf = newdf.withColumn("repeted_times", lit(0))   
-        new_df3=newdf.toPandas()
-        arr_identity_types=converted_from.split(',')
-        for each_identity_type in arr_identity_types:
-            for i in new_df3[each_identity_type].dropna().unique():
-                if i != 'NaN':
-                    new_df3.loc[new_df3[each_identity_type]==i,'repeted_times']=new_df3['repeted_times']+1
-        new_df4 = new_df3[(new_df3['repeted_times'] >0)].loc[new_df3.index.repeat(new_df3.repeted_times)].append(new_df3[(new_df3['repeted_times'] <1)]).reset_index(drop=True).astype(str)
-        for each_identity_type in arr_identity_types:
-            for i in range(0, len(new_df4)-1):    
-                if i == 0 :
-                    if new_df4.iloc[i, :][identifier_type] == 'NaN':
-                        new_df4.loc[i,identifier_value]= new_df4.iloc[i, :][each_identity_type]
-                        new_df4.loc[i,identifier_type]= each_identity_type
-                else:
-                    if new_df4.iloc[i-1, :]['Id'] == new_df4.iloc[i, :]['Id'] and new_df4.iloc[i-1, :][identifier_type] != 'NaN' :
-                        if new_df4.iloc[i, :][identifier_type] == 'NaN'and new_df4.iloc[i-1, :][identifier_type] != each_identity_type:
-                            if new_df4.iloc[i, :][each_identity_type] != 'nan':
-                                if new_df4.iloc[i, :][each_identity_type] != 'NaN':
-                                        new_df4.loc[i,identifier_value]= new_df4.iloc[i, :][each_identity_type]
-                                        new_df4.loc[i,identifier_type]= each_identity_type 
-                    else:  
-                        if new_df4.iloc[i-1, :]['Id'] != new_df4.iloc[i, :]['Id']:
-                            if new_df4.iloc[i, :][each_identity_type] != 'nan':
-                                if new_df4.iloc[i, :][each_identity_type] != 'NaN':
-                                    new_df4.loc[i,identifier_value]= new_df4.iloc[i, :][each_identity_type]
-                                    new_df4.loc[i,identifier_type]= each_identity_type 
-        spark = SparkSession.builder.appName('pandasToSparkDF').getOrCreate()
-        new_df4 = spark.createDataFrame(new_df4)
-        return(new_df4)
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds
+$ tfl workspace destroy
+Using Org[111597-114116-DEV], Project[Default Project], Workspace[xbsd-ui-apigw], TF Version[1.3.6-20230410-JPMC]
+
+Using AWS credentials from C:\Users\w619378\.aws\credentials (profile: adfs, region: us-east-1)
+Updating Workspace Env Var: HTTPS_PROXY
+Updating Workspace Env Var: TF_VAR_aws_access_key_id
+Updating Workspace Env Var: TF_VAR_aws_secret_access_key
+Updating Workspace Env Var: TF_VAR_aws_session_token
+Updating Workspace Env Var: TF_VAR_pipeline
+Updating Workspace Env Var: HTTP_PROXY
+
+Created Run: https://tfe.jpmchase.net/app/111597-114116-DEV/workspaces/xbsd-ui-apigw/runs/run-zwWJbiSiJv2F7Qmx
+
+Run Status: plan_queued
+Run Status: planning
+Terraform v1.3.6
+on linux_amd64
+Executing pre-plan hook...
+Start terraform-pre-plan script
+Initializing plugins and modules...
+Initializing modules...
+Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/role/aws 7.1.0 for apigateway-role...
+- apigateway-role in .terraform/modules/apigateway-role
+Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/lambda/aws 8.1.0 for calc_lambda...
+- calc_lambda in .terraform/modules/calc_lambda
+- calc_lambda.msk_event_source_mapping in .terraform/modules/calc_lambda/modules/msk-event-source-mapping
+- calc_lambda.sqs_event_source_mapping in .terraform/modules/calc_lambda/modules/sqs-event-source-mapping
+- calc_lambda.stream_event_source_mapping in .terraform/modules/calc_lambda/modules/stream-event-source-mapping
+Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/jpm-data/aws 9.0.0 for jpm-data...
+- jpm-data in .terraform/modules/jpm-data
+Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/kms/aws 7.0.0 for kms...
+- kms in .terraform/modules/kms
+Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/role/aws 7.1.0 for lambda_role...
+- lambda_role in .terraform/modules/lambda_role
+There are some problems with the configuration, described below.
+
+The Terraform configuration must be valid before initialization so that
+Terraform can determine which modules and providers need to be installed.
+╷
+│ Error: Experiment has concluded
+│
+│   on .terraform/modules/calc_lambda/variables.tf line 2, in terraform:
+│    2:   experiments = [module_variable_optional_attrs]
+│
+│ Experiment "module_variable_optional_attrs" is no longer available. The
+│ final feature corresponding to this experiment differs from the
+│ experimental form and is available in the Terraform language from Terraform
+│ v1.3.0 onwards.
+╵
+
+╷
+│ Error: Experiment has concluded
+│
+│   on .terraform/modules/calc_lambda/modules/msk-event-source-mapping/variables.tf line 2, in terraform:
+│    2:   experiments = [module_variable_optional_attrs]
+│
+│ Experiment "module_variable_optional_attrs" is no longer available. The
+│ final feature corresponding to this experiment differs from the
+│ experimental form and is available in the Terraform language from Terraform
+│ v1.3.0 onwards.
+╵
+
+╷
+│ Error: Experiment has concluded
+│
+│   on .terraform/modules/calc_lambda/modules/sqs-event-source-mapping/variables.tf line 2, in terraform:
+│    2:   experiments = [module_variable_optional_attrs]
+│
+│ Experiment "module_variable_optional_attrs" is no longer available. The
+│ final feature corresponding to this experiment differs from the
+│ experimental form and is available in the Terraform language from Terraform
+│ v1.3.0 onwards.
+╵
+
+╷
+│ Error: Experiment has concluded
+│
+│   on .terraform/modules/calc_lambda/modules/stream-event-source-mapping/variables.tf line 2, in terraform:
+│    2:   experiments = [module_variable_optional_attrs]
+│
+│ Experiment "module_variable_optional_attrs" is no longer available. The
+│ final feature corresponding to this experiment differs from the
+│ experimental form and is available in the Terraform language from Terraform
+│ v1.3.0 onwards.
+╵
+
+Operation failed: failed running terraform init (exit 1)Run Status: errored
+ERROR: error running apply: run errored
