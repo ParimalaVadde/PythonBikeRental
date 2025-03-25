@@ -1,37 +1,23 @@
-aws_security_group.alb_sg: Still destroying... [id=sg-0119ee9d5d1402c25, 14m40s elapsed]
-aws_security_group.alb_sg: Still destroying... [id=sg-0119ee9d5d1402c25, 14m50s elapsed]
-aws_security_group.alb_sg: Still destroying... [id=sg-0119ee9d5d1402c25, 15m0s elapsed]
-╷
-│ Error: deleting Security Group (sg-0119ee9d5d1402c25): DependencyViolation: resource sg-0119ee9d5d1402c25 has a dependent object
-│       status code: 400, request id: faed22cf-219b-4336-8934-06729e4adf34
-│
-│
-╵
-╷
-│ Error: deleting ECS Cluster Capacity Providers (xbsd-api-pull-ecs): ResourceInUseException: The specified capacity provider is in use and cannot be removed.
-│
-│
-╵
-╷
-│ Error: deleting App Mesh Service Mesh (xbsd-api-pull-ecs): ResourceInUseException: Mesh xbsd-api-pull-ecs for account 484862117635 has active VirtualServices, please delete VirtualServices before deleting the Mesh
-│
-│
-╵
-╷
-│ Error: deleting CloudFormation Stack (arn:aws:cloudformation:us-east-1:484862117635:stack/ecs-capacity-provider-reconciler-xbsd-api-pull-ecs/843d1420-ab9b-11ee-9f27-129d768196d1): waiting for completion: failed to delete CloudFormation stack (DELETE_FAILED): ["The following resource(s) failed to delete: [RegisterCapacityProvider]. " "Invalid PhysicalResourceId"]
-│
-│
-╵
-╷
-│ Error: deleting Service Discovery Private DNS Namespace (ns-beltbaz3jjvaoqlx): ResourceInUse: Namespace has associated services; delete the services before deleting the namespace
-│
-│
-╵
-Executing post-apply hook...
-> Starting custom finalise script...
-> run-n7c1HkFiEnsXDHFj finished with response code: 200
-Operation failed: failed running terraform apply (exit 1)Run Status: errored
-ERROR: error running apply: run errored
-
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace3
+Farm No.	AWS Account	Description	New Assignee	Action 	Percentage of completion 	status
+FARM.Finding.83769632	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <lightswitch-job> <2.1.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Parimala	EAC version Upgrade to 0.14.1	70%	In-Progress
+FARM.Finding.75949318	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-cluster> <2.22.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Priyanka	delete cluster	60%	In-Progress
+FARM.Finding.84546998	TEST	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (15.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <533267018973>	Mounika B	Version Upgrade	50%	In-Progress
+FARM.Finding.84547325	DEV	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (15.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Mounika B	EAC version Upgrade to 0.14.1	70%	In-Progress
+FARM.Finding.75951634	TEST	 Application <111597> has provisioned asset(s) using Terraform Module <ecs-application> <2.14.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <533267018973>	Abhishek	delete cluster	100%	Completed
+FARM.Finding.84548519	Prod	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (15.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>	Mounika B	Version Upgrade	40%	In-Progress
+FARM.Finding.75949351	Prod	Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-utils> <0.5.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>	Parimala	Version Upgrade	40%	In-Progress
+FARM.Finding.75951779	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <2.14.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Srinivas	delete cluster	100%	Completed
+FARM.Finding.75953308	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <2.14.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Abhishek	delete cluster	100%	Completed
+FARM.Finding.75962030	DEV	Application <111597> has provisioned asset(s) utilizing infrastructure component <3.8>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Priyanka	delete cluster	40%	In-Progress
+FARM.Finding.75949316	DEV	 Application <111597> has provisioned asset(s) utilizing Terraform Module <2.12.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Ramsai	delete cluster	100%	Completed
+FARM.Finding.75949317	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <2.15.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Mounika G	delete cluster	100%	Completed
+FARM.Finding.75962034	Prod	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon AWS Lambda for Python 3.8>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>.	Rakesh	Version Upgrade	50%	In-Progress
+FARM.Finding.75962032	Test	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon AWS Lambda for Python 3.8>, which is in Prohibited lifecycle status, in the Atlas AWS Account <533267018973>.	Rakesh	Version Upgrade	60%	In-Progress
+FARM.Finding.75962031	DEV	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (14.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Parimala	Version Upgrade	70%	In-Progress
+FARM.Finding.75949311	DEV	The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <api-gateway-deployment> <4.2.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Ramsai	delete cluster	60%	In-Progress
+FARM.Finding.75949313	DEV	The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <api-gateway-deployment> <4.2.1>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Parimala	delete cluster	100%	Completed
+FARM.Finding.75949315	DEV	The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <kms> <3.2.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Srinivas	delete cluster	100%	Completed
+FARM.Finding.75949319	DEV	"Terraform Module <api-gateway-setup> <4.0.1>, which is in Prohibited lifecycle status, 
+  in the Atlas AWS Account <484862117635>"	Parimala	delete cluster	100%	Completed
+FARM.Finding.75949350	TEST	"Terraform Module <ecs-cluster> <2.15.0>, which is in Prohibited lifecycle status,
+in the Atlas AWS Account <533267018973>"	Mounika G	delete cluster	80%	In-Progress
