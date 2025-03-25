@@ -1,49 +1,35 @@
 dev shell : 2.3.31 : default profile
 W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace2
-$ tfl apply
-Using Org[111597-114116-DEV], Project[Default Project], Workspace[xbsd-apigw-setup-ecs], TF Version[1.0.8-20230519-JPMC]
+$ pcl aws login -s
+Target login URL is https://idag2.jpmorganchase.com/adfs/ls/idpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices
+AWS Shared Credentials file is C:\Users\w619378\.aws\credentials
 
-Using AWS credentials from C:\Users\w619378\.aws\credentials (profile: adfs, region: us-east-1)
-Updating Workspace Env Var: TF_VAR_aws_secret_access_key
-Updating Workspace Env Var: TF_VAR_aws_access_key_id
-Updating Workspace Env Var: TF_VAR_aws_session_token
-Using tfvars from variables/local.tfvars
-Info: Starting UploadConfiguration.
-Info: Checking UploadConfiguration Response.
-Uploaded directory [.] to configuration version[cv-zW3ZEwJ1TUvgTPkF]
+Domain> ASIAPAC
+SID> W619378
 
-Created Run: https://tfe.jpmchase.net/app/111597-114116-DEV/workspaces/xbsd-apigw-setup-ecs/runs/run-r8BTwfbCEx3TeYWg
+    1> <no name> - arn:aws:iam::484862117635:role/111597-application-engineer
+    2> <no name> - arn:aws:iam::484862117635:role/111597-aurora-app-admin
+    3> <no name> - arn:aws:iam::484862117635:role/111597-aurora-app-rw
+    4> <no name> - arn:aws:iam::484862117635:role/111597-rdsproxy-ro
+    5> <no name> - arn:aws:iam::484862117635:role/tfe-module-pave
+    6> <no name> - arn:aws:iam::533267018973:role/111597-application-operator-view-only
+    7> <no name> - arn:aws:iam::533267018973:role/111597-aurora-app-admin
+    8> <no name> - arn:aws:iam::533267018973:role/111597-aurora-app-rw
+    9> <no name> - arn:aws:iam::533267018973:role/111597-rdsproxy-ro
+   10> <no name> - arn:aws:iam::533267018973:role/tfe-module-pave
+Display 10 out of 12
+Please enter 1-10, s <string>: Search, n: Next page, l: Last page
+> 5
+Selected <no name> - arn:aws:iam::484862117635:role/tfe-module-pave
 
-Run Status: plan_queued
-Run Status: planning
-Terraform v1.0.8
-on linux_amd64
-Executing pre-plan hook...
-Start terraform-pre-plan script
-Initializing plugins and modules...
-module.api_gateway_setup.random_id.module-instance-id: Refreshing state... [id=fRFKA9T6]
-module.api-gateway-role.random_id.module-instance-id: Refreshing state... [id=8TVM2V9O]
-module.vpc_endpoint_api_gateway.random_id.guid: Refreshing state... [id=zYTr_GjubmA]
-module.api-gateway-role.null_resource.validate_cross_account_roles_are_app[0]: Refreshing state... [id=5379093450880958474]
-module.jpm-data.null_resource.current[0]: Refreshing state... [id=5175267739572988875]
-╷
-│ Error: configuring Terraform AWS Provider: IAM Role (arn:aws:iam:::role/tfe-module-pave-apply) cannot be assumed.
-│
-│ There are a number of possible causes of this - the most common are:
-│   * The credentials used in order to assume the role are invalid
-│   * The credentials do not have appropriate permission to assume the role
-│   * The role ARN is not valid
-│
-│ AWS Error: operation error STS: AssumeRole, https response error StatusCode: 403, RequestID: 93394f16-2904-4fbe-9506-44b43c418f72, api error AccessDenied: User: arn:aws:sts::484862117635:assumed-role/tfe-module-pave/W619378@ASIAPAC.AD.JPMORGANCHASE.com is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam:::role/tfe-module-pave-apply
-│
-│
-│   with provider["registry.terraform.io/hashicorp/aws"],
-│   on providers.tf line 14, in provider "aws":
-│   14: provider "aws" {
-│
-╵
-Operation failed: failed running terraform plan (exit 1)Run Status: errored
-ERROR: error running apply: run errored
+Assuming role arn:aws:iam::484862117635:role/tfe-module-pave as ASIAPAC\W619378 on <no name> in region  us-east-1...
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace2
+
+-------------
+S U M M A R Y
+-------------
+Your new access key pair has been stored in the AWS shared credentials file (C:\Users\w619378\.aws\credentials) under the adfs profile.
+Note that it will expire in 59m56s at Tue, 25 Mar 2025 19:25:22 +0530
+After this time you may safely re-run this script to refresh your access key pair.
+To use these credentials, call the AWS CLI with the --profile option (e.g. aws s3 ls --profile adfs)
+To use these credentials by default, export the following environment variable: AWS_DEFAULT_PROFILE=adfs
