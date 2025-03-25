@@ -1,8 +1,29 @@
-Parimala		FARM.Finding.75949351	Prod	Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-utils> <0.5.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>	ecs-utils 0.5.0 [Prohibited] → ecs-utils 1.1.0 [Invest]			
+Plan Succeeded
 
+Are you sure you want to apply? [y/n]: y
+Run Status: apply_queued
+Run Status: applying
+Terraform v1.0.8
+on linux_amd64
+Executing pre-apply hook...
+Start terraform-pre-apply script
+Initializing plugins and modules...
+module.jpm_data.null_resource.current[0]: Destroying... [id=7154609129224673143]
+module.jpm_data.null_resource.modules_json: Destroying... [id=9179790643516318548]
+module.jpm_data.null_resource.modules_json: Destruction complete after 0s
+module.jpm_data.null_resource.current[0]: Destruction complete after 0s
 
-The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-utils> <0.5.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>. This indicates a violation of the firm's control objective regarding the use of technology products in a product lifecycle status that is not approved for use.
+Apply complete! Resources: 0 added, 0 changed, 2 destroyed.
+Executing post-apply hook...
+> Starting custom finalise script...
+> run-AppghzCfg8pRFPhD finished with response code: 200
+Run Status: applied
+Apply Succeeded
 
-What is the impact of this Finding?
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace2
+$ tfl workspace delete xbsd-apigw-setup-ecs
+Using Org[111597-114116-DEV], Project[Default Project], Workspace[xbsd-apigw-setup-ecs]
 
-The use of a Terraform Module in Prohibited lifecycle status can leave the firm vulnerable to long recovery times from system failures and cyber-attacks if vendor support is no longer available. Additionally, it may lead to information loss if not disposed of securely and could result in unnecessary expenses if the asset is not purchased through approved vendors.
+Delete Workspace [xbsd-apigw-setup-ecs] ? [y/n]: y
+Deleting workspace [xbsd-apigw-setup-ecs]
