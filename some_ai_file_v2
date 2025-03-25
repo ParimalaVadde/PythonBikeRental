@@ -1,219 +1,37 @@
-0b8ab894-b72a-8720-cd3b-2ba829ed16aa
+aws_security_group.alb_sg: Still destroying... [id=sg-0119ee9d5d1402c25, 14m40s elapsed]
+aws_security_group.alb_sg: Still destroying... [id=sg-0119ee9d5d1402c25, 14m50s elapsed]
+aws_security_group.alb_sg: Still destroying... [id=sg-0119ee9d5d1402c25, 15m0s elapsed]
+╷
+│ Error: deleting Security Group (sg-0119ee9d5d1402c25): DependencyViolation: resource sg-0119ee9d5d1402c25 has a dependent object
+│       status code: 400, request id: faed22cf-219b-4336-8934-06729e4adf34
+│
+│
+╵
+╷
+│ Error: deleting ECS Cluster Capacity Providers (xbsd-api-pull-ecs): ResourceInUseException: The specified capacity provider is in use and cannot be removed.
+│
+│
+╵
+╷
+│ Error: deleting App Mesh Service Mesh (xbsd-api-pull-ecs): ResourceInUseException: Mesh xbsd-api-pull-ecs for account 484862117635 has active VirtualServices, please delete VirtualServices before deleting the Mesh
+│
+│
+╵
+╷
+│ Error: deleting CloudFormation Stack (arn:aws:cloudformation:us-east-1:484862117635:stack/ecs-capacity-provider-reconciler-xbsd-api-pull-ecs/843d1420-ab9b-11ee-9f27-129d768196d1): waiting for completion: failed to delete CloudFormation stack (DELETE_FAILED): ["The following resource(s) failed to delete: [RegisterCapacityProvider]. " "Invalid PhysicalResourceId"]
+│
+│
+╵
+╷
+│ Error: deleting Service Discovery Private DNS Namespace (ns-beltbaz3jjvaoqlx): ResourceInUse: Namespace has associated services; delete the services before deleting the namespace
+│
+│
+╵
+Executing post-apply hook...
+> Starting custom finalise script...
+> run-n7c1HkFiEnsXDHFj finished with response code: 200
+Operation failed: failed running terraform apply (exit 1)Run Status: errored
+ERROR: error running apply: run errored
 
--- First, make sure the UUID extension is available
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Now create the insert statement
-INSERT INTO sds_main.physical_address
-(
-    physical_address_id,
-    related_identifier,
-    related_identifier_source,
-    physical_address_type,
-    street_line_1,
-    street_line_2,
-    street_line_3,
-    country,
-    city,
-    state_province,
-    postal_code,
-    location_name,
-    site_identifier,
-    is_active,
-    last_updated_by,
-    last_updated_date,
-    created_by,
-    created_date
-)
-WITH base_data AS (
-    SELECT DISTINCT
-        CAST(vendor_name_cleaned AS VARCHAR) AS vendor_name_cleaned,
-        CAST(vendor_postcode AS VARCHAR) AS vendor_postcode,
-        CAST(vendor_address_ln_1 AS VARCHAR) AS vendor_address_ln_1,
-        CAST(vendor_address_ln_2 AS VARCHAR) AS vendor_address_ln_2,
-        CAST(vendor_email AS VARCHAR) AS vendor_email,
-        CAST(vendor_country AS VARCHAR) AS vendor_country,
-        CAST(vendor_state AS VARCHAR) AS vendor_state,
-        CAST(vendor_city AS VARCHAR) AS vendor_city,
-        CAST(vendor_government_id AS VARCHAR) AS vendor_government_id
-    FROM sds_landing.analysis_pfd
-    WHERE vendor_name_cleaned IS NOT NULL
-),
-entity_hash AS (
-    SELECT 
-        bd.*,
-        encode(digest(CONCAT_WS('-', 
-            COALESCE(bd.vendor_name_cleaned, ''), 
-            COALESCE(bd.vendor_email, ''), 
-            COALESCE(bd.vendor_government_id, ''),
-            COALESCE(bd.vendor_address_ln_1, '')
-        ), 'sha256'), 'hex') AS entity_hash_value
-    FROM base_data bd
-),
-entity_id_mapping AS (
-    SELECT
-        eh.*,
-        substring(entity_hash_value, 1, 8) || '-' ||
-        substring(entity_hash_value, 9, 4) || '-' ||
-        substring(entity_hash_value, 13, 4) || '-' ||
-        substring(entity_hash_value, 17, 4) || '-' ||
-        substring(entity_hash_value, 21, 12) AS stg_business_entity_id
-    FROM entity_hash eh
-),
-physical_address_id_mapping AS (
-    SELECT
-        eim.*,
-        -- Create physical_address_id using the specific fields
-        substring(encode(digest(CONCAT_WS('-', 
-            COALESCE(eim.vendor_name_cleaned, ''), 
-            COALESCE(eim.vendor_postcode, ''),
-            COALESCE(eim.vendor_address_ln_1, ''),
-            COALESCE(eim.vendor_email, '')
-        ), 'sha256'), 'hex'), 1, 8) || '-' ||
-        substring(encode(digest(CONCAT_WS('-', 
-            COALESCE(eim.vendor_name_cleaned, ''), 
-            COALESCE(eim.vendor_postcode, ''),
-            COALESCE(eim.vendor_address_ln_1, ''),
-            COALESCE(eim.vendor_email, '')
-        ), 'sha256'), 'hex'), 9, 4) || '-' ||
-        substring(encode(digest(CONCAT_WS('-', 
-            COALESCE(eim.vendor_name_cleaned, ''), 
-            COALESCE(eim.vendor_postcode, ''),
-            COALESCE(eim.vendor_address_ln_1, ''),
-            COALESCE(eim.vendor_email, '')
-        ), 'sha256'), 'hex'), 13, 4) || '-' ||
-        substring(encode(digest(CONCAT_WS('-', 
-            COALESCE(eim.vendor_name_cleaned, ''), 
-            COALESCE(eim.vendor_postcode, ''),
-            COALESCE(eim.vendor_address_ln_1, ''),
-            COALESCE(eim.vendor_email, '')
-        ), 'sha256'), 'hex'), 17, 4) || '-' ||
-        substring(encode(digest(CONCAT_WS('-', 
-            COALESCE(eim.vendor_name_cleaned, ''), 
-            COALESCE(eim.vendor_postcode, ''),
-            COALESCE(eim.vendor_address_ln_1, ''),
-            COALESCE(eim.vendor_email, '')
-        ), 'sha256'), 'hex'), 21, 12) AS physical_address_id
-    FROM entity_id_mapping eim
-),
--- CTE for JP Morgan Chase constant entity
-jpmc_entity AS (
-    SELECT
-        'JP Morgan Chase Bank N.A.' AS business_entity_name,
-        encode(digest('JP Morgan Chase Bank N.A.', 'sha256'), 'hex') AS hash_value
-),
--- CTE for buying entities
-buying_entities AS (
-    SELECT DISTINCT
-        CAST(buying_entity AS VARCHAR) AS buying_entity_name,
-        encode(digest(COALESCE(buying_entity, ''), 'sha256'), 'hex') AS hash_value
-    FROM sds_landing.analysis_pfd
-    WHERE buying_entity IS NOT NULL
-),
--- Add mapping for JPMC
-jpmc_mapping AS (
-    SELECT
-        business_entity_name,
-        hash_value,
-        -- Both IDs created from entity name only for JPMC
-        substring(hash_value, 1, 8) || '-' ||
-        substring(hash_value, 9, 4) || '-' ||
-        substring(hash_value, 13, 4) || '-' ||
-        substring(hash_value, 17, 4) || '-' ||
-        substring(hash_value, 21, 12) AS stg_business_entity_id,
-        substring(hash_value, 1, 8) || '-' ||
-        substring(hash_value, 9, 4) || '-' ||
-        substring(hash_value, 13, 4) || '-' ||
-        substring(hash_value, 17, 4) || '-' ||
-        substring(hash_value, 21, 12) AS physical_address_id
-    FROM jpmc_entity
-),
--- Add mappings for buying entities
-buying_entity_mappings AS (
-    SELECT
-        buying_entity_name,
-        hash_value,
-        -- Both IDs created from entity name only for buying entities
-        substring(hash_value, 1, 8) || '-' ||
-        substring(hash_value, 9, 4) || '-' ||
-        substring(hash_value, 13, 4) || '-' ||
-        substring(hash_value, 17, 4) || '-' ||
-        substring(hash_value, 21, 12) AS stg_business_entity_id,
-        substring(hash_value, 1, 8) || '-' ||
-        substring(hash_value, 9, 4) || '-' ||
-        substring(hash_value, 13, 4) || '-' ||
-        substring(hash_value, 17, 4) || '-' ||
-        substring(hash_value, 21, 12) AS physical_address_id
-    FROM buying_entities
-)
-
--- Regular vendor addresses
-SELECT
-    physical_address_id,
-    stg_business_entity_id AS related_identifier,
-    CAST('business_entity' AS VARCHAR) AS related_identifier_source,
-    CAST(NULL AS VARCHAR) AS physical_address_type,
-    vendor_address_ln_1 AS street_line_1,
-    vendor_address_ln_2 AS street_line_2,
-    vendor_city AS street_line_3,
-    vendor_country AS country,
-    vendor_city AS city,
-    vendor_state AS state_province,
-    vendor_postcode AS postal_code,
-    CAST(NULL AS VARCHAR) AS location_name,
-    CAST(NULL AS VARCHAR) AS site_identifier,
-    CAST('Y' AS BOOLEAN) AS is_active,
-    CAST(NULL AS VARCHAR) AS last_updated_by,
-    CAST(NULL AS TIMESTAMP) AS last_updated_date,
-    CAST('supplier_directory' AS VARCHAR) AS created_by,
-    CAST(current_timestamp AS TIMESTAMP) AS created_date
-FROM physical_address_id_mapping
-WHERE vendor_address_ln_1 IS NOT NULL
-
-UNION ALL
-
--- JP Morgan Chase address
-SELECT
-    physical_address_id,
-    stg_business_entity_id AS related_identifier,
-    CAST('business_entity' AS VARCHAR) AS related_identifier_source,
-    CAST(NULL AS VARCHAR) AS physical_address_type,
-    CAST('383 Madison Avenue' AS VARCHAR) AS street_line_1,
-    CAST(NULL AS VARCHAR) AS street_line_2,
-    CAST('New York' AS VARCHAR) AS street_line_3,
-    CAST('United States' AS VARCHAR) AS country,
-    CAST('New York' AS VARCHAR) AS city,
-    CAST('NY' AS VARCHAR) AS state_province,
-    CAST('10179' AS VARCHAR) AS postal_code,
-    CAST(NULL AS VARCHAR) AS location_name,
-    CAST(NULL AS VARCHAR) AS site_identifier,
-    CAST('Y' AS BOOLEAN) AS is_active,
-    CAST(NULL AS VARCHAR) AS last_updated_by,
-    CAST(NULL AS TIMESTAMP) AS last_updated_date,
-    CAST('supplier_directory' AS VARCHAR) AS created_by,
-    CAST(current_timestamp AS TIMESTAMP) AS created_date
-FROM jpmc_mapping
-
-UNION ALL
-
--- Buying entity addresses (we'll use a placeholder address since we don't have real ones)
-SELECT
-    physical_address_id,
-    stg_business_entity_id AS related_identifier,
-    CAST('business_entity' AS VARCHAR) AS related_identifier_source,
-    CAST(NULL AS VARCHAR) AS physical_address_type,
-    CAST('1 ' || buying_entity_name || ' Headquarters' AS VARCHAR) AS street_line_1,
-    CAST(NULL AS VARCHAR) AS street_line_2,
-    CAST(NULL AS VARCHAR) AS street_line_3,
-    CAST('United States' AS VARCHAR) AS country,
-    CAST(NULL AS VARCHAR) AS city,
-    CAST(NULL AS VARCHAR) AS state_province,
-    CAST(NULL AS VARCHAR) AS postal_code,
-    CAST(NULL AS VARCHAR) AS location_name,
-    CAST(NULL AS VARCHAR) AS site_identifier,
-    CAST('Y' AS BOOLEAN) AS is_active,
-    CAST(NULL AS VARCHAR) AS last_updated_by,
-    CAST(NULL AS TIMESTAMP) AS last_updated_date,
-    CAST('supplier_directory' AS VARCHAR) AS created_by,
-    CAST(current_timestamp AS TIMESTAMP) AS created_date
-FROM buying_entity_mappings;
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace3
