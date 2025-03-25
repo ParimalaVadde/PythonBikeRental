@@ -1,3 +1,8 @@
+status	Count of Farm No.
+Completed	8
+In-Progress	12
+Grand Total	20
+
 Farm No.	AWS Account	Description	New Assignee	Action 	Percentage of completion 	status
 FARM.Finding.83769632	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <lightswitch-job> <2.1.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Parimala	EAC version Upgrade to 0.14.1	70%	In-Progress
 FARM.Finding.75949318	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-cluster> <2.22.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Priyanka	delete cluster	60%	In-Progress
