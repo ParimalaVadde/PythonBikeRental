@@ -1,3 +1,7 @@
+
+tfl configure --org=111597-114116-DEV --workspace=<WORKSPACE_NAME> --aws-region=us-east-1
+
+
 Workspace issues and destroying resources
 Deleting non-empty Terraform workspace has already been restricted. User would have to clean up the resources through terraform destroy.
 In rare scenarios, you can get into a position where terraform destroy can't complete due to resource conflicts or workspace issues.
