@@ -1,35 +1,143 @@
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace2
-$ pcl aws login -s
-Target login URL is https://idag2.jpmorganchase.com/adfs/ls/idpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices
-AWS Shared Credentials file is C:\Users\w619378\.aws\credentials
+Finding 75949351
+Note: All Date and Time fields are in local timezone
+ Back
+Finding Overview
+Response
+Dates
+Asset Details
+Resolution Ownership
+Notes (0)
+Resolver Tickets (0)
+Supplementary Info
+Finding History
+Finding DescriptionMore information: Description of the Finding, sent by the Data Provider
+OriginalShow AI description toggleAI Summary
+Why was this Finding raised?
 
-Domain> ASIAPAC
-SID> W619378
+The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-utils> <0.5.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>. This indicates a violation of the firm's control objective regarding the use of technology products in a product lifecycle status that is not approved for use.
 
-    1> <no name> - arn:aws:iam::484862117635:role/111597-application-engineer
-    2> <no name> - arn:aws:iam::484862117635:role/111597-aurora-app-admin
-    3> <no name> - arn:aws:iam::484862117635:role/111597-aurora-app-rw
-    4> <no name> - arn:aws:iam::484862117635:role/111597-rdsproxy-ro
-    5> <no name> - arn:aws:iam::484862117635:role/tfe-module-pave
-    6> <no name> - arn:aws:iam::533267018973:role/111597-application-operator-view-only
-    7> <no name> - arn:aws:iam::533267018973:role/111597-aurora-app-admin
-    8> <no name> - arn:aws:iam::533267018973:role/111597-aurora-app-rw
-    9> <no name> - arn:aws:iam::533267018973:role/111597-rdsproxy-ro
-   10> <no name> - arn:aws:iam::533267018973:role/tfe-module-pave
-Display 10 out of 12
-Please enter 1-10, s <string>: Search, n: Next page, l: Last page
-> 5
-Selected <no name> - arn:aws:iam::484862117635:role/tfe-module-pave
+What is the impact of this Finding?
 
-Assuming role arn:aws:iam::484862117635:role/tfe-module-pave as ASIAPAC\W619378 on <no name> in region  us-east-1...
+The use of a Terraform Module in Prohibited lifecycle status can leave the firm vulnerable to long recovery times from system failures and cyber-attacks if vendor support is no longer available. Additionally, it may lead to information loss if not disposed of securely and could result in unnecessary expenses if the asset is not purchased through approved vendors.
+
+For more information:
+go/CP-6104
+go/TCS-062-003
+AI Suggested Remediation Steps - Coming Q2 2025!
+Did you find the AI generated summary more useful than the original Finding description?More information: Give us feedback on the AI generated Finding summary to help drive improvements of the model.
+Finding GuidanceMore information: High level guidance regarding how to review and remediate the Finding
+Details regarding remediating this finding can be found by visiting this URL: https://eg-recommendation.prod.aws.jpmchase.net/api/v2/seals/111597/accounts/992382575964/workspaces?filterType=tpc&id=2613 . For any other questions, please refer to go/evergreenFAQ
+Finding OriginMore information: Name of the Data Provider responsible for creating and closing the Finding
+EDARTClick here to view the details of this Finding in Edart 
+Next Action More information: Customer to check whether they need to submit a response, extend deadline or if it will close out on time
+ReviewGo to Response 
+Next Action Owner
+Rohit Durai (E713174) 
+StatusMore information: Describes if Finding is Open or Closed
+OPEN
+Sub-Status Updated ByMore information: Identifies the user who changed the Finding Sub-Status
+R678415 
+Asset TypeMore information: Describes the type of asset the Finding was discovered on i.e. Application, Infrastructure, Component, Workstation
+Application
+AssetMore information: The Asset the Finding was discovered on, click link for more details
+111597 - B2B Payables X-Business Supplier Directory Services 
+Current Target DateMore information: Ensure your Finding is managed by this date. This means either remediate the Finding or have an active response.
+07-Dec-2025 - This is the finding Original Target Date - 
+Finding TypeMore information: The classification type of FARM Finding, this can either be "Finding" or "Informational"
+FINDING
+Control Name
+CP-6104 : Hardware and Software Component Lifecycle Maintenance 
+Criticality / Severity ScoreMore information: Seriousness of Finding as defined by the Data Provider, 1-5 score where 1 is most serious / Asset impact as calculated by FARM, 1-5 score where 1 is most impactful
+W3 / S4
+Sub-Status Updated DateMore information: Indicates the date the sub-status was updated
+04-Dec-2024 17:58:29 IST
+Original Target DateMore information: The initial current target date
+07-Dec-2025
+Assessment FrequencyMore information: How often this Finding is assessed by the control team
+Upto 36 hours
+Finding DetailsMore information: Additional Attributes/Details from Data Provider
+KeyMore information: The label description of the additional data sent from the data provider
+ValueMore information: Additional data provided by the data provider to help further investigation into the Finding.
+Account Id	992382575964
+ProductType	EVERGREEN
+Environment	PROD
+Support Coverage	Limited Support
+Reason Lifecycle	Prohibited
+SKU JRN	jrn:jpm:tpc:::sku:2613?version=1
 
 
--------------
-S U M M A R Y
--------------
-Your new access key pair has been stored in the AWS shared credentials file (C:\Users\w619378\.aws\credentials) under the adfs profile.
-Note that it will expire in 59m56s at Tue, 25 Mar 2025 19:25:22 +0530
-After this time you may safely re-run this script to refresh your access key pair.
-To use these credentials, call the AWS CLI with the --profile option (e.g. aws s3 ls --profile adfs)
-To use these credentials by default, export the following environment variable: AWS_DEFAULT_PROFILE=adfs
+Public Cloud Non-Compliance Dashboard: Find Terraform Workspace Upgrade Recommendations
+This dashboard will list recommendations on possible upgrade options that will help you to remediate the findings identified in the Public Cloud Non-Compliance Dashboard for your Terraform workspaces. If you have questions about why these findings are being generated or need additional help, please visit our FAQ.
+
+TFE Workspaces
+
+Found 1 workspace(s). Please click on each workspace to see the non compliant resources and view recommendations. Use the Workspace URL in the table below to check your last Terraform run status. If you find that the last Terraform run in the workspace completed with an error and you wish to clean up this workspace, please use this guide.
+
+Seal Id
+Deployment Id
+Account Id
+Environment
+Workspace Id
+Workspace URL
+111597
+114116
+992382575964
+prod
+ws-bcmyN9J6p1F7FqSe
+Click here to open Terraform Workspace
+1 row selected
+Rows per page:
+
+100
+1–1 of 1
+
+Inventory
+
+Inventory Type
+Inventory Name
+Inventory Version
+Lifecycle Status
+Lifecycle Status End Date
+Non Compliant Components
+ecs-utils
+ecs-utils
+0.5.0
+Prohibited
+2125-03-10
+ 
+role
+saml-role
+7.7.0
+Invest
+2124-09-20
+ 
+jpm-data
+jpm_data
+9.0.0
+Invest
+2124-11-22
+ 
+role-policy-updater
+role-policy-updater
+35.3.0
+Invest
+2124-11-22
+ 
+1–4 of 4
+
+Inventory Upgrade Recommendations
+
+Found prohibited module(s): ecs-utils:0.5.0 in the selected workspace. Please review the upgrade recommendations for the selected workspace:
+
+
+INVENTORY_RECOMMENDATION_RANK_1
+
+STEP: 1 ( Immediate Action to Remediate Break )
+
+The module ecs-utils:0.5.0 has been seen in combination with all the other modules in the selected workspace. Based on this information, our recommendation is to upgrade to ecs-utils:1.2.0. This combination has been observed 13464 times across multiple workspaces.
+You may upgrade directly to this version.
+There are 259 workspaces currently using ecs-utils:1.2.0 module in PRODUCTION.
+There are 909 workspaces currently using ecs-utils:1.2.0 module in DEV and TEST.
+
+
+ecs-utils 0.5.0 [Prohibited] → ecs-utils 1.2.0 [Invest]
