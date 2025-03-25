@@ -1,85 +1,49 @@
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace2
+$ tfl apply
+Using Org[111597-114116-DEV], Project[Default Project], Workspace[xbsd-apigw-setup-ecs], TF Version[1.0.8-20230519-JPMC]
 
-tfl configure --org=111597-114116-DEV --workspace=<WORKSPACE_NAME> --aws-region=us-east-1
+Using AWS credentials from C:\Users\w619378\.aws\credentials (profile: adfs, region: us-east-1)
+Updating Workspace Env Var: TF_VAR_aws_secret_access_key
+Updating Workspace Env Var: TF_VAR_aws_access_key_id
+Updating Workspace Env Var: TF_VAR_aws_session_token
+Using tfvars from variables/local.tfvars
+Info: Starting UploadConfiguration.
+Info: Checking UploadConfiguration Response.
+Uploaded directory [.] to configuration version[cv-zW3ZEwJ1TUvgTPkF]
 
-tfl configure --org=111597-114116-DEV --workspace=xbsd-apigw-setup-ecs --aws-region=us-east-1
+Created Run: https://tfe.jpmchase.net/app/111597-114116-DEV/workspaces/xbsd-apigw-setup-ecs/runs/run-r8BTwfbCEx3TeYWg
 
-Workspace issues and destroying resources
-Deleting non-empty Terraform workspace has already been restricted. User would have to clean up the resources through terraform destroy.
-In rare scenarios, you can get into a position where terraform destroy can't complete due to resource conflicts or workspace issues.
-There are also cases where the workspace was abandoned or the whereabout of the code that provisioned the resources is not known.
-This procedure provides a way to delete the workspace and corresponding resources provisioned with it.
+Run Status: plan_queued
+Run Status: planning
+Terraform v1.0.8
+on linux_amd64
+Executing pre-plan hook...
+Start terraform-pre-plan script
+Initializing plugins and modules...
+module.api_gateway_setup.random_id.module-instance-id: Refreshing state... [id=fRFKA9T6]
+module.api-gateway-role.random_id.module-instance-id: Refreshing state... [id=8TVM2V9O]
+module.vpc_endpoint_api_gateway.random_id.guid: Refreshing state... [id=zYTr_GjubmA]
+module.api-gateway-role.null_resource.validate_cross_account_roles_are_app[0]: Refreshing state... [id=5379093450880958474]
+module.jpm-data.null_resource.current[0]: Refreshing state... [id=5175267739572988875]
+╷
+│ Error: configuring Terraform AWS Provider: IAM Role (arn:aws:iam:::role/tfe-module-pave-apply) cannot be assumed.
+│
+│ There are a number of possible causes of this - the most common are:
+│   * The credentials used in order to assume the role are invalid
+│   * The credentials do not have appropriate permission to assume the role
+│   * The role ARN is not valid
+│
+│ AWS Error: operation error STS: AssumeRole, https response error StatusCode: 403, RequestID: 93394f16-2904-4fbe-9506-44b43c418f72, api error AccessDenied: User: arn:aws:sts::484862117635:assumed-role/tfe-module-pave/W619378@ASIAPAC.AD.JPMORGANCHASE.com is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam:::role/tfe-module-pave-apply
+│
+│
+│   with provider["registry.terraform.io/hashicorp/aws"],
+│   on providers.tf line 14, in provider "aws":
+│   14: provider "aws" {
+│
+╵
+Operation failed: failed running terraform plan (exit 1)Run Status: errored
+ERROR: error running apply: run errored
 
-Before you proceed...
-Note: The procedure includes applying an "empty" main.tf file i.e. there are no resources or modules defined except jpm-data. Applying this will result to an attempt to destroy resources that is in Terraform workspace state. To validate the actions prior to destroy, you could swap the 'destroy' above with a 'plan' instead.
-
-Below is the step-by-step guidance to be followed:
-1. Extract the files from jpm-data.zip template and update the value of aws_account_id in variables/local.tfvars file.
-2. The main.tf file that is included in jpm-data.zip will default to latest version. User should replace the jpm-data version in the main.tf file with the jpm-data version that is in-use in user workspace to be destroyed. User can find the jpm-data version in use by running the command tfl state show|grep terraform/modules/jpm_data once they are logged in. Refer to next steps 3 and 4 for guidance on how to login with the appropriate role.
-3. User executes pcl aws login --region <AWS region> to login to their AWS account with tfe-module-pave role.
-4. User executes tfl configure --org=<TFE org> --workspace=<TFE workspace> --aws-region=<AWS region>.
-5. User executes tfl apply targeting the TFE workspace that needs to be cleaned up. This will clean up all modules and resources in the TFE workspace since there is only jpm_data module in the project which doesn’t provision AWS resources.
-6. In case tfl apply failed due to resource conflict where there are existing resource in AWS account, user to clean up resource in conflict using ORCA and do a tfl apply after that.
-7. User executes tfl destroy to destroy the jpm_data module. This step is needed because the user can’t delete the TFE workspace even if the workspace only consists of the jpm_data module.
-8. User deletes the TFE workspace from the TFE UI or by executing tfl workspace delete <TFE workspace>.
-
-User must have Workspace Write permission in order to perform this operation / Unable to create workspace
-Check if the group exists AD Domain (AD.JPMORGANCHASE.COM) - https://ars7.jpmchase.net/admin/
-Dev
-
-TFE-GOLD-<seal_id>-<deployment_id>-DEV-WSCREATOR
-
-Test
-
-TFE-GOLD-<seal_id>-<deployment_id>-TEST-WSCREATOR
-
-Prod
-
-TFE-GOLD-<seal_id>-<deployment_id>-PRD-WSCREATOR
-
-
-Check if your FID is part of the following - https://ars7.jpmchase.net/admin/
-DEV FID
-
-Your Dev build FID should be a member of:
-TFE-GOLD-<seal_id>-<deployment_id>-DEV-WSCREATOR
-AWS-<dev_aws_account_id>-tfe-module-pave
-TFE-GOLD-ATLAS-MODULE-REGISTRY-READ
-
-TEST FID
-
-Your TEST build FID should be a member of:
-TFE-GOLD-<seal_id>-<deployment_id>-TEST-WSCREATOR
-AWS-<test_aws_account_id>-tfe-module-pave
-TFE-GOLD-ATLAS-MODULE-REGISTRY-READ
-
-PROD FID - Should be under EPV control
-
-Your PROD test FID should be a member of:
-TFE-GOLD-<seal_id>-<deployment_id>-PRD-WSCREATOR
-AWS-<prod_aws_account_id>-tfe-module-pave
-TFE-GOLD-ATLAS-MODULE-REGISTRY-READ
-
-AWS account has resources that were created by teammates who have left the firm. Team is not aware about the workspaces used by them to provision the resources.
-How to clean up / destroy those resources?
-
-Search for the account at go/atlas-lookup
-Navigate to section "Terraform Provisioned Product Versions"
-Check the Workspace name under TFE_WORKSPACE_NAME for resources that need to be destroyed.NOTE It should not be UNKNOWN.
-Navigate to go/tfeui,choose your organization to see if that workspace exists.
-If workspace exists:
-Leverage this doc to delete ALL resources provisioned using above workspace.
-If workspace does not exist or is UNKNOWN, use ORCA to delete the orphan resources.
-How to Unlock Terraform Workspace?
-If your workspace is locked, you would see an alert on your workspaces list that says "Needs Attention" Locked Workspace Alert!
-
-You woudl be able to see a padlock sign , indicating a locked workspace. Locked Workspace Padlock!
-
-NOTE If a workspace is locked, your plans will queue forever.
-
-To unlock , please follow below steps:
-
-Navigate to go/tfeui
-Select your organization
-Select your workspace name
-Navigate to Settings ->Locking and Unlock your workspace
-See Terraform Access for more information on access requests.
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace2
