@@ -1,90 +1,80 @@
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds
-$ tfl workspace destroy
-Using Org[111597-114116-DEV], Project[Default Project], Workspace[xbsd-ui-apigw], TF Version[1.3.6-20230410-JPMC]
+Workspace issues and destroying resources
+Deleting non-empty Terraform workspace has already been restricted. User would have to clean up the resources through terraform destroy.
+In rare scenarios, you can get into a position where terraform destroy can't complete due to resource conflicts or workspace issues.
+There are also cases where the workspace was abandoned or the whereabout of the code that provisioned the resources is not known.
+This procedure provides a way to delete the workspace and corresponding resources provisioned with it.
 
-Using AWS credentials from C:\Users\w619378\.aws\credentials (profile: adfs, region: us-east-1)
-Updating Workspace Env Var: HTTPS_PROXY
-Updating Workspace Env Var: TF_VAR_aws_access_key_id
-Updating Workspace Env Var: TF_VAR_aws_secret_access_key
-Updating Workspace Env Var: TF_VAR_aws_session_token
-Updating Workspace Env Var: TF_VAR_pipeline
-Updating Workspace Env Var: HTTP_PROXY
+Before you proceed...
+Note: The procedure includes applying an "empty" main.tf file i.e. there are no resources or modules defined except jpm-data. Applying this will result to an attempt to destroy resources that is in Terraform workspace state. To validate the actions prior to destroy, you could swap the 'destroy' above with a 'plan' instead.
 
-Created Run: https://tfe.jpmchase.net/app/111597-114116-DEV/workspaces/xbsd-ui-apigw/runs/run-zwWJbiSiJv2F7Qmx
+Below is the step-by-step guidance to be followed:
+1. Extract the files from jpm-data.zip template and update the value of aws_account_id in variables/local.tfvars file.
+2. The main.tf file that is included in jpm-data.zip will default to latest version. User should replace the jpm-data version in the main.tf file with the jpm-data version that is in-use in user workspace to be destroyed. User can find the jpm-data version in use by running the command tfl state show|grep terraform/modules/jpm_data once they are logged in. Refer to next steps 3 and 4 for guidance on how to login with the appropriate role.
+3. User executes pcl aws login --region <AWS region> to login to their AWS account with tfe-module-pave role.
+4. User executes tfl configure --org=<TFE org> --workspace=<TFE workspace> --aws-region=<AWS region>.
+5. User executes tfl apply targeting the TFE workspace that needs to be cleaned up. This will clean up all modules and resources in the TFE workspace since there is only jpm_data module in the project which doesn’t provision AWS resources.
+6. In case tfl apply failed due to resource conflict where there are existing resource in AWS account, user to clean up resource in conflict using ORCA and do a tfl apply after that.
+7. User executes tfl destroy to destroy the jpm_data module. This step is needed because the user can’t delete the TFE workspace even if the workspace only consists of the jpm_data module.
+8. User deletes the TFE workspace from the TFE UI or by executing tfl workspace delete <TFE workspace>.
 
-Run Status: plan_queued
-Run Status: planning
-Terraform v1.3.6
-on linux_amd64
-Executing pre-plan hook...
-Start terraform-pre-plan script
-Initializing plugins and modules...
-Initializing modules...
-Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/role/aws 7.1.0 for apigateway-role...
-- apigateway-role in .terraform/modules/apigateway-role
-Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/lambda/aws 8.1.0 for calc_lambda...
-- calc_lambda in .terraform/modules/calc_lambda
-- calc_lambda.msk_event_source_mapping in .terraform/modules/calc_lambda/modules/msk-event-source-mapping
-- calc_lambda.sqs_event_source_mapping in .terraform/modules/calc_lambda/modules/sqs-event-source-mapping
-- calc_lambda.stream_event_source_mapping in .terraform/modules/calc_lambda/modules/stream-event-source-mapping
-Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/jpm-data/aws 9.0.0 for jpm-data...
-- jpm-data in .terraform/modules/jpm-data
-Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/kms/aws 7.0.0 for kms...
-- kms in .terraform/modules/kms
-Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/role/aws 7.1.0 for lambda_role...
-- lambda_role in .terraform/modules/lambda_role
-There are some problems with the configuration, described below.
+User must have Workspace Write permission in order to perform this operation / Unable to create workspace
+Check if the group exists AD Domain (AD.JPMORGANCHASE.COM) - https://ars7.jpmchase.net/admin/
+Dev
 
-The Terraform configuration must be valid before initialization so that
-Terraform can determine which modules and providers need to be installed.
-╷
-│ Error: Experiment has concluded
-│
-│   on .terraform/modules/calc_lambda/variables.tf line 2, in terraform:
-│    2:   experiments = [module_variable_optional_attrs]
-│
-│ Experiment "module_variable_optional_attrs" is no longer available. The
-│ final feature corresponding to this experiment differs from the
-│ experimental form and is available in the Terraform language from Terraform
-│ v1.3.0 onwards.
-╵
+TFE-GOLD-<seal_id>-<deployment_id>-DEV-WSCREATOR
 
-╷
-│ Error: Experiment has concluded
-│
-│   on .terraform/modules/calc_lambda/modules/msk-event-source-mapping/variables.tf line 2, in terraform:
-│    2:   experiments = [module_variable_optional_attrs]
-│
-│ Experiment "module_variable_optional_attrs" is no longer available. The
-│ final feature corresponding to this experiment differs from the
-│ experimental form and is available in the Terraform language from Terraform
-│ v1.3.0 onwards.
-╵
+Test
 
-╷
-│ Error: Experiment has concluded
-│
-│   on .terraform/modules/calc_lambda/modules/sqs-event-source-mapping/variables.tf line 2, in terraform:
-│    2:   experiments = [module_variable_optional_attrs]
-│
-│ Experiment "module_variable_optional_attrs" is no longer available. The
-│ final feature corresponding to this experiment differs from the
-│ experimental form and is available in the Terraform language from Terraform
-│ v1.3.0 onwards.
-╵
+TFE-GOLD-<seal_id>-<deployment_id>-TEST-WSCREATOR
 
-╷
-│ Error: Experiment has concluded
-│
-│   on .terraform/modules/calc_lambda/modules/stream-event-source-mapping/variables.tf line 2, in terraform:
-│    2:   experiments = [module_variable_optional_attrs]
-│
-│ Experiment "module_variable_optional_attrs" is no longer available. The
-│ final feature corresponding to this experiment differs from the
-│ experimental form and is available in the Terraform language from Terraform
-│ v1.3.0 onwards.
-╵
+Prod
 
-Operation failed: failed running terraform init (exit 1)Run Status: errored
-ERROR: error running apply: run errored
+TFE-GOLD-<seal_id>-<deployment_id>-PRD-WSCREATOR
+
+
+Check if your FID is part of the following - https://ars7.jpmchase.net/admin/
+DEV FID
+
+Your Dev build FID should be a member of:
+TFE-GOLD-<seal_id>-<deployment_id>-DEV-WSCREATOR
+AWS-<dev_aws_account_id>-tfe-module-pave
+TFE-GOLD-ATLAS-MODULE-REGISTRY-READ
+
+TEST FID
+
+Your TEST build FID should be a member of:
+TFE-GOLD-<seal_id>-<deployment_id>-TEST-WSCREATOR
+AWS-<test_aws_account_id>-tfe-module-pave
+TFE-GOLD-ATLAS-MODULE-REGISTRY-READ
+
+PROD FID - Should be under EPV control
+
+Your PROD test FID should be a member of:
+TFE-GOLD-<seal_id>-<deployment_id>-PRD-WSCREATOR
+AWS-<prod_aws_account_id>-tfe-module-pave
+TFE-GOLD-ATLAS-MODULE-REGISTRY-READ
+
+AWS account has resources that were created by teammates who have left the firm. Team is not aware about the workspaces used by them to provision the resources.
+How to clean up / destroy those resources?
+
+Search for the account at go/atlas-lookup
+Navigate to section "Terraform Provisioned Product Versions"
+Check the Workspace name under TFE_WORKSPACE_NAME for resources that need to be destroyed.NOTE It should not be UNKNOWN.
+Navigate to go/tfeui,choose your organization to see if that workspace exists.
+If workspace exists:
+Leverage this doc to delete ALL resources provisioned using above workspace.
+If workspace does not exist or is UNKNOWN, use ORCA to delete the orphan resources.
+How to Unlock Terraform Workspace?
+If your workspace is locked, you would see an alert on your workspaces list that says "Needs Attention" Locked Workspace Alert!
+
+You woudl be able to see a padlock sign , indicating a locked workspace. Locked Workspace Padlock!
+
+NOTE If a workspace is locked, your plans will queue forever.
+
+To unlock , please follow below steps:
+
+Navigate to go/tfeui
+Select your organization
+Select your workspace name
+Navigate to Settings ->Locking and Unlock your workspace
+See Terraform Access for more information on access requests
