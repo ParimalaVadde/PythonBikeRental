@@ -1,60 +1,216 @@
-Here's a draft email invite to track status and discuss progress on the FARM findings:
+Skip header
+Engineers
+W619378
+Skip navigation
+EAC - ENVIRONMENT AS CODE
+Community
+Community Tools
+Environment-as-Code (EaC)
+EaC
+Guides
+Component Guides
+v0.13.x
+AWS ECS Utils
 
----
 
-Subject: Daily FARM Findings Status Meeting - 4:30 PM [Sprint End: March 30, 2025]
+AWS ECS Utils
+Overview and Details for provisioning AWS ECS Utils using EaC
 
-Hi Team,
+Last Updated:
+2025-01-07
+Notice: This Module will be available with EaC ModulePack 0.5.0
+Overview
+This module is designed to install a lambda and provide access to SAML role provided which can be used for scaling ecs services on demand .
 
-I'm setting up daily status meetings to track our progress on the FARM findings resolution that we're currently working on. These sessions will provide a platform to discuss progress, address blockers, and ensure we meet our sprint deadline.
+Component: ecsutils
+Model Component Type: ECSUtils
 
-Meeting Details:
-- Purpose: FARM Findings Status Update and Blocker Discussion
-- Time: 4:30 PM - 5:00 PM
-- Frequency: Daily (including weekends if needed)
-- Duration: Until sprint end (March 30, 2025)
-- Location: [Meeting Room/Teams Link]
+Features: The ECS Utils module is used to install:
 
-Agenda:
-1. Daily progress updates from each assignee
-2. Discussion of any technical issues or blockers
-3. Support needed from other team members
-4. Adjustments to assignments if necessary
+ecs-operations-lambda
+Create application-autoscaling endpoint
+Limitations: Using SCALE or SUSPEND will enable below list of parameters which will prevent any scaling enabled.
 
-Please come prepared with:
-- Status of your assigned FARM findings
-- Any blockers or challenges you're facing
-- Estimated completion timeline
+DynamicScalingInSuspended
+DynamicScalingOutSuspended
+ScheduledScalingSuspended
+Configurable Properties
+Name	Description	Type	Default	Required
+attribution_enabled	n/a	bool	false	no
+private_subnets	The list of Private Subnets in which the core tasks will be run. The Private Subnets should have Public Subnets in the same AZ.	list(string)	
+[
+  "PrivateSubnet01",
+  "PrivateSubnet02"
+]
+no
+tags	Custom Tags	map	{}	no
+Outputs
+Name	Description
+ecs_ops_lambda_details	
+Examples
+We recommend that you do not copy and paste and leverage our Model and Deployment Schema to populate your files.
+EaC gives you ability to auto populate your model file leveraging our model schema.
+Model Schema will help users create a model file with an Auto-complete feature in IDE (VS-Code recommended with 'YAML' extension install ). This will help assist and avoid manual errors that may come up while writing a model file from scratch.
+Press CTRL-SPACE for model autocompletion and assistance.
+Runtime Model Configuration:
+Below is an example for specifying an ECSUtils in a Runtime Model. Please use schema and auto complete functionality to generate model file.
 
-This daily sync is critical to ensure we resolve all findings before the sprint ends. If you cannot attend, please send your update in advance.
+apiVersion: model/v1
+kind: Model
+metadata:
+  type: InfraModel
+  name: '<a-name-for-your-model>'
+  version: "v1" # Version for your model Eg. v1 or v2
+  sealID: "<your-seal-id>"
+  mutable: <Select true or false>
+  patternName: "<select-a-pattern>"
+spec:
+  components:
+    - type: ECSCluster
+      name: ecsclstr1
+      connectsTo:
+        - type: LightSwitch
+          name: litswitch1
+    - type: DynamoDB
+      name: ddb1
+    - type: Roles
+      name: roles
+    - type: LightSwitch
+      name: litswitch1
+    - type: ECSUtils
+      name: ecsutils1
+Deployment template configuration for ECSUtils along with ECS Cluster.
+Below is a sample Deployment file with all the properties . Please use schema and auto complete functionality to generate deployment file.
 
-Thank you for your commitment to resolving these priority items.
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+  name: <a-name-for-your-deployment>
+  model:
+    name: <provide-your-model-name>
+    version: v1 # Version that you have specified in your model file
+  sealID: "<your-seal-id>"
+spec:
+  environment:
+    awsAccountID: <Provide_aws_region_here>
+    awsRegion: <Provide_aws_region_here>
+    tfeOrganization: <Provide_tfe_organization_here>
+  modulepack:
+    name: default
+    version: <Provide_ModulePack_Version_here>
+  components:
+    - type: ECSUtils
+      name: ecsutils1
+      action: apply
+      properties:
+        private_subnets:
+          - "PrivateSubnet01"
+          - "PrivateSubnet02"
+        tags: <provide_tags_here>
+    - type: ECSCluster
+      name: ecsclstr1
+      action: apply
+      properties:
+        ecs_nlb_certificate_arn: "CERT_ARN"
+      connectsTo:
+        - type: LightSwitch
+          name: litswitch1
+      dependsOn:
+        - type: ECSUtils
+          name: ecsutils1
+    - type: DynamoDB
+      name: ddb1
+      action: apply
+      properties:
+        app_prefix: true
+        hash_key: test-key
+    - type: LightSwitch
+      name: litswitch1
+      action: apply
+      properties:
+        lightswitch_enabled: true
+    - type: Roles
+      name: roles
+      action: apply
+      properties:
+        roles:
+          - assumable_service:
+              - ecs-tasks.amazonaws.com
+            access:
+              - instanceVersion: v1
+                modelVersion: v1
+                name: ddb1
+                permissions:
+                  write_access: true
+                  read_access: true
+                type: DynamoDB
+            name: ecs-role-1
+ecs-operations-lambda
+This lambda offers below set of action
 
-Regards,
-[Your Name]
+SUSPEND - Suspends Scale-in, Scale-out and scheduled actions of the scaling target and makes desired count to zero Lambda Payload
+{
+"Action": "Scaling",
+"ClusterName": "ecs-cluster" ,
+"ServiceName": "ecs-service",
+"ScaleAction": "SUSPEND"
+}
+UNSUSPEND - Unsuspend Scale-in, scale-out and scheduled actions of the scaling target Lambda Payload
+{
+"Action": "Scaling",
+"ClusterName": "ecs-cluster" ,
+"ServiceName": "ecs-service",
+"ScaleAction": "UNSUSPEND"
+}
+SCALE - Suspends Scale-in, Scale-out and scheduled actions of the scaling target and sets the desired count to value provided in request Lambda Payload
+{
+"Action": "Scaling",
+"ClusterName": "ecs-cluster" ,
+"ServiceName": "ecs-service",
+"ScaleAction": "SCALE",
+"Count": 3
+}
+Create SAMPLE AWS Role ecs-ops from go/cloudatlas
+Step 1: Create new Application Role New Application Role!
 
----
+Note: the ECSUtils component creates an IAM role in the format -app-ecs-ops-, so please check the IAM service in your AWS account for the exact name before requesting the role. Also, Cloud Atlas will prepend -app- to the role you enter, so you only need to enter ecs-ops-.
 
-Would you like me to make any adjustments to this draft?
+Request Form!
 
-**************************************************************************************************************************************
+Step 2: Create RSAM to get access for the Role RSAM Request Form!
 
-Subject: Daily FARM Findings Status Meeting - 4:30 PM
-Hi Team,
-I'm scheduling daily status meetings to track our progress on the FARM findings resolution.
-Meeting Details:
+References
+Atlas Modules Bundled
+Atlas Module	Version	Documentation	TF Bundle Requirements
+ecs-utils	1.2.0	Terraform Module: ECS-Utils Module	1.0.8-20230908-JPMC
+role-policy-updater	51.3.0	Terraform Module: role-poliy-updater Module	1.0.8-20230908-JPMC
+role	7.19.0	Terraform Module: role Module	1.0.8-20230908-JPMC
+Change Log
+ModulePack 0.10.0
+7/2/2024
 
-Time: 4:30 PM daily
-Duration: 30 minutes
-Period: March 21-30, 2025 (until sprint end)
-Location: [Teams Link]
+CCBEAAS-15275 Upgraded ECSUtils to module version 1.0.0
+ModulePack 0.7.0
+1/16/2024
 
-Agenda:
+CCBEAAS-5893 Added support for deployment metadata tags to be appended to all components in deployment file.
+CCBEAAS-6524 ECSUtils component schema enhancements with more descriptions and validation
+ModulePack 0.12.0
+TBD
 
-Progress updates
-Blocker discussion
-Support requests
+CCBEAAS-15563 Update ecs-utils to v1.2.0
+ModulePack 0.6.0
+11/16/2023
 
-Please come prepared with your status and any challenges you're facing.
-Thank you,
-[Your Name]
+No Updates
+ON THIS PAGE
+
+Overview
+Configurable Properties
+Outputs
+Examples
+ecs-operations-lambda
+Create SAMPLE AWS Role ecs-ops from go/cloudatlas
+References
+Change Log
+Back to Top
