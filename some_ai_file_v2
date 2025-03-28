@@ -1,28 +1,212 @@
-status	Count of Farm No.
-Completed	8
-In-Progress	12
-Grand Total	20
-
-Farm No.	AWS Account	Description	New Assignee	Action 	Percentage of completion 	status
-FARM.Finding.83769632	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <lightswitch-job> <2.1.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Parimala	EAC version Upgrade to 0.14.1	70%	In-Progress
-FARM.Finding.75949318	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-cluster> <2.22.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Priyanka	delete cluster	60%	In-Progress
-FARM.Finding.84546998	TEST	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (15.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <533267018973>	Mounika B	Version Upgrade	50%	In-Progress
-FARM.Finding.84547325	DEV	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (15.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Mounika B	EAC version Upgrade to 0.14.1	70%	In-Progress
-FARM.Finding.75951634	TEST	 Application <111597> has provisioned asset(s) using Terraform Module <ecs-application> <2.14.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <533267018973>	Abhishek	delete cluster	100%	Completed
-FARM.Finding.84548519	Prod	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (15.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>	Mounika B	Version Upgrade	40%	In-Progress
-FARM.Finding.75949351	Prod	Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-utils> <0.5.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>	Parimala	Version Upgrade	40%	In-Progress
-FARM.Finding.75951779	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <2.14.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Srinivas	delete cluster	100%	Completed
-FARM.Finding.75953308	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <2.14.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Abhishek	delete cluster	100%	Completed
-FARM.Finding.75962030	DEV	Application <111597> has provisioned asset(s) utilizing infrastructure component <3.8>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Priyanka	delete cluster	40%	In-Progress
-FARM.Finding.75949316	DEV	 Application <111597> has provisioned asset(s) utilizing Terraform Module <2.12.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Ramsai	delete cluster	100%	Completed
-FARM.Finding.75949317	DEV	Application <111597> has provisioned asset(s) utilizing Terraform Module <2.15.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Mounika G	delete cluster	100%	Completed
-FARM.Finding.75962034	Prod	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon AWS Lambda for Python 3.8>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>.	Rakesh	Version Upgrade	50%	In-Progress
-FARM.Finding.75962032	Test	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon AWS Lambda for Python 3.8>, which is in Prohibited lifecycle status, in the Atlas AWS Account <533267018973>.	Rakesh	Version Upgrade	60%	In-Progress
-FARM.Finding.75962031	DEV	Application <111597> has provisioned asset(s) utilizing the infrastructure component <Amazon Aurora PostgreSQL SaaS (14.3)>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Parimala	Version Upgrade	70%	In-Progress
-FARM.Finding.75949311	DEV	The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <api-gateway-deployment> <4.2.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>	Ramsai	delete cluster	60%	In-Progress
-FARM.Finding.75949313	DEV	The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <api-gateway-deployment> <4.2.1>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Parimala	delete cluster	100%	Completed
-FARM.Finding.75949315	DEV	The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <kms> <3.2.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <484862117635>.	Srinivas	delete cluster	100%	Completed
-FARM.Finding.75949319	DEV	"Terraform Module <api-gateway-setup> <4.0.1>, which is in Prohibited lifecycle status, 
-  in the Atlas AWS Account <484862117635>"	Parimala	delete cluster	100%	Completed
-FARM.Finding.75949350	TEST	"Terraform Module <ecs-cluster> <2.15.0>, which is in Prohibited lifecycle status,
-in the Atlas AWS Account <533267018973>"	Mounika G	delete cluster	80%	In-Progress
+# yaml-language-server: $schema=schema/ecs-InfraDeploy_schema.json
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+    name: xbsdprode
+    sealID: "111597"
+    model:
+        name: ecstest
+        version: v8
+spec:
+    modulepack:
+        name: default
+        version: 0.13.0
+    environment:
+        awsAccountID: "992382575964"
+        awsRegion: us-east-1
+        tfeOrganization: 111597-114116-PRD
+    components:
+        - type: Route53
+          name: dns
+          action: skip
+          connectsTo:
+            - type: NetworkLoadBalancer
+              name: ecsnlb
+          properties: 
+            record_name: "ecs-v812871-python-app"  
+            alias: false
+            record_type: "CNAME"
+            routing_policy: "SIMPLE"
+            tags: {CIB-CMEE-ARCHETYPE-NAME: ECS-EAC-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.1-PREVIEW}          
+        - type: NetworkLoadBalancer
+          name: ecsnlb
+          action: apply
+          connectsTo:
+            - type: ApplicationLoadBalancer
+              name: ecsalb
+          properties: 
+            vpc_subnets:
+              - "PublicSubnet02"
+              - "PublicSubnet01"
+            on_prem_accessible: true
+            find_unused_ip: true
+            certificate_arn: "arn:aws:acm:us-east-1:992382575964:certificate/4f3b1376-9027-4e91-871f-dda89f469ada"
+            cloudwatch_alarms:
+              - comparison_operator: "LessThanOrEqualToThreshold"
+                evaluation_periods: 3
+                datapoints_to_alarm: 1
+                period: 60
+                threshold: 0
+                statistic: "Average"
+                description_prefix: "mon:alert:true"
+                insufficient_data_actions: []
+                index: [0]
+                metric_name: "HealthyHostCount"
+                treat_missing_data: "breaching"
+                actions_enabled: true
+          tags: {CIB-CMEE-ARCHETYPE-NAME: ECS-EAC-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.1-PREVIEW}            
+        - type: ApplicationLoadBalancer
+          name: ecsalb
+          action: apply
+          connectsTo:
+            - type: ECSCluster
+              name: xbsdecs
+          properties: 
+            certificate_arn: "arn:aws:acm:us-east-1:992382575964:certificate/4f3b1376-9027-4e91-871f-dda89f469ada"
+            idleTimeout : 12000
+            vpc_subnets:
+              - "PrivateSubnet02"
+              - "PrivateSubnet01"
+            cloudwatch_alarms:
+                - comparison_operator: "LessThanOrEqualToThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 1
+                  period: 60
+                  threshold: 0
+                  statistic: "Average"
+                  description_prefix: "mon:alert:true"
+                  insufficient_data_actions: []
+                  index: [0]
+                  metric_name: "HealthyHostCount"
+                  treat_missing_data: "breaching"
+                  actions_enabled: true
+            tags: {CIB-CMEE-ARCHETYPE-NAME: ECS-EAC-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.1-PREVIEW}               
+        - type: ECSCluster
+          name: xbsdecs
+          action: apply
+          connectsTo:
+            - type: Roles
+              name: ecsrole
+            - type: S3
+              name: bucket
+              model: xbsddbts
+              modelVersion: v6
+              deployment: auroraprdb                            
+            - type: RDSAuroraPostgres
+              name: xbsdtestdb
+              model: xbsddbts
+              modelVersion: v6
+              deployment: auroraprdb                                     
+          dependsOn:
+            - type: NATGateway
+              name: ecsnat
+              model: aupobas
+              modelVersion: v3
+              deployment: aupobas              
+            - type: PrivateVPCEndpoints
+              name: vpce
+              model: aupobas
+              modelVersion: v3
+              deployment: aupobas              
+            - type: ECSUtils
+              name: ecsutils
+              model: aupobas
+              modelVersion: v3
+              deployment: aupobas
+          properties:
+            acceptance_test_enabled: false
+            ecs_nlb_certificate_arn: "arn:aws:acm:us-east-1:992382575964:certificate/4f3b1376-9027-4e91-871f-dda89f469ada"
+            ecr_enabled: true
+            private_subnets: ['PrivateSubnet01', 'PrivateSubnet02']
+            gateway_capacity_provider_strategy: [{'base': 1, 'capacity_provider': 'FARGATE_SPOT', 'weight': 1}]
+            gateway:
+              {'enabled': False, 'security_group_id': None, 'target_group_arn': None}
+            source_registry: "jetae-publish.prod.aws.jpmchase.net"
+            #####Datadog#####
+            datadog_enabled: false
+            datadog_agent_enabled: false
+            datadog_autoscaling_max_capacity: 1
+            datadog_autoscaling_min_capacity: 1
+            datadog_cpu_target_percentage: 100
+            datadog_memory_target_percentage: 65
+            ecs_proxy_log_level: "info"
+            #####SSM Parameters Enabled#####                                        
+            ssm_enabled: true
+            #####XRAY Enabled#####                                        
+            xray_enabled: true
+            tags: {CIB-CMEE-ARCHETYPE-NAME: ECS-EAC-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.1-PREVIEW}        
+        - type: ECSUtils
+          name: ecsutils
+          action: skip
+          properties:
+            private_subnets:
+              - "PrivateSubnet02"
+              - "PrivateSubnet01"
+        - name: secrets
+          type: SecretsManager
+          action: apply 
+          properties:
+            secrets:
+              - name: prod-secret-app
+                recovery_windows_in_days: 30   
+                secret_content_type: PASSWORDS
+                secret_key_list:
+                  - api_presales_username
+                  - api_presales_password
+                  - client_id
+                  - client_secret
+                  - security_token
+            global_config:
+                enabled: false
+                replica_regions: []
+        - type: Roles
+          name: ecsrole
+          action: apply
+          properties: 
+            roles:
+              - access:
+                  - name: xbsdtestdb
+                    model: xbsddbts
+                    modelVersion: v6
+                    deployment: auroraprdb                  
+                    permissions:
+                      app_admin_access: true
+                      readwrite_access: true
+                      read_access: true
+                    type: RDSAuroraPostgres
+                  - name: secrets
+                    permissions:
+                      app_admin_access: true
+                      readwrite_access: true
+                      read_access: true
+                    type: SecretsManager  
+                  - name: bucket
+                    model: xbsddbts
+                    modelVersion: v6
+                    deployment: auroraprdb                                    
+                    permissions:
+                      list_access: true
+                      read_access: true
+                      write_access: true
+                      delete_access: true
+                      delete_object_version_access: true
+                    type: S3
+                assumable_service:
+                  - ecs-tasks.amazonaws.com
+                name: xbsd_ecs_role
+                rpu:
+                  stepfunction_access:
+                    read_access: true
+                    write_access: true
+        - type: PrivateVPCEndpoints
+          name: vpce
+          action: skip
+          properties:
+            tags:
+              {name: "ecs_vpc"}                         
+        - type: NATGateway
+          name: ecsnat
+          action: skip
+          properties: 
+            tags:
+              {name: "ecs_nat"}
