@@ -1,8 +1,8 @@
 1
-module.rds_proxy.aws_security_group_rule.rds_db_proxy_ingress_rule
+module.rds_proxy.aws_security_group_rule.rds_proxy_proxyport_ingress_rule
 :
 Refreshing state...
-[id=sgrule-3757217016]
+[id=sgrule-839242267]
 2
 module.rds_proxy.aws_security_group_rule.rds_proxy_dbport_ingress_rule
 :
@@ -46,44 +46,44 @@ module.rds_proxy.aws_db_proxy_target.db-target
 Refreshing state...
 [id=rds-proxy-interactive-ro-wmkckwrm/default/TRACKED_CLUSTER/rdsapg86a8-auroratdb-v1-cluster]
 10
+module.rds_proxy.data.archive_file.zip_user_creation_lambda
+:
+Read complete after 4s
+[id=3395dcb34c9058f55313a91333b98f09be0e56f3]
+11
+module.rds_proxy.aws_lambda_function.user_creation_lambda
+:
+Refreshing state...
+[id=Proxy-User_creation-aurora-postgresql-wmkckwrm]
+12
 module.rds_proxy.data.archive_file.zip_RDSProxySecretsRotationIntRO_lambda
 [0]
 :
 Read complete after 2s
 [id=1d2e200e9f94e715a99a97d2e5655538c1d88a47]
-11
+13
 module.rds_proxy.aws_lambda_function.RDSProxySecretsRotation_int_ro_lambda
 [0]
 :
 Refreshing state...
 [id=RDSPrx-int-ro-rotation-xbsddevdb-wmkckwrm]
-12
-module.rds_proxy.data.archive_file.zip_user_creation_lambda
-:
-Read complete after 4s
-[id=3395dcb34c9058f55313a91333b98f09be0e56f3]
-13
-module.rds_proxy.aws_lambda_function.user_creation_lambda
-:
-Refreshing state...
-[id=Proxy-User_creation-aurora-postgresql-wmkckwrm]
 14
-module.rds_proxy.aws_lambda_permission.allow_asm_invoke_RDSProxySecretsRotation_int_ro_rotation_lambda
-[0]
-:
-Refreshing state...
-[id=terraform-20250118155747156500000005]
-15
 module.rds_proxy.aws_lambda_invocation.user_creation
 :
 Refreshing state...
 [id=Proxy-User_creation-aurora-postgresql-wmkckwrm_$LATEST_6d9980d7a4860dd1541f06cdf75ec23f]
-16
+15
 module.rds_proxy.aws_secretsmanager_secret_rotation.rds-proxy-int-ro-secret
 [0]
 :
 Refreshing state...
 [id=arn:aws:secretsmanager:us-east-1:484862117635:secret:/rds-aurora-postgres/rdsapg86a8-auroratdb-v1-cluster-xbsddevdb/PROXY-INTERACTIVE-RO-wmkckwrm-Tq8WLk]
+16
+module.rds_proxy.aws_lambda_permission.allow_asm_invoke_RDSProxySecretsRotation_int_ro_rotation_lambda
+[0]
+:
+Refreshing state...
+[id=terraform-20250118155747156500000005]
 17
 ╷
 18
