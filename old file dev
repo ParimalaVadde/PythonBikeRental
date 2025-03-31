@@ -1,143 +1,218 @@
-Finding 75949351
-Note: All Date and Time fields are in local timezone
- Back
-Finding Overview
-Response
-Dates
-Asset Details
-Resolution Ownership
-Notes (0)
-Resolver Tickets (0)
-Supplementary Info
-Finding History
-Finding DescriptionMore information: Description of the Finding, sent by the Data Provider
-OriginalShow AI description toggleAI Summary
-Why was this Finding raised?
-
-The Public Cloud TLM process detected that Application <111597> has provisioned asset(s) utilizing Terraform Module <ecs-utils> <0.5.0>, which is in Prohibited lifecycle status, in the Atlas AWS Account <992382575964>. This indicates a violation of the firm's control objective regarding the use of technology products in a product lifecycle status that is not approved for use.
-
-What is the impact of this Finding?
-
-The use of a Terraform Module in Prohibited lifecycle status can leave the firm vulnerable to long recovery times from system failures and cyber-attacks if vendor support is no longer available. Additionally, it may lead to information loss if not disposed of securely and could result in unnecessary expenses if the asset is not purchased through approved vendors.
-
-For more information:
-go/CP-6104
-go/TCS-062-003
-AI Suggested Remediation Steps - Coming Q2 2025!
-Did you find the AI generated summary more useful than the original Finding description?More information: Give us feedback on the AI generated Finding summary to help drive improvements of the model.
-Finding GuidanceMore information: High level guidance regarding how to review and remediate the Finding
-Details regarding remediating this finding can be found by visiting this URL: https://eg-recommendation.prod.aws.jpmchase.net/api/v2/seals/111597/accounts/992382575964/workspaces?filterType=tpc&id=2613 . For any other questions, please refer to go/evergreenFAQ
-Finding OriginMore information: Name of the Data Provider responsible for creating and closing the Finding
-EDARTClick here to view the details of this Finding in Edart 
-Next Action More information: Customer to check whether they need to submit a response, extend deadline or if it will close out on time
-ReviewGo to Response 
-Next Action Owner
-Rohit Durai (E713174) 
-StatusMore information: Describes if Finding is Open or Closed
-OPEN
-Sub-Status Updated ByMore information: Identifies the user who changed the Finding Sub-Status
-R678415 
-Asset TypeMore information: Describes the type of asset the Finding was discovered on i.e. Application, Infrastructure, Component, Workstation
-Application
-AssetMore information: The Asset the Finding was discovered on, click link for more details
-111597 - B2B Payables X-Business Supplier Directory Services 
-Current Target DateMore information: Ensure your Finding is managed by this date. This means either remediate the Finding or have an active response.
-07-Dec-2025 - This is the finding Original Target Date - 
-Finding TypeMore information: The classification type of FARM Finding, this can either be "Finding" or "Informational"
-FINDING
-Control Name
-CP-6104 : Hardware and Software Component Lifecycle Maintenance 
-Criticality / Severity ScoreMore information: Seriousness of Finding as defined by the Data Provider, 1-5 score where 1 is most serious / Asset impact as calculated by FARM, 1-5 score where 1 is most impactful
-W3 / S4
-Sub-Status Updated DateMore information: Indicates the date the sub-status was updated
-04-Dec-2024 17:58:29 IST
-Original Target DateMore information: The initial current target date
-07-Dec-2025
-Assessment FrequencyMore information: How often this Finding is assessed by the control team
-Upto 36 hours
-Finding DetailsMore information: Additional Attributes/Details from Data Provider
-KeyMore information: The label description of the additional data sent from the data provider
-ValueMore information: Additional data provided by the data provider to help further investigation into the Finding.
-Account Id	992382575964
-ProductType	EVERGREEN
-Environment	PROD
-Support Coverage	Limited Support
-Reason Lifecycle	Prohibited
-SKU JRN	jrn:jpm:tpc:::sku:2613?version=1
-
-
-Public Cloud Non-Compliance Dashboard: Find Terraform Workspace Upgrade Recommendations
-This dashboard will list recommendations on possible upgrade options that will help you to remediate the findings identified in the Public Cloud Non-Compliance Dashboard for your Terraform workspaces. If you have questions about why these findings are being generated or need additional help, please visit our FAQ.
-
-TFE Workspaces
-
-Found 1 workspace(s). Please click on each workspace to see the non compliant resources and view recommendations. Use the Workspace URL in the table below to check your last Terraform run status. If you find that the last Terraform run in the workspace completed with an error and you wish to clean up this workspace, please use this guide.
-
-Seal Id
-Deployment Id
-Account Id
-Environment
-Workspace Id
-Workspace URL
-111597
-114116
-992382575964
-prod
-ws-bcmyN9J6p1F7FqSe
-Click here to open Terraform Workspace
-1 row selected
-Rows per page:
-
-100
-1–1 of 1
-
-Inventory
-
-Inventory Type
-Inventory Name
-Inventory Version
-Lifecycle Status
-Lifecycle Status End Date
-Non Compliant Components
-ecs-utils
-ecs-utils
-0.5.0
-Prohibited
-2125-03-10
- 
-role
-saml-role
-7.7.0
-Invest
-2124-09-20
- 
-jpm-data
-jpm_data
-9.0.0
-Invest
-2124-11-22
- 
-role-policy-updater
-role-policy-updater
-35.3.0
-Invest
-2124-11-22
- 
-1–4 of 4
-
-Inventory Upgrade Recommendations
-
-Found prohibited module(s): ecs-utils:0.5.0 in the selected workspace. Please review the upgrade recommendations for the selected workspace:
-
-
-INVENTORY_RECOMMENDATION_RANK_1
-
-STEP: 1 ( Immediate Action to Remediate Break )
-
-The module ecs-utils:0.5.0 has been seen in combination with all the other modules in the selected workspace. Based on this information, our recommendation is to upgrade to ecs-utils:1.2.0. This combination has been observed 13464 times across multiple workspaces.
-You may upgrade directly to this version.
-There are 259 workspaces currently using ecs-utils:1.2.0 module in PRODUCTION.
-There are 909 workspaces currently using ecs-utils:1.2.0 module in DEV and TEST.
-
-
-ecs-utils 0.5.0 [Prohibited] → ecs-utils 1.2.0 [Invest]
+# yaml-language-server: $schema=schema/aupodat_deployment_schema.json
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+    name: "auroratdb"
+    sealID: "111597"
+    model:
+        name: xbsddbts
+        version: v5
+spec:
+    modulepack:
+        name: default
+        version: 0.14.4
+    environment:
+        awsAccountID: "484862117635"
+        awsRegion: us-east-1
+        tfeOrganization: 111597-114116-DEV
+    components:
+        - type: KMS
+          name: rdstestkms
+          action: apply
+          properties:
+            key_alias: rdsdevkms
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+        - type: LightSwitch
+          name: lswitch
+          action: apply
+          properties:
+            lightswitch_enabled: true
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+        - type: S3
+          name: bucket
+          action: apply
+          properties:
+            ######BACKUP Enabled#####                                        
+            core_backups_retention: "70DAYS"
+            enable_bucket_versioning: "Enabled"
+#            enable_object_locking: true
+            lifecycle_rules:
+                - id: "default"
+                  filter:
+                    prefix: ""
+                  expiration:
+                    - expired_object_delete_marker: true
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+        - type: RDSAuroraPostgres
+          name: xbsdtestdb
+          action: apply
+          connectsTo:
+            - type: KMS
+              name: rdstestkms
+            - type: LightSwitch
+              name: lswitch
+          dependsOn:
+            - type: PrivateVPCEndpoints
+              name: vpce
+          properties:
+            #####Graviton Enabled#####
+            is_serverless: true
+            serverless_db_type: db.serverless
+            db_instance_type: "db.r6g.large"
+            database_name: "xbsddevdb"
+            aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
+            aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
+            #####Backup Enabled#####
+            db_backup_retention_days: 35
+            skip_final_snapshot: false
+            deletion_protection: "false"
+            identifier_prefix: xbsddevdb
+            enable_immutable_backups: true
+            #preferred_backup_window: "21:00-22:00"
+            monitoring_interval: "5"
+            centralized_backup: "PITRBACKUP"
+            #centralized_backup: "PITRANDSNAPBKP"
+            centralized_backup_pitr_schedule: "cron(30 15 ? * * *)"
+            #centralized_backup_snap_schedule: "cron(30 15 ? * * *)"
+            #centralized_snap_retention_days: 35
+            #####Auto Scaling Enabled#####        
+            min_capacity: 1
+            max_capacity: 8
+            #####Performance Enabled#####                
+            performance_insights_enabled: true
+            performance_insights_retention_period: 7
+            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
+            replica_count: 1
+            ca_cert_identifier: "rds-ca-rsa2048-g1"
+            enable_nlb_connectivity: true
+            rds_proxy: false
+            engine_version: "15.3"
+            healthcheck_enabled: true
+            subnets:
+              - "PrivateSubnet01"
+              - "PrivateSubnet02"
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+            custom_db_names:
+                - "custom"
+                #####LightSwitch Enabled#####                        
+            lightswitch_config:
+                enabled: true
+                start_action:
+                    schedule: "cron(00 7 ? * MON-FRI *)" ###5pm UTC
+                stop_action:
+                    schedule: "cron(00 20 ? * MON-FRI *)"
+                holiday_schedule_expressions: []
+        - type: CloudWatch
+          name: dbcwalms
+          action: apply
+          properties:
+            alarms:
+                - alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "AuroraReplicaLagMaximum"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Connection Attempts"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "ConnectionAttempts"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 90
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Connection Attempts alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Deadlocks"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "Deadlocks"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 5
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Deadlocks alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Read IOPS"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "ReadIOPS"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Read IOPS alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Read Throughput"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "ReadThroughput"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Read Throughput alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Write IOPS"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "WriteIOPS"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Write IOPS alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+                - alarm_name: "Aurora Postgres: Write Throughput"
+                  comparison_operator: "GreaterThanThreshold"
+                  evaluation_periods: 3
+                  datapoints_to_alarm: 3
+                  metric_name: "WriteThroughput"
+                  namespace: "AWS/RDS"
+                  period: 300
+                  statistic: "Average"
+                  threshold: 1000000
+                  treat_missing_data: "notBreaching"
+                  alarm_description: "Aurora Postgres: Write Throughput alarm"
+                  actions_enabled: true
+                  insufficient_data_actions: []
+            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
+        - type: PrivateVPCEndpoints
+          name: vpce
+          action: apply
+          properties: 
+            tags:
+              {name: "ecs_vpc"}
+            service_names:
+              - name : rds
+        - type: RDSProxy
+          name: proxy
+          action: skip
+          connectsTo:
+            - type: RDSAuroraPostgres
+              name: xbsdtestdb
+          properties:
+            interactive_reader_endpoint: true
+            recovery_window_in_days: 0
