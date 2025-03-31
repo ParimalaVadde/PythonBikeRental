@@ -1,34 +1,32 @@
 error
 
 1
-module.rds_proxy.data.archive_file.zip_RDSProxySecretsRotationIntRO_lambda
-[0]
-:
-Reading...
-2
 module.rds_proxy.data.aws_subnet.ps
 ["subnet-030d8e8eb11534c9c"]
 :
-Read complete after 0s
+Read complete after 1s
 [id=subnet-030d8e8eb11534c9c]
+2
+data.aws_subnets.private_default
+:
+Read complete after 1s
+[id=us-east-1]
 3
-module.rds_proxy.aws_secretsmanager_secret.rds-proxy-int-ro-secret
-[0]
-:
-Refreshing state...
-[id=arn:aws:secretsmanager:us-east-1:484862117635:secret:/rds-aurora-postgres/rdsapg86a8-auroratdb-v1-cluster-xbsddevdb/PROXY-INTERACTIVE-RO-wmkckwrm-Tq8WLk]
-4
-module.rds_proxy.data.aws_subnet.ps
-["subnet-075fe19c06d714656"]
-:
-Read complete after 0s
-[id=subnet-075fe19c06d714656]
-5
 data.aws_subnet.private_default
 ["subnet-0c9f43d460989ff81"]
 :
-Read complete after 0s
-[id=subnet-0c9f43d460989ff81]
+Reading...
+4
+data.aws_subnet.private_default
+["subnet-0ff9e70598fa2c988"]
+:
+Reading...
+5
+module.rds_proxy.aws_secretsmanager_secret_version.rds-proxy-int-ro-secret
+[0]
+:
+Refreshing state...
+[id=arn:aws:secretsmanager:us-east-1:484862117635:secret:/rds-aurora-postgres/rdsapg86a8-auroratdb-v1-cluster-xbsddevdb/PROXY-INTERACTIVE-RO-wmkckwrm-Tq8WLk|9430D970-31A1-4D9D-81DD-972D52DF5352]
 6
 data.aws_subnet.private_default
 ["subnet-0ff9e70598fa2c988"]
@@ -36,70 +34,70 @@ data.aws_subnet.private_default
 Read complete after 0s
 [id=subnet-0ff9e70598fa2c988]
 7
-module.rds_proxy.data.aws_subnets.subnet_ids
+data.aws_subnet.private_default
+["subnet-0c9f43d460989ff81"]
 :
-Reading...
+Read complete after 0s
+[id=subnet-0c9f43d460989ff81]
 8
-module.rds_proxy.data.aws_subnet.subnet_ids
-[0]
+module.rds_proxy.data.aws_subnets.subnet_ids
 :
 Reading...
 9
 module.rds_proxy.data.aws_subnet.subnet_ids
-[1]
+[0]
 :
 Reading...
 10
-module.rds_proxy.aws_secretsmanager_secret_version.rds-proxy-int-ro-secret
-[0]
+module.rds_proxy.data.aws_subnet.subnet_ids
+[1]
+:
+Reading...
+11
+module.rds_proxy.aws_iam_role_policy.rds-proxy-access-secretmanager-attach
 :
 Refreshing state...
-[id=arn:aws:secretsmanager:us-east-1:484862117635:secret:/rds-aurora-postgres/rdsapg86a8-auroratdb-v1-cluster-xbsddevdb/PROXY-INTERACTIVE-RO-wmkckwrm-Tq8WLk|9430D970-31A1-4D9D-81DD-972D52DF5352]
-11
+[id=aurora-postgresql-proxy-secrets-role-wmkckwrm:terraform-20250118155339835200000002]
+12
+module.rds_proxy.aws_iam_role_policy.user_creation_lambda_policy_document
+:
+Refreshing state...
+[id=rds_user_creation_lambda_role_wmkckwrm:terraform-20250118155339800300000001]
+13
 module.rds_proxy.data.aws_subnet.subnet_ids
 [0]
 :
 Read complete after 0s
 [id=subnet-0c9f43d460989ff81]
-12
+14
 module.rds_proxy.data.aws_subnets.subnet_ids
 :
 Read complete after 0s
 [id=us-east-1]
-13
+15
 module.rds_proxy.data.aws_subnet.subnet_ids
 [1]
 :
 Read complete after 0s
 [id=subnet-0ff9e70598fa2c988]
-14
-module.rds_proxy.aws_iam_role_policy.user_creation_lambda_policy_document
-:
-Refreshing state...
-[id=rds_user_creation_lambda_role_wmkckwrm:terraform-20250118155339800300000001]
-15
+16
 module.rds_proxy.data.aws_vpc.vpc
 :
 Reading...
-16
-module.rds_proxy.aws_iam_role_policy.rds-proxy-access-secretmanager-attach
-:
-Refreshing state...
-[id=aurora-postgresql-proxy-secrets-role-wmkckwrm:terraform-20250118155339835200000002]
 17
-module.rds_proxy.aws_iam_role_policy.rds-proxy-rotate-secret-attach
-:
-Refreshing state...
-[id=rds-aurora-postgresql-db-lambda-proxy-rds-role-wmkckwrm:terraform-20250324114224383900000002]
-18
 module.rds_proxy.aws_iam_role_policy.rds_proxy_lambda_vpc_access
 :
 Refreshing state...
 [id=rds-aurora-postgresql-db-lambda-proxy-rds-role-wmkckwrm:terraform-20250324114224380900000001]
+18
+module.rds_proxy.aws_iam_role_policy.rds-proxy-rotate-secret-attach
+:
+Refreshing state...
+[id=rds-aurora-postgresql-db-lambda-proxy-rds-role-wmkckwrm:terraform-20250324114224383900000002]
 19
 module.rds_proxy.data.aws_vpc.vpc
 :
-Read complete after 0s
+Read complete after 1s
 [id=vpc-0278eb782f17766e4]
 20
 module.rds_proxy.aws_security_group.execute_hardening_sql_function_sg
@@ -112,25 +110,25 @@ module.rds_proxy.aws_security_group.proxy
 Refreshing state...
 [id=sg-0f88ef3457ae850a9]
 22
-module.rds_proxy.aws_security_group_rule.rds_proxy_proxyport_ingress_rule
-:
-Refreshing state...
-[id=sgrule-839242267]
-23
 module.rds_proxy.aws_security_group_rule.rds_db_proxy_ingress_rule
 :
 Refreshing state...
 [id=sgrule-3757217016]
+23
+module.rds_proxy.aws_security_group_rule.rds_proxy_dbport_ingress_rule
+:
+Refreshing state...
+[id=sgrule-2513631716]
 24
 module.rds_proxy.aws_security_group_rule.ingress_rule
 :
 Refreshing state...
 [id=sgrule-3961541313]
 25
-module.rds_proxy.aws_security_group_rule.rds_proxy_dbport_ingress_rule
+module.rds_proxy.aws_security_group_rule.rds_proxy_proxyport_ingress_rule
 :
 Refreshing state...
-[id=sgrule-2513631716]
+[id=sgrule-839242267]
 26
 module.rds_proxy.aws_db_proxy.proxy
 :
@@ -142,15 +140,15 @@ module.rds_proxy.aws_db_proxy_default_target_group.target-proxy
 Refreshing state...
 [id=rds-proxy-interactive-ro-wmkckwrm]
 28
-module.rds_proxy.data.aws_iam_policy_document.aurora_proxy_ro_role_policy_documents
-[0]
-:
-Reading...
-29
 module.rds_proxy.aws_db_proxy_endpoint.proxy-endpoint-ro
 :
 Refreshing state...
 [id=rds-proxy-interactive-ro-wmkckwrm/rds-proxy-interactive-ro-wmkckwrm-ro]
+29
+module.rds_proxy.data.aws_iam_policy_document.aurora_proxy_ro_role_policy_documents
+[0]
+:
+Reading...
 30
 module.rds_proxy.data.aws_iam_policy_document.aurora_proxy_ro_role_policy_documents
 [0]
@@ -164,43 +162,43 @@ module.rds_proxy.aws_iam_role_policy.rds_postgres_proxy_ro_role_policy
 Refreshing state...
 [id=111597-rdsproxy-ro:terraform-20250118155829521500000006]
 32
+module.rds_proxy.data.archive_file.zip_user_creation_lambda
+:
+Read complete after 3s
+[id=3395dcb34c9058f55313a91333b98f09be0e56f3]
+33
+module.rds_proxy.aws_lambda_function.user_creation_lambda
+:
+Refreshing state...
+[id=Proxy-User_creation-aurora-postgresql-wmkckwrm]
+34
 module.rds_proxy.aws_db_proxy_target.db-target
 :
 Refreshing state...
 [id=rds-proxy-interactive-ro-wmkckwrm/default/TRACKED_CLUSTER/rdsapg86a8-auroratdb-v1-cluster]
-33
+35
+module.rds_proxy.aws_lambda_invocation.user_creation
+:
+Refreshing state...
+[id=Proxy-User_creation-aurora-postgresql-wmkckwrm_$LATEST_6d9980d7a4860dd1541f06cdf75ec23f]
+36
 module.rds_proxy.data.archive_file.zip_RDSProxySecretsRotationIntRO_lambda
 [0]
 :
 Read complete after 2s
 [id=1d2e200e9f94e715a99a97d2e5655538c1d88a47]
-34
+37
 module.rds_proxy.aws_lambda_function.RDSProxySecretsRotation_int_ro_lambda
 [0]
 :
 Refreshing state...
 [id=RDSPrx-int-ro-rotation-xbsddevdb-wmkckwrm]
-35
+38
 module.rds_proxy.aws_lambda_permission.allow_asm_invoke_RDSProxySecretsRotation_int_ro_rotation_lambda
 [0]
 :
 Refreshing state...
 [id=terraform-20250118155747156500000005]
-36
-module.rds_proxy.data.archive_file.zip_user_creation_lambda
-:
-Read complete after 4s
-[id=3395dcb34c9058f55313a91333b98f09be0e56f3]
-37
-module.rds_proxy.aws_lambda_function.user_creation_lambda
-:
-Refreshing state...
-[id=Proxy-User_creation-aurora-postgresql-wmkckwrm]
-38
-module.rds_proxy.aws_lambda_invocation.user_creation
-:
-Refreshing state...
-[id=Proxy-User_creation-aurora-postgresql-wmkckwrm_$LATEST_6d9980d7a4860dd1541f06cdf75ec23f]
 39
 module.rds_proxy.aws_secretsmanager_secret_rotation.rds-proxy-int-ro-secret
 [0]
