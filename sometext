@@ -1,216 +1,198 @@
-Skip header
-Engineers
-W619378
-Skip navigation
-EAC - ENVIRONMENT AS CODE
-Community
-Community Tools
-Environment-as-Code (EaC)
-EaC
-Guides
-Component Guides
-v0.13.x
-AWS ECS Utils
-
-
-AWS ECS Utils
-Overview and Details for provisioning AWS ECS Utils using EaC
-
-Last Updated:
-2025-01-07
-Notice: This Module will be available with EaC ModulePack 0.5.0
-Overview
-This module is designed to install a lambda and provide access to SAML role provided which can be used for scaling ecs services on demand .
-
-Component: ecsutils
-Model Component Type: ECSUtils
-
-Features: The ECS Utils module is used to install:
-
-ecs-operations-lambda
-Create application-autoscaling endpoint
-Limitations: Using SCALE or SUSPEND will enable below list of parameters which will prevent any scaling enabled.
-
-DynamicScalingInSuspended
-DynamicScalingOutSuspended
-ScheduledScalingSuspended
-Configurable Properties
-Name	Description	Type	Default	Required
-attribution_enabled	n/a	bool	false	no
-private_subnets	The list of Private Subnets in which the core tasks will be run. The Private Subnets should have Public Subnets in the same AZ.	list(string)	
-[
-  "PrivateSubnet01",
-  "PrivateSubnet02"
-]
-no
-tags	Custom Tags	map	{}	no
-Outputs
-Name	Description
-ecs_ops_lambda_details	
-Examples
-We recommend that you do not copy and paste and leverage our Model and Deployment Schema to populate your files.
-EaC gives you ability to auto populate your model file leveraging our model schema.
-Model Schema will help users create a model file with an Auto-complete feature in IDE (VS-Code recommended with 'YAML' extension install ). This will help assist and avoid manual errors that may come up while writing a model file from scratch.
-Press CTRL-SPACE for model autocompletion and assistance.
-Runtime Model Configuration:
-Below is an example for specifying an ECSUtils in a Runtime Model. Please use schema and auto complete functionality to generate model file.
-
-apiVersion: model/v1
-kind: Model
-metadata:
-  type: InfraModel
-  name: '<a-name-for-your-model>'
-  version: "v1" # Version for your model Eg. v1 or v2
-  sealID: "<your-seal-id>"
-  mutable: <Select true or false>
-  patternName: "<select-a-pattern>"
-spec:
-  components:
-    - type: ECSCluster
-      name: ecsclstr1
-      connectsTo:
-        - type: LightSwitch
-          name: litswitch1
-    - type: DynamoDB
-      name: ddb1
-    - type: Roles
-      name: roles
-    - type: LightSwitch
-      name: litswitch1
-    - type: ECSUtils
-      name: ecsutils1
-Deployment template configuration for ECSUtils along with ECS Cluster.
-Below is a sample Deployment file with all the properties . Please use schema and auto complete functionality to generate deployment file.
-
-apiVersion: deployment/v1
-kind: Deployment
-metadata:
-  name: <a-name-for-your-deployment>
-  model:
-    name: <provide-your-model-name>
-    version: v1 # Version that you have specified in your model file
-  sealID: "<your-seal-id>"
-spec:
-  environment:
-    awsAccountID: <Provide_aws_region_here>
-    awsRegion: <Provide_aws_region_here>
-    tfeOrganization: <Provide_tfe_organization_here>
-  modulepack:
-    name: default
-    version: <Provide_ModulePack_Version_here>
-  components:
-    - type: ECSUtils
-      name: ecsutils1
-      action: apply
-      properties:
-        private_subnets:
-          - "PrivateSubnet01"
-          - "PrivateSubnet02"
-        tags: <provide_tags_here>
-    - type: ECSCluster
-      name: ecsclstr1
-      action: apply
-      properties:
-        ecs_nlb_certificate_arn: "CERT_ARN"
-      connectsTo:
-        - type: LightSwitch
-          name: litswitch1
-      dependsOn:
-        - type: ECSUtils
-          name: ecsutils1
-    - type: DynamoDB
-      name: ddb1
-      action: apply
-      properties:
-        app_prefix: true
-        hash_key: test-key
-    - type: LightSwitch
-      name: litswitch1
-      action: apply
-      properties:
-        lightswitch_enabled: true
-    - type: Roles
-      name: roles
-      action: apply
-      properties:
-        roles:
-          - assumable_service:
-              - ecs-tasks.amazonaws.com
-            access:
-              - instanceVersion: v1
-                modelVersion: v1
-                name: ddb1
-                permissions:
-                  write_access: true
-                  read_access: true
-                type: DynamoDB
-            name: ecs-role-1
-ecs-operations-lambda
-This lambda offers below set of action
-
-SUSPEND - Suspends Scale-in, Scale-out and scheduled actions of the scaling target and makes desired count to zero Lambda Payload
-{
-"Action": "Scaling",
-"ClusterName": "ecs-cluster" ,
-"ServiceName": "ecs-service",
-"ScaleAction": "SUSPEND"
-}
-UNSUSPEND - Unsuspend Scale-in, scale-out and scheduled actions of the scaling target Lambda Payload
-{
-"Action": "Scaling",
-"ClusterName": "ecs-cluster" ,
-"ServiceName": "ecs-service",
-"ScaleAction": "UNSUSPEND"
-}
-SCALE - Suspends Scale-in, Scale-out and scheduled actions of the scaling target and sets the desired count to value provided in request Lambda Payload
-{
-"Action": "Scaling",
-"ClusterName": "ecs-cluster" ,
-"ServiceName": "ecs-service",
-"ScaleAction": "SCALE",
-"Count": 3
-}
-Create SAMPLE AWS Role ecs-ops from go/cloudatlas
-Step 1: Create new Application Role New Application Role!
-
-Note: the ECSUtils component creates an IAM role in the format -app-ecs-ops-, so please check the IAM service in your AWS account for the exact name before requesting the role. Also, Cloud Atlas will prepend -app- to the role you enter, so you only need to enter ecs-ops-.
-
-Request Form!
-
-Step 2: Create RSAM to get access for the Role RSAM Request Form!
-
-References
-Atlas Modules Bundled
-Atlas Module	Version	Documentation	TF Bundle Requirements
-ecs-utils	1.2.0	Terraform Module: ECS-Utils Module	1.0.8-20230908-JPMC
-role-policy-updater	51.3.0	Terraform Module: role-poliy-updater Module	1.0.8-20230908-JPMC
-role	7.19.0	Terraform Module: role Module	1.0.8-20230908-JPMC
-Change Log
-ModulePack 0.10.0
-7/2/2024
-
-CCBEAAS-15275 Upgraded ECSUtils to module version 1.0.0
-ModulePack 0.7.0
-1/16/2024
-
-CCBEAAS-5893 Added support for deployment metadata tags to be appended to all components in deployment file.
-CCBEAAS-6524 ECSUtils component schema enhancements with more descriptions and validation
-ModulePack 0.12.0
-TBD
-
-CCBEAAS-15563 Update ecs-utils to v1.2.0
-ModulePack 0.6.0
-11/16/2023
-
-No Updates
-ON THIS PAGE
-
-Overview
-Configurable Properties
-Outputs
-Examples
-ecs-operations-lambda
-Create SAMPLE AWS Role ecs-ops from go/cloudatlas
-References
-Change Log
-Back to Top
+1
+module.rds_proxy.aws_security_group_rule.rds_db_proxy_ingress_rule
+:
+Refreshing state...
+[id=sgrule-3757217016]
+2
+module.rds_proxy.aws_security_group_rule.rds_proxy_dbport_ingress_rule
+:
+Refreshing state...
+[id=sgrule-2513631716]
+3
+module.rds_proxy.aws_db_proxy.proxy
+:
+Refreshing state...
+[id=rds-proxy-interactive-ro-wmkckwrm]
+4
+module.rds_proxy.aws_db_proxy_default_target_group.target-proxy
+:
+Refreshing state...
+[id=rds-proxy-interactive-ro-wmkckwrm]
+5
+module.rds_proxy.data.aws_iam_policy_document.aurora_proxy_ro_role_policy_documents
+[0]
+:
+Reading...
+6
+module.rds_proxy.aws_db_proxy_endpoint.proxy-endpoint-ro
+:
+Refreshing state...
+[id=rds-proxy-interactive-ro-wmkckwrm/rds-proxy-interactive-ro-wmkckwrm-ro]
+7
+module.rds_proxy.data.aws_iam_policy_document.aurora_proxy_ro_role_policy_documents
+[0]
+:
+Read complete after 0s
+[id=44279471]
+8
+module.rds_proxy.aws_iam_role_policy.rds_postgres_proxy_ro_role_policy
+[0]
+:
+Refreshing state...
+[id=111597-rdsproxy-ro:terraform-20250118155829521500000006]
+9
+module.rds_proxy.aws_db_proxy_target.db-target
+:
+Refreshing state...
+[id=rds-proxy-interactive-ro-wmkckwrm/default/TRACKED_CLUSTER/rdsapg86a8-auroratdb-v1-cluster]
+10
+module.rds_proxy.data.archive_file.zip_RDSProxySecretsRotationIntRO_lambda
+[0]
+:
+Read complete after 2s
+[id=1d2e200e9f94e715a99a97d2e5655538c1d88a47]
+11
+module.rds_proxy.aws_lambda_function.RDSProxySecretsRotation_int_ro_lambda
+[0]
+:
+Refreshing state...
+[id=RDSPrx-int-ro-rotation-xbsddevdb-wmkckwrm]
+12
+module.rds_proxy.data.archive_file.zip_user_creation_lambda
+:
+Read complete after 4s
+[id=3395dcb34c9058f55313a91333b98f09be0e56f3]
+13
+module.rds_proxy.aws_lambda_function.user_creation_lambda
+:
+Refreshing state...
+[id=Proxy-User_creation-aurora-postgresql-wmkckwrm]
+14
+module.rds_proxy.aws_lambda_permission.allow_asm_invoke_RDSProxySecretsRotation_int_ro_rotation_lambda
+[0]
+:
+Refreshing state...
+[id=terraform-20250118155747156500000005]
+15
+module.rds_proxy.aws_lambda_invocation.user_creation
+:
+Refreshing state...
+[id=Proxy-User_creation-aurora-postgresql-wmkckwrm_$LATEST_6d9980d7a4860dd1541f06cdf75ec23f]
+16
+module.rds_proxy.aws_secretsmanager_secret_rotation.rds-proxy-int-ro-secret
+[0]
+:
+Refreshing state...
+[id=arn:aws:secretsmanager:us-east-1:484862117635:secret:/rds-aurora-postgres/rdsapg86a8-auroratdb-v1-cluster-xbsddevdb/PROXY-INTERACTIVE-RO-wmkckwrm-Tq8WLk]
+17
+╷
+18
+│ Error
+:
+Invalid function argument
+19
+│
+20
+│ on variables.tf line 111, in variable
+"
+global_config
+"
+:
+21
+│ 111
+:
+condition = var.global_config.enabled && length(var.global_config.secondary_region) > 0 && length(var.global_config.primary_secrets_vpc_endpoint_dns_names) > 0 && length(var.global_config.secondary_secrets_vpc_endpoint_dns_names) > 0 || !var.global_config.enabled
+22
+│ ├────────────────
+23
+│ │ while calling length(value)
+24
+│ │ var.global_config.secondary_region is null
+25
+│
+26
+│ Invalid value for
+"
+value
+"
+parameter
+:
+argument must not be null.
+27
+╵
+28
+╷
+29
+│ Error
+:
+Invalid function argument
+30
+│
+31
+│ on variables.tf line 111, in variable
+"
+global_config
+"
+:
+32
+│ 111
+:
+condition = var.global_config.enabled && length(var.global_config.secondary_region) > 0 && length(var.global_config.primary_secrets_vpc_endpoint_dns_names) > 0 && length(var.global_config.secondary_secrets_vpc_endpoint_dns_names) > 0 || !var.global_config.enabled
+33
+│ ├────────────────
+34
+│ │ while calling length(value)
+35
+│ │ var.global_config.primary_secrets_vpc_endpoint_dns_names is null
+36
+│
+37
+│ Invalid value for
+"
+value
+"
+parameter
+:
+argument must not be null.
+38
+╵
+39
+╷
+40
+│ Error
+:
+Invalid function argument
+41
+│
+42
+│ on variables.tf line 111, in variable
+"
+global_config
+"
+:
+43
+│ 111
+:
+condition = var.global_config.enabled && length(var.global_config.secondary_region) > 0 && length(var.global_config.primary_secrets_vpc_endpoint_dns_names) > 0 && length(var.global_config.secondary_secrets_vpc_endpoint_dns_names) > 0 || !var.global_config.enabled
+44
+│ ├────────────────
+45
+│ │ while calling length(value)
+46
+│ │ var.global_config.secondary_secrets_vpc_endpoint_dns_names is null
+47
+│
+48
+│ Invalid value for
+"
+value
+"
+parameter
+:
+argument must not be null.
+49
+╵
+50
+Operation failed
+:
+failed running terraform plan (exit 1)
