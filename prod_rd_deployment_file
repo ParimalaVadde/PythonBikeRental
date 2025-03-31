@@ -9,3 +9,120 @@
     recovery_window_in_days: 0
     global_config:
       enabled: false
+
+
+ERROR: Pipeline Failed, sending EaC pipeline done event: while scanning for the next token
+
+found character '\t(TAB)' that cannot start any token. (Do not use \t(TAB) for indentation)
+
+ in 'reader', line 363, column 1:
+
+    			    enabled: false
+
+    ^
+
+ 
+
+[Pipeline] }
+
+[Pipeline] // ansiColor
+
+[Pipeline] End of Pipeline
+
+java.lang.NullPointerException: Cannot invoke method postPipelineDoneEvent() on null object
+
+	at org.codehaus.groovy.runtime.NullObject.invokeMethod(NullObject.java:91)
+
+	at org.codehaus.groovy.runtime.callsite.PogoMetaClassSite.call(PogoMetaClassSite.java:47)
+
+	at org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCall(CallSiteArray.java:47)
+
+	at org.codehaus.groovy.runtime.callsite.NullCallSite.call(NullCallSite.java:34)
+
+	at org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCall(CallSiteArray.java:47)
+
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.call(AbstractCallSite.java:116)
+
+	at com.cloudbees.groovy.cps.sandbox.DefaultInvoker.methodCall(DefaultInvoker.java:20)
+
+	at jules_eacPipelineRunner.call(jules_eacPipelineRunner.groovy:138)
+
+	at WorkflowScript.run(WorkflowScript:5)
+
+	at ___cps.transform___(Native Method)
+
+	at com.cloudbees.groovy.cps.impl.ContinuationGroup.methodCall(ContinuationGroup.java:86)
+
+	at com.cloudbees.groovy.cps.impl.FunctionCallBlock$ContinuationImpl.dispatchOrArg(FunctionCallBlock.java:113)
+
+	at com.cloudbees.groovy.cps.impl.FunctionCallBlock$ContinuationImpl.fixArg(FunctionCallBlock.java:83)
+
+	at jdk.internal.reflect.GeneratedMethodAccessor196.invoke(Unknown Source)
+
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+
+	at java.base/java.lang.reflect.Method.invoke(Method.java:566)
+
+	at com.cloudbees.groovy.cps.impl.ContinuationPtr$ContinuationImpl.receive(ContinuationPtr.java:72)
+
+	at com.cloudbees.groovy.cps.impl.LocalVariableBlock$LocalVariable.get(LocalVariableBlock.java:39)
+
+	at com.cloudbees.groovy.cps.LValueBlock$GetAdapter.receive(LValueBlock.java:30)
+
+	at com.cloudbees.groovy.cps.impl.LocalVariableBlock.evalLValue(LocalVariableBlock.java:28)
+
+	at com.cloudbees.groovy.cps.LValueBlock$BlockImpl.eval(LValueBlock.java:55)
+
+	at com.cloudbees.groovy.cps.LValueBlock.eval(LValueBlock.java:16)
+
+	at com.cloudbees.groovy.cps.Next.step(Next.java:83)
+
+	at com.cloudbees.groovy.cps.Continuable$1.call(Continuable.java:174)
+
+	at com.cloudbees.groovy.cps.Continuable$1.call(Continuable.java:163)
+
+	at org.codehaus.groovy.runtime.GroovyCategorySupport$ThreadCategoryInfo.use(GroovyCategorySupport.java:136)
+
+	at org.codehaus.groovy.runtime.GroovyCategorySupport.use(GroovyCategorySupport.java:275)
+
+	at com.cloudbees.groovy.cps.Continuable.run0(Continuable.java:163)
+
+	at org.jenkinsci.plugins.workflow.cps.SandboxContinuable.access$001(SandboxContinuable.java:18)
+
+	at org.jenkinsci.plugins.workflow.cps.SandboxContinuable.run0(SandboxContinuable.java:51)
+
+	at org.jenkinsci.plugins.workflow.cps.CpsThread.runNextChunk(CpsThread.java:187)
+
+	at org.jenkinsci.plugins.workflow.cps.CpsThreadGroup.run(CpsThreadGroup.java:420)
+
+	at org.jenkinsci.plugins.workflow.cps.CpsThreadGroup.access$400(CpsThreadGroup.java:95)
+
+	at org.jenkinsci.plugins.workflow.cps.CpsThreadGroup$2.call(CpsThreadGroup.java:330)
+
+	at org.jenkinsci.plugins.workflow.cps.CpsThreadGroup$2.call(CpsThreadGroup.java:294)
+
+	at org.jenkinsci.plugins.workflow.cps.CpsVmExecutorService$2.call(CpsVmExecutorService.java:67)
+
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+
+	at hudson.remoting.SingleLaneExecutorService$1.run(SingleLaneExecutorService.java:139)
+
+	at jenkins.util.ContextResettingExecutorService$1.run(ContextResettingExecutorService.java:28)
+
+	at jenkins.security.ImpersonatingExecutorService$1.run(ImpersonatingExecutorService.java:68)
+
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+
+	at java.base/java.lang.Thread.run(Thread.java:834)
+
+[Bitbucket] Notifying commit build result
+
+[Bitbucket] Build result notified
+
+Finished: FAILURE
