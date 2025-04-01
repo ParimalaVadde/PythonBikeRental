@@ -1,17 +1,32 @@
-Got it! Here's the updated comment with the reference to the Excel link:
-
----
-
-- **Cluster Deletion Updates:**  
-  9 cluster deletion FARM breaks have been successfully completed.  
-  The ones marked as blockers have dependencies on the AWS team for cluster deletion. For details, please refer to the [Excel link in Teams]. These will be addressed in the next sprint.
-
-- **Amazon Aurora PostgreSQL SaaS (15.3) and Lightswitch Job Version Upgrade:**  
-  There are a total of 5 FARM breaks related to Amazon Aurora PostgreSQL SaaS (15.3) and the **lightswitch-job** module version 2.1.0. These issues are tied to the version upgrade, but we are facing difficulties with the RDS proxy component. A request will be raised with the EAC team to resolve the issue, and it will be taken up in the next sprint.
-
-- **AWS Lambda for Python 3.8:**  
-  The application (<111597>) has provisioned assets utilizing the infrastructure component **AWS Lambda for Python 3.8**, which is in Prohibited lifecycle status in the TEST AWS Account. This issue will be addressed in the next sprint.
-
----
-
-This should be clear, with the reference to the Teams Excel link for the blockers.
+aws_security_group.alb_sg: Still destroying... [id=sg-0119ee9d5d1402c25, 15m1s elapsed]
+╷
+│ Error: deleting Service Discovery Private DNS Namespace (ns-beltbaz3jjvaoqlx): ResourceInUse: Namespace has associated services; delete the services before deleting the namespace
+│
+│
+╵
+╷
+│ Error: deleting CloudFormation Stack (arn:aws:cloudformation:us-east-1:484862117635:stack/ecs-capacity-provider-reconciler-xbsd-api-pull-ecs/843d1420-ab9b-11ee-9f27-129d768196d1): waiting for completion: failed to delete CloudFormation stack (DELETE_FAILED): ["The following resource(s) failed to delete: [RegisterCapacityProvider]. " "Invalid PhysicalResourceId"]
+│
+│
+╵
+╷
+│ Error: deleting Security Group (sg-0119ee9d5d1402c25): DependencyViolation: resource sg-0119ee9d5d1402c25 has a dependent object
+│       status code: 400, request id: b6ae2e09-00e3-4677-8b65-725d4ce7df7f
+│
+│
+╵
+╷
+│ Error: deleting App Mesh Service Mesh (xbsd-api-pull-ecs): ResourceInUseException: Mesh xbsd-api-pull-ecs for account 484862117635 has active VirtualServices, please delete VirtualServices before deleting the Mesh
+│
+│
+╵
+╷
+│ Error: deleting ECS Cluster Capacity Providers (xbsd-api-pull-ecs): ResourceInUseException: The specified capacity provider is in use and cannot be removed.
+│
+│
+╵
+Executing post-apply hook...
+> Starting custom finalise script...
+> run-2asviboXeT8ox3CK finished with response code: 200
+Operation failed: failed running terraform apply (exit 1)Run Status: errored
+ERROR: error running apply: run errored
