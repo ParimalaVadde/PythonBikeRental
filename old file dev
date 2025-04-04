@@ -1,68 +1,67 @@
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds
-$ cd workspace_cleanup
+Yes, you can upgrade the VPC endpoint module versions via CLI. From the commands you've provided, I can see you've already logged into the proper AWS account using PCL AWS login and configured TFL.
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\workspace_cleanup
-$ cd workspace_priyanka_75949318
+Let me outline a step-by-step approach to upgrade the VPC endpoint module versions via the CLI:
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace_priyanka_75949318
-$ pcl aws login -s
-Target login URL is https://idag2.jpmorganchase.com/adfs/ls/idpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices
-AWS Shared Credentials file is C:\Users\w619378\.aws\credentials
+1. First, make sure you're in the correct workspace:
+   - I see you've configured for workspace "xbsd-api-pull-ecs-terraform-ecs-use1"
+   - However, we need to ensure this is a workspace with VPC endpoints that need updating
 
-Domain> ASIAPAC
-SID> W619378
-Password>
-RSA Code>
+2. Before making changes, let's examine the current state:
+   ```bash
+   $ tfl state list | grep vpc-endpoint
+   ```
+   This will show if you have any VPC endpoints in this workspace.
 
-    1> <no name> - arn:aws:iam::484862117635:role/111597-application-engineer
-    2> <no name> - arn:aws:iam::484862117635:role/111597-aurora-app-admin
-    3> <no name> - arn:aws:iam::484862117635:role/111597-aurora-app-rw
-    4> <no name> - arn:aws:iam::484862117635:role/111597-rdsproxy-ro
-    5> <no name> - arn:aws:iam::484862117635:role/tfe-module-pave
-    6> <no name> - arn:aws:iam::533267018973:role/111597-application-operator-view-only
-    7> <no name> - arn:aws:iam::533267018973:role/111597-aurora-app-admin
-    8> <no name> - arn:aws:iam::533267018973:role/111597-aurora-app-rw
-    9> <no name> - arn:aws:iam::533267018973:role/111597-rdsproxy-ro
-   10> <no name> - arn:aws:iam::533267018973:role/tfe-module-pave
-Display 10 out of 12
-Please enter 1-10, s <string>: Search, n: Next page, l: Last page
-> 5
-Selected <no name> - arn:aws:iam::484862117635:role/tfe-module-pave
+3. Now let's check the existing Terraform configuration:
+   ```bash
+   $ tfl show
+   ```
+   Or specifically look at the files:
+   ```bash
+   $ cat *.tf | grep -A 10 "module.*vpc-endpoint"
+   ```
 
-Assuming role arn:aws:iam::484862117635:role/tfe-module-pave as ASIAPAC\W619378 on <no name> in region  us-east-1...
+4. Once you've identified the VPC endpoint module blocks, you'll need to update them. You can use a text editor or use a command like sed to update the version:
+   ```bash
+   $ sed -i 's/version = "[0-9]\+\.[0-9]\+\.[0-9]\+"/version = "7.0.0"/g' *.tf
+   ```
+   This will find all version strings in the module blocks and update them to "7.0.0".
 
+5. Verify your changes:
+   ```bash
+   $ cat *.tf | grep -A 10 "module.*vpc-endpoint"
+   ```
 
--------------
-S U M M A R Y
--------------
-Your new access key pair has been stored in the AWS shared credentials file (C:\Users\w619378\.aws\credentials) under the adfs profile.
-Note that it will expire in 59m55s at Tue, 01 Apr 2025 19:29:16 +0530
-After this time you may safely re-run this script to refresh your access key pair.
-To use these credentials, call the AWS CLI with the --profile option (e.g. aws s3 ls --profile adfs)
-To use these credentials by default, export the following environment variable: AWS_DEFAULT_PROFILE=adfs
+6. Now run a plan to see what will change:
+   ```bash
+   $ tfl plan
+   ```
 
+7. If the plan looks good, apply the changes:
+   ```bash
+   $ tfl apply
+   ```
 
+8. After the apply completes, verify in the AWS console that the MODULE_VERSION tag has been updated to 7.0.0.
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace_priyanka_75949318
-$ tfl state show | grep terraform/module
-WARNING: tfl not configured. run 'tfl configure' command instead of setting environment variables
+Based on the data you provided, you should repeat this process for each workspace that has VPC endpoints needing updates. 
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace_priyanka_75949318
+For example, to upgrade the RDS endpoint we discussed earlier, you would need to:
+```bash
 $ tfl configure
 Address> https://tfe.jpmchase.net
 Org> 111597-114116-DEV
-Project> Default Project
-Workspace> xbsd-api-pull-ecs-terraform-ecs-use1
+Project> [Default Project if applicable]
+Workspace> v812871-vpc-endpoint
 TF Version> 1.0.8-20230519-JPMC
 Region> us-east-1
+```
 
-Configured
+Then follow steps 2-8 above for that workspace.
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\workspace_cleanup\workspace_priyanka_75949318
-$ tfl apply
+To be systematic, you might want to:
+1. Create a list of all workspaces from your CSV
+2. Write a script that iterates through each workspace, updates the version, and applies the changes
+3. Track your progress to ensure all endpoints are updated before the May 15, 2025 deadline
+
+Would you like help with creating such a script to automate this process across multiple workspaces?
