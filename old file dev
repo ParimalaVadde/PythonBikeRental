@@ -1,218 +1,40 @@
-# yaml-language-server: $schema=schema/aupodat_deployment_schema.json
-apiVersion: deployment/v1
-kind: Deployment
-metadata:
-    name: "auroratdb"
-    sealID: "111597"
-    model:
-        name: xbsddbts
-        version: v5
-spec:
-    modulepack:
-        name: default
-        version: 0.14.4
-    environment:
-        awsAccountID: "484862117635"
-        awsRegion: us-east-1
-        tfeOrganization: 111597-114116-DEV
-    components:
-        - type: KMS
-          name: rdstestkms
-          action: apply
-          properties:
-            key_alias: rdsdevkms
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: LightSwitch
-          name: lswitch
-          action: apply
-          properties:
-            lightswitch_enabled: true
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: S3
-          name: bucket
-          action: apply
-          properties:
-            ######BACKUP Enabled#####                                        
-            core_backups_retention: "70DAYS"
-            enable_bucket_versioning: "Enabled"
-#            enable_object_locking: true
-            lifecycle_rules:
-                - id: "default"
-                  filter:
-                    prefix: ""
-                  expiration:
-                    - expired_object_delete_marker: true
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: RDSAuroraPostgres
-          name: xbsdtestdb
-          action: apply
-          connectsTo:
-            - type: KMS
-              name: rdstestkms
-            - type: LightSwitch
-              name: lswitch
-          dependsOn:
-            - type: PrivateVPCEndpoints
-              name: vpce
-          properties:
-            #####Graviton Enabled#####
-            is_serverless: true
-            serverless_db_type: db.serverless
-            db_instance_type: "db.r6g.large"
-            database_name: "xbsddevdb"
-            aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
-            aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
-            #####Backup Enabled#####
-            db_backup_retention_days: 35
-            skip_final_snapshot: false
-            deletion_protection: "false"
-            identifier_prefix: xbsddevdb
-            enable_immutable_backups: true
-            #preferred_backup_window: "21:00-22:00"
-            monitoring_interval: "5"
-            centralized_backup: "PITRBACKUP"
-            #centralized_backup: "PITRANDSNAPBKP"
-            centralized_backup_pitr_schedule: "cron(30 15 ? * * *)"
-            #centralized_backup_snap_schedule: "cron(30 15 ? * * *)"
-            #centralized_snap_retention_days: 35
-            #####Auto Scaling Enabled#####        
-            min_capacity: 1
-            max_capacity: 8
-            #####Performance Enabled#####                
-            performance_insights_enabled: true
-            performance_insights_retention_period: 7
-            preferred_maintenance_window: "Sun:22:00-Sun:23:00"
-            replica_count: 1
-            ca_cert_identifier: "rds-ca-rsa2048-g1"
-            enable_nlb_connectivity: true
-            rds_proxy: false
-            engine_version: "15.3"
-            healthcheck_enabled: true
-            subnets:
-              - "PrivateSubnet01"
-              - "PrivateSubnet02"
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-            custom_db_names:
-                - "custom"
-                #####LightSwitch Enabled#####                        
-            lightswitch_config:
-                enabled: true
-                start_action:
-                    schedule: "cron(00 7 ? * MON-FRI *)" ###5pm UTC
-                stop_action:
-                    schedule: "cron(00 20 ? * MON-FRI *)"
-                holiday_schedule_expressions: []
-        - type: CloudWatch
-          name: dbcwalms
-          action: apply
-          properties:
-            alarms:
-                - alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "AuroraReplicaLagMaximum"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Connection Attempts"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "ConnectionAttempts"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 90
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Connection Attempts alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Deadlocks"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "Deadlocks"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 5
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Deadlocks alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Read IOPS"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "ReadIOPS"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Read IOPS alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Read Throughput"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "ReadThroughput"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Read Throughput alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Write IOPS"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "WriteIOPS"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Write IOPS alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-                - alarm_name: "Aurora Postgres: Write Throughput"
-                  comparison_operator: "GreaterThanThreshold"
-                  evaluation_periods: 3
-                  datapoints_to_alarm: 3
-                  metric_name: "WriteThroughput"
-                  namespace: "AWS/RDS"
-                  period: 300
-                  statistic: "Average"
-                  threshold: 1000000
-                  treat_missing_data: "notBreaching"
-                  alarm_description: "Aurora Postgres: Write Throughput alarm"
-                  actions_enabled: true
-                  insufficient_data_actions: []
-            tags: {CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE, CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW}
-        - type: PrivateVPCEndpoints
-          name: vpce
-          action: apply
-          properties: 
-            tags:
-              {name: "ecs_vpc"}
-            service_names:
-              - name : rds
-        - type: RDSProxy
-          name: proxy
-          action: skip
-          connectsTo:
-            - type: RDSAuroraPostgres
-              name: xbsdtestdb
-          properties:
-            interactive_reader_endpoint: true
-            recovery_window_in_days: 0
+Here's a brief description you can use for raising a ticket to the EAC team:
+
+---
+
+**Subject**: RDSProxy Module Error in Modulepack 0.14.4 - Cross-Region Lookup Failure
+
+**Description**:
+
+We are experiencing an issue while upgrading our RDSProxy module from modulepack version 0.13.0 to 0.14.4. The deployment is failing with a cross-region lookup error despite our attempts to disable global configuration.
+
+**Error Details**:
+- Error message: "core-Vpc01-Id was not found in CloudFormation Exports for region us-west-2"
+- Error occurs in data.tf line 25 (data "aws_cloudformation_export" "vpc_id_secondary")
+- Deployment ID: [Include your deployment ID if available]
+
+**Steps Taken**:
+1. Added global_config with enabled: false
+2. Tried setting secondary_region to both empty string and primary region ("us-east-1")
+3. Included all required fields in global_config
+
+**Deployment File**:
+Our deployment file includes RDSProxy component with:
+```yaml
+global_config:
+  enabled: false
+  secondary_region: "us-east-1"
+  secondary_vpc_subnet_names: []
+  primary_secrets_vpc_endpoint_dns_names: []
+  secondary_secrets_vpc_endpoint_dns_names: []
+```
+
+**Impact**:
+This issue is blocking our upgrade to modulepack 0.14.4, which we need for [add your business reason].
+
+**Request**:
+Please advise on the correct configuration for disabling global functionality in RDSProxy module version 0.14.4, or provide a workaround to prevent the cross-region lookup from occurring.
+
+---
+
+This description provides the essential information the EAC team will need to understand and address your issue.
