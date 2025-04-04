@@ -1,67 +1,52 @@
-Yes, you can upgrade the VPC endpoint module versions via CLI. From the commands you've provided, I can see you've already logged into the proper AWS account using PCL AWS login and configured TFL.
+ # module.vpc-endpoint-secrets-manager.random_id.guid will be destroyed
+  - resource "random_id" "guid" {
+      - b64_std     = "o4PlXB3Ya9A=" -> null
+      - b64_url     = "o4PlXB3Ya9A" -> null
+      - byte_length = 8 -> null
+      - dec         = "11782513233931824080" -> null
+      - hex         = "a383e55c1dd86bd0" -> null
+      - id          = "o4PlXB3Ya9A" -> null
+    }
 
-Let me outline a step-by-step approach to upgrade the VPC endpoint module versions via the CLI:
+Plan: 0 to add, 0 to change, 5 to destroy.
 
-1. First, make sure you're in the correct workspace:
-   - I see you've configured for workspace "xbsd-api-pull-ecs-terraform-ecs-use1"
-   - However, we need to ensure this is a workspace with VPC endpoints that need updating
+Changes to Outputs:
+  - aws_vpc_endpoint_id       = "vpce-0870971d0cc512fc3" -> null
+  - dns_name                  = [
+      - "vpce-0870971d0cc512fc3-t03w9aat.rds.us-east-1.vpce.amazonaws.com",
+      - "vpce-0870971d0cc512fc3-t03w9aat-us-east-1d.rds.us-east-1.vpce.amazonaws.com",
+      - "vpce-0870971d0cc512fc3-t03w9aat-us-east-1b.rds.us-east-1.vpce.amazonaws.com",
+      - "rds.us-east-1.amazonaws.com",
+      - "rds.us-east-1.api.aws",
+    ] -> null
+  - eni                       = [
+      - "eni-07ecb473a8524c22f",
+      - "eni-08caaadb73ac11d9b",
+    ] -> null
+  - hosted_zone_id            = [
+      - "Z7HUB22UULQXV",
+      - "Z7HUB22UULQXV",
+      - "Z7HUB22UULQXV",
+      - "Z031121212G71BNVUXS2K",
+      - "Z0126658C5YKTOF3ARWJ",
+    ] -> null
+  - private_security_group_id = "sg-0b520e08989af7a7a" -> null
+  - private_vpc_endpoint_type = "Interface" -> null
+Run Status: policy_checking
+Run Status: errored
 
-2. Before making changes, let's examine the current state:
-   ```bash
-   $ tfl state list | grep vpc-endpoint
-   ```
-   This will show if you have any VPC endpoints in this workspace.
+Policy Check Status: hard_failed
+  Passed          : 176
+  Advisory Failed : 0
+  Soft Failed     : 0
+  Hard Failed     : 1
 
-3. Now let's check the existing Terraform configuration:
-   ```bash
-   $ tfl show
-   ```
-   Or specifically look at the files:
-   ```bash
-   $ cat *.tf | grep -A 10 "module.*vpc-endpoint"
-   ```
+Policy {hard-mandatory atlas-global/aws-mod-efa-allowed}: Failed
+  ctc-policy-name:  aws-mod-efa-allowed.sentinel
+  ctc-policy-ref:  atlas-global-efa-policy-002
+  /core/account/atlasversion Not sourced. Please see go/tfeatlasdata for more information on how to resolve this issue
+  /core/account/facet/efa Not sourced. Please see go/tfeatlasdata for more information on how to resolve this issue
+  Unable to determine whether account is EFA or not. You must provision jpm-data 8.0.0 or greater. For details on upgrading, please visit go/jpmdata8
 
-4. Once you've identified the VPC endpoint module blocks, you'll need to update them. You can use a text editor or use a command like sed to update the version:
-   ```bash
-   $ sed -i 's/version = "[0-9]\+\.[0-9]\+\.[0-9]\+"/version = "7.0.0"/g' *.tf
-   ```
-   This will find all version strings in the module blocks and update them to "7.0.0".
-
-5. Verify your changes:
-   ```bash
-   $ cat *.tf | grep -A 10 "module.*vpc-endpoint"
-   ```
-
-6. Now run a plan to see what will change:
-   ```bash
-   $ tfl plan
-   ```
-
-7. If the plan looks good, apply the changes:
-   ```bash
-   $ tfl apply
-   ```
-
-8. After the apply completes, verify in the AWS console that the MODULE_VERSION tag has been updated to 7.0.0.
-
-Based on the data you provided, you should repeat this process for each workspace that has VPC endpoints needing updates. 
-
-For example, to upgrade the RDS endpoint we discussed earlier, you would need to:
-```bash
-$ tfl configure
-Address> https://tfe.jpmchase.net
-Org> 111597-114116-DEV
-Project> [Default Project if applicable]
-Workspace> v812871-vpc-endpoint
-TF Version> 1.0.8-20230519-JPMC
-Region> us-east-1
-```
-
-Then follow steps 2-8 above for that workspace.
-
-To be systematic, you might want to:
-1. Create a list of all workspaces from your CSV
-2. Write a script that iterates through each workspace, updates the version, and applies the changes
-3. Track your progress to ensure all endpoints are updated before the May 15, 2025 deadline
-
-Would you like help with creating such a script to automate this process across multiple workspaces?
+  This policy ensures that EFAs only run an approved subset of Atlas AWS modules.
+ERROR: error running plan: run errored
