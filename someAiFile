@@ -1,3 +1,7 @@
+i am working vewrsion upgrade for "apignlal-484862117635-us-east-1-apigw-apignlal-v1"
+can you give me main.tf for "apignlal-484862117635-us-east-1-apigw-apignlal-v1"
+
+main.tf
 module "vpc-endpoint-rds" {
   source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
   version = "7.0.0"
