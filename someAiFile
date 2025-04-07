@@ -1,3 +1,4 @@
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ tfl init
-Lock file .terraform.lock.hcl already exists and upgrade flag is false
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds
+$ mkdir base-533267018973-us-east-1-PrivateVPCEndpoints
+A subdirectory or file base-533267018973-us-east-1-PrivateVPCEndpoints already exists.
