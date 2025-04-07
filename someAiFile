@@ -1,4 +1,1 @@
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds
-$ mkdir base-533267018973-us-east-1-PrivateVPCEndpoints
-A subdirectory or file base-533267018973-us-east-1-PrivateVPCEndpoints already exists.
+111597	533267000000	com.amazonaws.us-east-1.rds	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
