@@ -1,102 +1,53 @@
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ tfl run list
-Using Org[111597-114116-DEV], Project[Default Project], Workspace[v812871-vpc-endpoint]
+I can see from your output that:
 
-Id      : run-q7zTyxYY7TJREi4F
-Status  : canceled
-Created : 2025-04-04 12:40:46.391 +0000 UTC
+1. The last successful run was on 2023-09-27 (status: applied)
+2. There was a canceled run on 2025-04-04 (very recent)
+3. The state list shows that you already have two VPC endpoints configured:
+   - `module.vpc-endpoint-rds`
+   - `module.vpc-endpoint-secrets-manager`
 
-Id      : run-iU7uXNb8bjG8w6AQ
-Status  : errored
-Created : 2023-10-09 11:02:09.424 +0000 UTC
+The RDS endpoint module is already in your state, which implies that you shouldn't need to create it - it already exists. However, it appears that recent runs have had issues (either canceled or errored), which suggests there might be problems with the configuration.
 
-Id      : run-CxboSGzYHagy8Cu9
-Status  : applied
-Created : 2023-09-27 11:30:17.245 +0000 UTC
+Since we can see the state contains the module you're working with, I'd recommend:
 
-Id      : run-Dg1StrF6WZZwhGV5
-Status  : errored
-Created : 2023-09-27 11:25:18.767 +0000 UTC
+1. Try to get the current configuration:
+```bash
+$ tfl workspace show-configuration
+```
 
-Id      : run-SGkqGms2ZBYgFGWt
-Status  : errored
-Created : 2023-09-27 11:21:12.967 +0000 UTC
+If that doesn't work, try downloading the state to examine it:
+```bash
+$ tfl state pull > terraform.tfstate
+```
 
-Showing 1 of 1 pages (5 total items)
+2. Create a new file that matches your existing configuration but makes your changes:
+```bash
+$ cat > main.tf << 'EOF'
+module "vpc-endpoint-rds" {
+  source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
+  version = "7.0.0"
+  
+  configuration = {
+    service_name = "rds"
+    subnet_type  = "Private"
+  }
+}
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ tfl state list
-Using Org[111597-114116-DEV], Project[Default Project], Workspace[v812871-vpc-endpoint]
+module "vpc-endpoint-secrets-manager" {
+  source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
+  version = "7.0.0"
+  
+  configuration = {
+    service_name = "secretsmanager"
+    subnet_type  = "Private"
+  }
+}
+EOF
+```
 
-module.jpm_data.data.aws_caller_identity.current
-module.jpm_data.data.aws_region.current
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-classification
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-cp
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-environment
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/activedirectory"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/cads_hub"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/ctc"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/efa"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/map"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/markets"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/markets_hub"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/mipp"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/pci"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-facets["/core/account/facet/s3interfaceendpoint"]
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-platform-env
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-seal-deployment-id
-module.jpm_data.data.aws_ssm_parameter.atlas-sourced-account-seal-id
-module.jpm_data.data.aws_ssm_parameters_by_path.atlas-sourced-account-facet-path
-module.jpm_data.null_resource.current[0]
-module.vpc-endpoint-rds.data.atlas_tags.main
-module.vpc-endpoint-rds.data.aws_caller_identity.current
-module.vpc-endpoint-rds.data.aws_cloudformation_export.edge_security_group_id
-module.vpc-endpoint-rds.data.aws_cloudformation_export.vpc_cidr
-module.vpc-endpoint-rds.data.aws_cloudformation_export.vpc_id
-module.vpc-endpoint-rds.data.aws_ec2_managed_prefix_list.edge
-module.vpc-endpoint-rds.data.aws_iam_policy_document.private
-module.vpc-endpoint-rds.data.aws_iam_policy_document.routable
-module.vpc-endpoint-rds.data.aws_organizations_organization.org
-module.vpc-endpoint-rds.data.aws_region.current
-module.vpc-endpoint-rds.data.aws_ssm_parameter.account_classification
-module.vpc-endpoint-rds.data.aws_ssm_parameter.account_environment
-module.vpc-endpoint-rds.data.aws_ssm_parameter.account_platform_env
-module.vpc-endpoint-rds.data.aws_ssm_parameter.account_seal_deployment_id
-module.vpc-endpoint-rds.data.aws_ssm_parameter.account_sealid
-module.vpc-endpoint-rds.data.aws_ssm_parameter.cp
-module.vpc-endpoint-rds.data.aws_ssm_parameters_by_path.account
-module.vpc-endpoint-rds.data.aws_subnet.default["subnet-0c9f43d460989ff81"]
-module.vpc-endpoint-rds.data.aws_subnet.default["subnet-0ff9e70598fa2c988"]
-module.vpc-endpoint-rds.data.aws_subnets.default
-module.vpc-endpoint-rds.data.aws_vpc_endpoint_service.default
-module.vpc-endpoint-rds.aws_security_group.private[0]
-module.vpc-endpoint-rds.aws_vpc_endpoint.default
-module.vpc-endpoint-rds.random_id.guid
-module.vpc-endpoint-secrets-manager.data.atlas_tags.main
-module.vpc-endpoint-secrets-manager.data.aws_caller_identity.current
-module.vpc-endpoint-secrets-manager.data.aws_cloudformation_export.edge_security_group_id
-module.vpc-endpoint-secrets-manager.data.aws_cloudformation_export.vpc_cidr
-module.vpc-endpoint-secrets-manager.data.aws_cloudformation_export.vpc_id
-module.vpc-endpoint-secrets-manager.data.aws_ec2_managed_prefix_list.edge
-module.vpc-endpoint-secrets-manager.data.aws_iam_policy_document.private
-module.vpc-endpoint-secrets-manager.data.aws_iam_policy_document.routable
-module.vpc-endpoint-secrets-manager.data.aws_organizations_organization.org
-module.vpc-endpoint-secrets-manager.data.aws_region.current
-module.vpc-endpoint-secrets-manager.data.aws_ssm_parameter.account_classification
-module.vpc-endpoint-secrets-manager.data.aws_ssm_parameter.account_environment
-module.vpc-endpoint-secrets-manager.data.aws_ssm_parameter.account_platform_env
-module.vpc-endpoint-secrets-manager.data.aws_ssm_parameter.account_seal_deployment_id
-module.vpc-endpoint-secrets-manager.data.aws_ssm_parameter.account_sealid
-module.vpc-endpoint-secrets-manager.data.aws_ssm_parameter.cp
-module.vpc-endpoint-secrets-manager.data.aws_ssm_parameters_by_path.account
-module.vpc-endpoint-secrets-manager.data.aws_subnet.default["subnet-0c9f43d460989ff81"]
-module.vpc-endpoint-secrets-manager.data.aws_subnet.default["subnet-0ff9e70598fa2c988"]
-module.vpc-endpoint-secrets-manager.data.aws_subnets.default
-module.vpc-endpoint-secrets-manager.data.aws_vpc_endpoint_service.default
-module.vpc-endpoint-secrets-manager.aws_security_group.private[0]
-module.vpc-endpoint-secrets-manager.random_id.guid
+3. If you need to make changes to the existing configuration, you might want to examine the most recent logs to understand why the run was canceled or errored:
+```bash
+$ tfl run show run-q7zTyxYY7TJREi4F
+```
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
+What specific changes are you trying to make to the VPC endpoints? Are you trying to add a new one, modify existing ones, or remove one?
