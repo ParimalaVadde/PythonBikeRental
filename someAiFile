@@ -1,12 +1,37 @@
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ echo ".terraform\modules\**" > .terraformignore
+Let's try a different approach since the Windows environment might be handling backslashes differently. Try creating the .terraformignore file with forward slashes instead:
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
+```bash
+$ echo ".terraform/modules/**" > .terraformignore
+```
+
+If that doesn't work, let's create the file using a text editor:
+
+```bash
+$ vim .terraformignore
+```
+
+Then in Vim:
+1. Press `i` to enter insert mode
+2. Type or paste: `.terraform/modules/**`
+3. Press Esc
+4. Type `:wq` and press Enter
+
+Alternatively, try both versions in the same file:
+
+```bash
+$ echo -e ".terraform/modules/**\n.terraform\\modules\\**" > .terraformignore
+```
+
+After creating the file, verify its contents with:
+
+```bash
+$ cat .terraformignore
+```
+
+And then try running the plan again:
+
+```bash
 $ tfl plan
-Using Org[111597-114116-DEV], Project[Default Project], Workspace[v812871-vpc-endpoint], TF Version[1.0.8-20230519-JPMC]
+```
 
-ERROR: error running plan: .terraform/modules folder must be ignored. add '.terraform\modules\**' to .terraformignore file
-
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
+If you're still getting the error, there might be a specific format requirement for your environment. You might want to check with colleagues who have successfully set up Terraform in your organization.
