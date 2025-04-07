@@ -1,108 +1,101 @@
-W619378@WH-1AB5C35118 I:\ds
-$ tfl --help
-Terraform Lite CLI (tfl-cli) is a CLI tool to manage remote runs on Terraform Enterprise.
-The commands supported by tfl-cli are very similar to the open-source terraform CLI, but leverages the TFE REST API.
+Based on the tfl help output, I see the commands available in your environment. Let's adjust our approach to work with these commands. Here's how you can upgrade the VPC endpoint modules:
 
-TFE Configuration:
+1. First, let's pull the configuration from one of the workspaces that needs updating. Based on your data, let's start with the RDS endpoint in the DEV environment:
 
-  Env Var           | Description
-  ----------------- | --------------------------------------------------------------------
-  TFE_ADDRESS       | Base URL for terraform enterprise.
-                    | Default: https://tfe.jpmchase.net
-                    |
-  TFE_TOKEN         | Terraform Enterprise auth token.
-                    | Generated from Terraform Enterprise **Settings->Tokens** section.
+   ```bash
+   $ tfl configure
+   Address> https://tfe.jpmchase.net
+   Org> 111597-114116-DEV
+   Project> Default Project
+   Workspace> v812871-vpc-endpoint
+   TF Version> 1.0.8-20230519-JPMC
+   Region> us-east-1
+   ```
 
+2. Once configured, pull the Terraform files:
+   ```bash
+   $ mkdir -p v812871-vpc-endpoint && cd v812871-vpc-endpoint
+   $ tfl get
+   ```
 
-Global Flags:
+3. After pulling the files, search for the VPC endpoint module:
+   ```bash
+   $ grep -r "module.*vpc-endpoint" .
+   ```
 
-All global CLI flags can be configured with the equivalent environment variable that start with
-TFL_CLI_ARGS_ followed by the flag name (replace underscore for dashes).
+4. Edit the files containing VPC endpoint module references. You can use a text editor to change the version from the current version (e.g., "4.11.0") to "7.0.0".
 
-  Flag              | Description
-  ----------------- | --------------------------------------------------------------------
-  --org             | TFE Organization.
-                    | Can be configured with TFL_CLI_ARGS_ORG env var.
-                    |
-  --workspace       | TFE Workspace.
-                    | Can be configured with TFL_CLI_ARGS_WORKSPACE env var.
-                    |
-  --project             | TFE Project.
-                    | Can be configured with TFL_CLI_ARGS_PROJECT env var.
-                                        | Default: Default Project
-                    |
-  --tf-version      | Terraform version to be used for the workspace.
-                    | TFE workspace will be updated to this version before creating runs.
-                    | Can be configured with TFL_CLI_ARGS_TF_VERSION env var.
-                    |
-  --var-file        | Path to the tfvars file(s) what will be applied to runs.
-                    | Default: ['variables/local.tfvars']
-                    | Can be configured with TFL_CLI_ARGS_VAR_FILE env var (space seperated)
-                    |
-  --env             | Legacy way of configuring var file and will be deprecated in the future.
-                    | Uses the environments/<env>.environment.tfvars convention.
-                    | Default: local
-                    | Can be configured with TFL_CLI_ARGS_ENV env var (space seperated)
-                    |
-  --aws-profile     | AWS Profile to use. Must be listed be in '$home/.aws/credentials' file.
-                    | Default: 'adfs'
-                    | Can be configured with TFL_CLI_ARGS_AWS_PROFILE env var
-                    |
-  --aws-region      | Target AWS Region to use for 'aws_region' and 'region' variables.
-                    | Defaults to region lised in '$home/.aws/credentials' file.
-                    | Can be configured with TFL_CLI_ARGS_AWS_REGION env var
-                    |
-  --env-var         | TFE workspace Environment variable(s) in name=value format.
-                    | TFE workspace will be updated with the env vars before creating runs.
-                    | Can be configured with TFL_CLI_ARGS_ENV_VAR_NAME=VALUE style env vars.
-                    |
-  --non-interactive | Non interactive mode.
-                    | Can be configured with TFL_CLI_ARGS_NON_INTERACTIVE env var
-                    |
-  --no-color        | No color mode.
-                    | Can be configured with TFL_CLI_ARGS_NO_COLOR env var
+5. After updating the files, validate your changes:
+   ```bash
+   $ tfl validate
+   ```
 
-Usage:
-  tfl [command]
+6. Run a plan to see what will change:
+   ```bash
+   $ tfl plan
+   ```
 
-Available Commands:
-  login              Login to Terraform Enterprise.
-  configure          Configures TFE Org, Project, Workspace, TF Version for the current session using interactive prompts.
-  plan               Run Terraform Plan against TFE
-  apply              Run Terraform Apply against TFE
-  destroy            Run Terraform Destroy against TFE
-  state              State related commands
-  run                Run related commands
-  module             Module related commands
-  get                Get Module sources into '.terraform' folder for IDE Completion
-  workspace          Workspace related commands
-  config             TFL config related commands
-  browser            Open tfe in browser
-  validate           Validate terraform files
-  version            Version information
-  terraform-versions Displays valid Terraform Versions
-  init               Initialize or update Terraform dependency lock file for TFE workspace
-  help               Help about any command
-  completion         generate the autocompletion script for the specified shell
+7. If the plan looks good, apply the changes:
+   ```bash
+   $ tfl apply
+   ```
 
-Flags:
-      --acknowledge-restricted-data-source    Acknowledge use of restricted data sources (DEV/TEST only)
-      --address string                        Base URL for terraform enterprise (default "https://tfe.jpmchase.net")
-      --auto-var-modes string                 Comma seperated list of auto tfvars modes. suppported modes are 'aws' (default "aws")
-      --aws-profile string                    AWS profile to use for reading AWS auth info (default "adfs")
-      --aws-region string                     AWS region to use instead of the region from AWS credentials file
-      --disable-aws-assumed-role-validation   Disable AWS Assumed role validation to tfe-module-pave/tfe-developer-pave/viewonly roles
-      --env-var stringArray                   Env vars to set on workspace in name=value format
-  -h, --help                                  help for tfl
-      --no-color                              No color mode
-      --non-interactive                       Non interactive mode
-      --org string                            TFE Organization
-      --project string                        TFE project (default "Default Project")
-      --tf-version string                     TF Version to set on workspace before creating runs
-      --var-file stringArray                  tfvars variable file(s) to use for runs (default [variables/local.tfvars])
-      --workspace string                      TFE Workspace
+8. After the apply completes, verify in the AWS console that the MODULE_VERSION tag has been updated to 7.0.0.
 
-Use "tfl [command] --help" for more information about a command.
+9. Repeat steps 1-8 for each workspace in your list.
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds
+To automate this process for multiple workspaces, you could create a script that:
+1. Takes a CSV file with the workspace information
+2. For each workspace, configures tfl, pulls the config, updates the module version, and applies the changes
+3. Logs the results
+
+Here's a simple approach for multiple workspaces:
+
+1. Create a file named `workspaces.txt` with the workspace details:
+   ```
+   111597-114116-DEV,Default Project,v812871-vpc-endpoint
+   111597-114116-DEV,Default Project,terraform-lambda-v812871
+   111597-114116-DEV,Default Project,xbsd-apigw-setup-ecs
+   ```
+
+2. Run a loop to process each workspace:
+   ```bash
+   while IFS=, read -r org project workspace; do
+     echo "Processing $org/$project/$workspace"
+     
+     # Configure tfl
+     tfl configure <<EOF
+   https://tfe.jpmchase.net
+   $org
+   $project
+   $workspace
+   1.0.8-20230519-JPMC
+   us-east-1
+   EOF
+     
+     # Create directory and pull files
+     mkdir -p "$workspace" && cd "$workspace"
+     tfl get
+     
+     # Find and update VPC endpoint modules
+     files=$(grep -l "module.*vpc-endpoint" *.tf 2>/dev/null)
+     for file in $files; do
+       sed -i 's/version = "[0-9]\+\.[0-9]\+\.[0-9]\+"/version = "7.0.0"/g' "$file"
+       echo "Updated $file"
+     done
+     
+     # Validate, plan, and apply
+     tfl validate
+     tfl plan
+     # Uncomment the following line when you're ready to apply
+     # tfl apply -auto-approve
+     
+     cd ..
+     echo "Completed $workspace"
+     echo "-----------------------"
+   done < workspaces.txt
+   ```
+
+Note that this script includes `-auto-approve` for tfl apply, which would automatically approve the changes without manual confirmation. Remove that flag if you want to review each apply operation before confirming.
+
+Would you like me to adjust any part of this approach to better fit your environment or needs?
