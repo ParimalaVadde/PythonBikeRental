@@ -1,11 +1,11 @@
-Which of the following is a key consideration when incorporating open source software into a project?
-Select the 2 correct answers.
+What can you do if you are ingesting a package with a restrictive (i.e., red or yellow) license?
+Select the best answer.
 
 A.
-The color scheme of the software
+Replace the package with an alternative that has a permissive license
 B.
-The number of contributors to the project
+Copy and paste the package's source code into your own code
 C.
-The licensing terms and compliance requirements
+Assume the package is safe to use without any checks
 D.
-The software's popularity on social media
+Use the package without reviewing its license obligations
