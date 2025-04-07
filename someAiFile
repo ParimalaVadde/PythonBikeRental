@@ -1,55 +1,76 @@
 W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ tfl plan
-Using Org[111597-114116-DEV], Project[Default Project], Workspace[v812871-vpc-endpoint], TF Version[1.0.8-20230519-JPMC]
+$ cat main.tf
+module "vpc-endpoint-rds" {
+        source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
+        version = "7.0.0"
 
-ERROR: error running plan: .terraform/modules folder must be ignored. add '.terraform\modules\**' to .terraformignore file
+        configuration = {
+                service_name = "rds"
+                subnet_type  = "Private"
+        }
+}
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ echo ".terraform\modules\**" > .terraformignore
+module "vpc-endpoint-secrets-manager" {
+        source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
+        version = "7.0.0"
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ tfl plan
-Using Org[111597-114116-DEV], Project[Default Project], Workspace[v812871-vpc-endpoint], TF Version[1.0.8-20230519-JPMC]
 
-ERROR: error running plan: .terraform/modules folder must be ignored. add '.terraform\modules\**' to .terraformignore file
-
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ echo ".terraform/modules/**" > .terraformignore
-
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ vim .terraformignore
+        configuration = {
+                service_name = "secretsmanager"
+                subnet_type  = "Private"
+}
+}
 
 dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ tfl plan
-Using Org[111597-114116-DEV], Project[Default Project], Workspace[v812871-vpc-endpoint], TF Version[1.0.8-20230519-JPMC]
 
-ERROR: error running plan: .terraform/modules folder must be ignored. add '.terraform\modules\**' to .terraformignore file
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ echo -e ".terraform/modules/**\n.terraform\\modules\\**" > .terraformignore
 
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ cat .terraformignore
--e ".terraform/modules/**\n.terraform\\modules\\**"
-
-dev shell : 2.3.31 : default profile
 W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
 $ tfl plan
 Using Org[111597-114116-DEV], Project[Default Project], Workspace[v812871-vpc-endpoint], TF Version[1.0.8-20230519-JPMC]
 
-ERROR: error running plan: .terraform/modules folder must be ignored. add '.terraform\modules\**' to .terraformignore file
+Using AWS credentials from C:\Users\w619378\.aws\credentials (profile: adfs, region: us-east-1)
+Updating Workspace Env Var: TF_VAR_aws_session_token
+Updating Workspace Env Var: TF_VAR_aws_access_key_id
+Updating Workspace Env Var: TF_VAR_aws_secret_access_key
+Info: Starting UploadConfiguration.
+Info: Checking UploadConfiguration Response.
+Uploaded directory [.] to configuration version[cv-aYgRJwtjTon9LVt9]
+
+Created Run: https://tfe.jpmchase.net/app/111597-114116-DEV/workspaces/v812871-vpc-endpoint/runs/run-AhdbMcLznfUC4uMp
+
+Run Status: plan_queued
+Run Status: planning
+Terraform v1.0.8
+on linux_amd64
+Executing pre-plan hook...
+Start terraform-pre-plan script
+Initializing plugins and modules...
+Initializing modules...
+Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws 7.0.0 for vpc-endpoint-rds...
+- vpc-endpoint-rds in .terraform/modules/vpc-endpoint-rds
+Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws 7.0.0 for vpc-endpoint-secrets-manager...
+- vpc-endpoint-secrets-manager in .terraform/modules/vpc-endpoint-secrets-manager
+
+Initializing the backend...
+╷
+│ Error:
+│ Error reading local state: 2 problems:
+│
+│ - Unsupported state file format: The state file could not be parsed as JSON: syntax error at byte offset 1.
+│ - Unsupported state file format: The state file does not have a "version" attribute, which is required to identify the format version.
+│
+│ Terraform is trying to read your local state to determine if there is
+│ state to migrate to your newly configured backend. Terraform can't continue
+│ without this check because that would risk losing state. Please resolve the
+│ error above and try again.
+│
+│
+│
+╵
+
+Operation failed: failed running terraform init (exit 1)Run Status: errored
+ERROR: error running plan: run errored
 
 dev shell : 2.3.31 : default profile
 W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ vim .terraformignore
-
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$
