@@ -1,9 +1,11 @@
-What is the responsibility of a developer when releasing software to production?
+What is true about the differences between copyleft and permissive open source licenses?
 Select the best answer.
 
 A.
-To restrict distribution to within the company only
+Copyleft licenses require derivative works to be released under the same license, while permissive licenses allow derivative works to be released under any license, though they may require changes to be documented.
 B.
-To ensure compliance with the underlying packages' license terms, including any and all aggregate license obligations, such as distributing OSS licenses with end products in which a package is incorporated
+Copyleft licenses are used for software, permissive licenses for hardware
 C.
-To commercialize the software for profit  
+Copyleft licenses are only for personal use, while permissive licenses are for commercial use  
+D.
+Copyleft licenses are the opposite of copyright licenses and allow free usage/distribution, whereas permissive licenses require permission to use/distribute
