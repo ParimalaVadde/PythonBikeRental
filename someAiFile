@@ -1,9 +1,11 @@
-Which of the following is a significant risk of using open source software in a corporate environment?
-Select the 2 correct answers.
+Which of the following licenses require that derivative works must also be open source and, in particular, use a compatible license?
+Select the best answer.
 
 A.
-No guaranteed long-term software support 
+GNU General Public License (GPL)
 B.
-Lower quality software compared to proprietary options  
+BSD License
 C.
-Inheriting the security vulnerabilities present in poorly maintained projects
+MIT License
+D.
+Apache License 2.0
