@@ -3,33 +3,8 @@ module "vpc-endpoint-apignlal" {
   version = "7.0.0"
   
   configuration = {
-    service_name = "execute-api"
-    subnet_type  = "Private"
+    service_name     = "execute-api"
+    subnet_type      = "Private"
     vpc_endpoint_name = "apignlal-484862117635-us-east-1-apigw-apignlal-v1"
   }
 }
-
-
-
-
-
-Downloading tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws 7.0.0 for vpc-endpoint-apignlal...
-- vpc-endpoint-apignlal in .terraform/modules/vpc-endpoint-apignlal
-There are some problems with the configuration, described below.
-
-The Terraform configuration must be valid before initialization so that
-Terraform can determine which modules and providers need to be installed.
-╷
-│ Error: Missing newline after argument
-│
-│   on main.tf line 7, in module "vpc-endpoint-apignlal":
-│    4: configuration = {
-│    5: service_name = "execute-api"
-│    6: subnet_type  = "Private"
-│    7: vpc_endpoint_name = "apignlal-484862117635-us-east-1-apigw-apignlal-v1"   } }
-│
-│ An argument definition must end with a newline.
-╵
-
-Operation failed: failed running terraform init (exit 1)Run Status: errored
-ERROR: error running plan: run errored
