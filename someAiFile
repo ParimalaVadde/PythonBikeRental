@@ -1,14 +1,11 @@
-I'll create a Jira user story based on the information you provided about the VPC Endpoint module deprecation. Here's a structured user story with a short description and acceptance criteria:
+What are the best practices for open source license compliance?
+Select the best answer.
 
-## Short Description
-Upgrade VPC Endpoint module to version 7.0.0 to remediate data exfiltration vulnerability in B2B Payables X-Business Supplier Directory Services application (SEAL ID: 111597).
-
-## Acceptance Criteria
-1. Identify all VPC Endpoints across DEV, TEST, and PROD environments that are using outdated module-vpc-endpoint versions
-2. Update Terraform code for all identified VPC endpoints to use version 7.0.0
-3. Run Spinnaker/Jules pipeline or TFL plan/apply on each repository
-4. Verify successful upgrade by confirming MODULE_VERSION tag shows 7.0.0 in AWS Console for each VPC endpoint
-5. Complete verification that all VPC endpoints are functioning as expected after upgrade
-6. Complete upgrade before May 15, 2025 to avoid FARM breaks and security vulnerabilities
-
-Would you like me to add any additional details to the user story?
+A.
+Use only open source software from trusted sources
+B.
+Review intended uses and use cases of dependencies in the context of the open source license conditions
+C.
+Avoid using open source software unless absolutely necessary
+D.
+Distribute software without reviewing license terms
