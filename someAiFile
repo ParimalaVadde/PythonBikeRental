@@ -1,11 +1,11 @@
-What are the best practices for open source license compliance?
+What are some common ways to manage open source dependencies in a project?
 Select the best answer.
 
 A.
-Use only open source software from trusted sources
+Using package managers and automated dependency tools
 B.
-Review intended uses and use cases of dependencies in the context of the open source license conditions
+Hardcoding dependencies in the project  
 C.
-Avoid using open source software unless absolutely necessary
+Updating dependencies manually and sporadically
 D.
-Distribute software without reviewing license terms
+Avoiding all open source software
