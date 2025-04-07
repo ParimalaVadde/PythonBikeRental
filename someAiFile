@@ -1,58 +1,36 @@
-module.vpc-endpoint-secrets-manager.random_id.guid: Refreshing state... [id=o4PlXB3Ya9A]
-module.jpm_data.null_resource.current[0]: Refreshing state... [id=4565446417636889772]
-╷
-│ Error: describing organization: AccessDeniedException: You don't have permissions to access this resource.
-│
-│   with module.vpc-endpoint-rds.data.aws_organizations_organization.org,
-│   on .terraform/modules/vpc-endpoint-rds/data.tf line 3, in data "aws_organizations_organization" "org":
-│    3: data "aws_organizations_organization" "org" {}
-│
-╵
-╷
-│ Error: describing SSM parameter (/services/account/cloudprovider): ParameterNotFound:
-│
-│   with module.vpc-endpoint-rds.data.aws_ssm_parameter.cp,
-│   on .terraform/modules/vpc-endpoint-rds/data.tf line 21, in data "aws_ssm_parameter" "cp":
-│   21: data "aws_ssm_parameter" "cp" {
-│
-╵
-╷
-│ Error: reading EC2 Managed Prefix List (pl-02cc3dcbf8b1be391) Entries: UnauthorizedOperation: You are not authorized to perform this operation. User: arn:aws:sts::336188891669:assumed-role/tfe-instance-us-east-1-db0af7205912/i-074da3e48607325df is not authorized to perform: ec2:GetManagedPrefixListEntries on resource: arn:aws:ec2:us-east-1:336188891669:prefix-list/pl-02cc3dcbf8b1be391 because no identity-based policy allows the ec2:GetManagedPrefixListEntries action. Encoded authorization failure message: D4cABKKzExSCd4xflzcksoAadUZaYgd6NYvqN6yS_3DR82gTIsituBapCzlC-kgiz3Rw2SzV_P-jh8IInPS41unSgvZqtaerdVEwZdipbv7XkTFdnC1HD-OZ4fGzQJ9JmrKkLyoRcHOqFwskn2PVhzO4fRsyTQGL9mxXWfmxveCAIxBoHt_XnG3xpLiFXoWFFmwZoBybmE80PsrJ3j7Q5P34KXleDLcixzrWoS5jRe6cg9Fb3F18XUJXjV540SFwOG8ANF4GDLSqp7hUeZBp_HjRL5wthoar7qFGIqWR31yFB4Qh48ky14V4gV1bnWpGUWDPL01hnxEV66Zmdo4qPN1V6aoGhD63o-CF9PBhp-0gK4V8t4wPDKozGbDzBeq1ElhKZ6VUYF-hKU49xuMuEONfNowemtqyeimrt_6JH4HDux_PmFu6kWixoWXbwOsDvOpRz0H_Azdwsn5hcMuBfINmV3vppI2kQCV1PCOfDt3DrRysPK2YTtxG5p4O6FSVxG5dvVwvOjkZ_l6GdurixyuWydJnVyAoyzkouXs2VAi-3QONaMLa7FtcZUgvcdiN9mWYNoWDwS3664sFoZEGwl52HtMb2A
-│       status code: 403, request id: 88708b1f-f150-463e-8ebe-3d93e701f6e0
-│
-│   with module.vpc-endpoint-rds.data.aws_ec2_managed_prefix_list.edge,
-│   on .terraform/modules/vpc-endpoint-rds/data.tf line 43, in data "aws_ec2_managed_prefix_list" "edge":
-│   43: data "aws_ec2_managed_prefix_list" "edge" {
-│
-╵
-╷
-│ Error: describing organization: AccessDeniedException: You don't have permissions to access this resource.
-│
-│   with module.vpc-endpoint-secrets-manager.data.aws_organizations_organization.org,
-│   on .terraform/modules/vpc-endpoint-secrets-manager/data.tf line 3, in data "aws_organizations_organization" "org":
-│    3: data "aws_organizations_organization" "org" {}
-│
-╵
-╷
-│ Error: describing SSM parameter (/services/account/cloudprovider): ParameterNotFound:
-│
-│   with module.vpc-endpoint-secrets-manager.data.aws_ssm_parameter.cp,
-│   on .terraform/modules/vpc-endpoint-secrets-manager/data.tf line 21, in data "aws_ssm_parameter" "cp":
-│   21: data "aws_ssm_parameter" "cp" {
-│
-╵
-╷
-│ Error: reading EC2 Managed Prefix List (pl-02cc3dcbf8b1be391) Entries: UnauthorizedOperation: You are not authorized to perform this operation. User: arn:aws:sts::336188891669:assumed-role/tfe-instance-us-east-1-db0af7205912/i-074da3e48607325df is not authorized to perform: ec2:GetManagedPrefixListEntries on resource: arn:aws:ec2:us-east-1:336188891669:prefix-list/pl-02cc3dcbf8b1be391 because no identity-based policy allows the ec2:GetManagedPrefixListEntries action. Encoded authorization failure message: PuEqv-hbw2jTrSfkrWN06GP9Id9ph5j8u5f5T5i960lIx0ptE9BF5oY9tLZHTSZCVKUr8RU3mfBdMedp7mx0jK-bk9-jOW_Uq4ROj5TyvhsYxr-pwTum0WTzU_Sp2Xwbxm0K_oagdsH36sT40FyiM-6g_LS8_Zd_xHEUkhBmd1kASGoP9JPcMZInpOmxCZ4Um0O_Zf-p9FAX1S7bGZbGXqifExnpb5cL2njtPJ0nardUsWS1H5ClTaAzvbTJSUohhjKtgScFaI37fb10ms7djjfAhqrK3QXDy6SEHzVP2ujkoBxx2C1nN7kaJH14OGmByhwLJnd3ow5ITEQAIjhvo3bQyfVxiHvnYkKKw8LmFe6ASGtxQn2Jx5hJDUJ5MxV17LABBiDvpb7KAoB0VKlYXCyC9REmCklMrkbKEdmXA5_cROvtxvfUElzXpDLAs7zThV_32NWDTI7FTVyZZnrBwXIw3hlrOgwmr94qR78RaNPzpoFZCyS47vh299g1XIexo4XgqWpemfw15BHWvu8nIh6hrfLh_-43AEEHbni0qUP7KfcZajZP6PmkEhQwx_HCo1wwLJmdqVnC0KO1GN_vWiSBfykXd_Q
-│       status code: 403, request id: dcd7ed91-8e4e-4a1d-b6a0-5843f3398d35
-│
-│   with module.vpc-endpoint-secrets-manager.data.aws_ec2_managed_prefix_list.edge,
-│   on .terraform/modules/vpc-endpoint-secrets-manager/data.tf line 43, in data "aws_ec2_managed_prefix_list" "edge":
-│   43: data "aws_ec2_managed_prefix_list" "edge" {
-│
-╵
-Operation failed: failed running terraform plan (exit 1)Run Status: errored
-ERROR: error running plan: run errored
+W619378@WH-1AB5C35118 I:\ds
+$
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds
+$ tfl configure
+Address> https://tfe.jpmchase.net
+Org> 111597-114116-TEST
+Project> Default Project
+Workspace> base-533267018973-us-east-1-PrivateVPCEndpoints
+TF Version> 1.0.8-20240301-JPMC
+Region> us-east-1
+
+Configured
 
 dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
+W619378@WH-1AB5C35118 I:\ds
+$ mkdir -p base-533267018973-us-east-1-PrivateVPCEndpoints && cd base-533267018973-us-east-1-PrivateVPCEndpoints
+A subdirectory or file -p already exists.
+Error occurred while processing: -p.
+
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds
+$ cd mkdir -p base-533267018973-us-east-1-PrivateVPCEndpoints
+The system cannot find the path specified.
+
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds
+$ mkdir -p base-533267018973-us-east-1-PrivateVPCEndpoints
+A subdirectory or file -p already exists.
+Error occurred while processing: -p.
+A subdirectory or file base-533267018973-us-east-1-PrivateVPCEndpoints already exists.
+Error occurred while processing: base-533267018973-us-east-1-PrivateVPCEndpoints.
+
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds
 $
