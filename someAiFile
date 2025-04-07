@@ -1,1 +1,19 @@
-111597	533267000000	com.amazonaws.us-east-1.rds	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+module "vpc-endpoint-rds" {
+  source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
+  version = "7.0.0"
+  
+  configuration = {
+    service_name = "rds"
+    subnet_type  = "Private"
+  }
+}
+
+module "vpc-endpoint-secrets-manager" {
+  source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
+  version = "7.0.0"
+  
+  configuration = {
+    service_name = "secretsmanager"
+    subnet_type  = "Private"
+  }
+}
