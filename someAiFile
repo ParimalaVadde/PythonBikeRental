@@ -1,11 +1,9 @@
-What are some common ways to manage open source dependencies in a project?
-Select the best answer.
+Which of the following is a significant risk of using open source software in a corporate environment?
+Select the 2 correct answers.
 
 A.
-Using package managers and automated dependency tools
+No guaranteed long-term software support 
 B.
-Hardcoding dependencies in the project  
+Lower quality software compared to proprietary options  
 C.
-Updating dependencies manually and sporadically
-D.
-Avoiding all open source software
+Inheriting the security vulnerabilities present in poorly maintained projects
