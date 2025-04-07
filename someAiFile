@@ -1,11 +1,9 @@
-What can you do if you are ingesting a package with a restrictive (i.e., red or yellow) license?
-Select the best answer.
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds
+$ tfl show
+ERROR: unknown command "show" for "tfl"
 
-A.
-Replace the package with an alternative that has a permissive license
-B.
-Copy and paste the package's source code into your own code
-C.
-Assume the package is safe to use without any checks
-D.
-Use the package without reviewing its license obligations
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds
+$ cat *.tf | grep -A 10 "module.*vpc-endpoint"
+cat: '*.tf': No such file or directory
