@@ -1,36 +1,4 @@
-W619378@WH-1AB5C35118 I:\ds
-$
 dev shell : 2.3.31 : default profile
 W619378@WH-1AB5C35118 I:\ds
-$ tfl configure
-Address> https://tfe.jpmchase.net
-Org> 111597-114116-TEST
-Project> Default Project
-Workspace> base-533267018973-us-east-1-PrivateVPCEndpoints
-TF Version> 1.0.8-20240301-JPMC
-Region> us-east-1
-
-Configured
-
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds
-$ mkdir -p base-533267018973-us-east-1-PrivateVPCEndpoints && cd base-533267018973-us-east-1-PrivateVPCEndpoints
-A subdirectory or file -p already exists.
-Error occurred while processing: -p.
-
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds
-$ cd mkdir -p base-533267018973-us-east-1-PrivateVPCEndpoints
-The system cannot find the path specified.
-
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds
-$ mkdir -p base-533267018973-us-east-1-PrivateVPCEndpoints
-A subdirectory or file -p already exists.
-Error occurred while processing: -p.
+$ mkdir base-533267018973-us-east-1-PrivateVPCEndpoints
 A subdirectory or file base-533267018973-us-east-1-PrivateVPCEndpoints already exists.
-Error occurred while processing: base-533267018973-us-east-1-PrivateVPCEndpoints.
-
-dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds
-$
