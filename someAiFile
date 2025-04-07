@@ -1,24 +1,5 @@
 W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
-$ cat main.tf
-module "vpc-endpoint-rds" {
-        source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
-        version = "7.0.0"
+$ tfl plan
+Using Org[111597-114116-DEV], Project[Default Project], Workspace[v812871-vpc-endpoint], TF Version[1.0.8-20230519-JPMC]
 
-        configuration = {
-                service_name = "rds"
-                subnet_type  = "Private"
-        }
-}
-
-module "vpc-endpoint-secrets-manager" {
-        source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
-        version = "7.0.0"
-
-
-        configuration = {
-                service_name = "secretsmanager"
-                subnet_type  = "Private"
-}
-}
-
-dev shell : 2.3.31 : default profile
+ERROR: error running plan: .terraform/modules folder must be ignored. add '.terraform\modules\**' to .terraformignore file
