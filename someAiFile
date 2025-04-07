@@ -1,1 +1,12 @@
+W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
 $ echo ".terraform\modules\**" > .terraformignore
+
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
+$ tfl plan
+Using Org[111597-114116-DEV], Project[Default Project], Workspace[v812871-vpc-endpoint], TF Version[1.0.8-20230519-JPMC]
+
+ERROR: error running plan: .terraform/modules folder must be ignored. add '.terraform\modules\**' to .terraformignore file
+
+dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\v812871-vpc-endpoint
