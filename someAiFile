@@ -1,11 +1,9 @@
-Which of the following licenses require that derivative works must also be open source and, in particular, use a compatible license?
+What is the responsibility of a developer when releasing software to production?
 Select the best answer.
 
 A.
-GNU General Public License (GPL)
+To restrict distribution to within the company only
 B.
-BSD License
+To ensure compliance with the underlying packages' license terms, including any and all aggregate license obligations, such as distributing OSS licenses with end products in which a package is incorporated
 C.
-MIT License
-D.
-Apache License 2.0
+To commercialize the software for profit  
