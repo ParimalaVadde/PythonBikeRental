@@ -66,3 +66,7 @@ spec:
 
 
 why am i getting below error. when component names in deployment file and model file are same
+WARN[0004] Failed to run Deployment Plan before Init     error="status: FAILURE\nstate: CLIENT_REQUEST\ncode: 500\nerror: '[ERROR_DEPLOYMENT_VALIDATION]: the components in you
+r model and deployment do not match; expect non-base components to match between deployment and model: deployment.components=[{xbsdvpct PrivateVPCEndpoints v1} {xbsdecr ECRCac
+he v1} {ecsnat NATGateway v1} {xbase XRAYBase v1}], model.components=[{xbsdvpct PrivateVPCEndpoints } {xbsdecr ECRCache } {ecsnat NATGateway } {xbase XRAYBase } {ecsutils ECSU
+tils }]'\n"
