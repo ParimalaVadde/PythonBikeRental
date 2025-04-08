@@ -1,63 +1,68 @@
-# Workspace Deletion Procedure
+deploment file
 
-## Prerequisites
-Before starting, ensure you have:
-- Necessary AWS and Terraform permissions
-- Correct group memberships:
-  - TFE-GOLD-<seal_id>-<deployment_id>-DEV-WSCREATOR
-  - AWS-<dev_aws_account_id>-tfe-module-pave
-  - TFE-GOLD-ATLAS-MODULE-REGISTRY-READ
+# yaml-language-server: $schema=schema/aupobas_deployment_schema.json
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+    name: "aupobast"
+    sealID: "111597"
+    model:
+        name: aupobas
+        version: v6
+spec:
+    modulepack:
+        name: default
+        version: 0.14.0
+    environment:
+        awsAccountID: "533267018973"
+        awsRegion: us-east-1
+        tfeOrganization: 111597-114116-TEST
+    components:
+        - type: PrivateVPCEndpoints
+          name: xbsdvpct
+          action: apply
+          properties:
+        - type: ECRCache
+          name: xbsdecr
+          action: apply
+          properties:
+        - type: NATGateway
+          name: ecsnat
+          action: apply
+          properties:
+        - type: XRAYBase
+          name: xbase
+          action: apply
+          properties:
+        - type: ECSUtils
+          name: ecsutil
+          action: apply
+          properties:
 
-## Detailed Deletion Steps
 
-### 1. AWS Login
-```bash
-pcl aws login --region us-east-1
-```
 
-### 2. Configure Terraform for Workspace
-```bash
-tfl configure --org=111597-114116-DEV --workspace=<WORKSPACE_NAME> --aws-region=us-east-1
-```
-> **Note:** Replace `<WORKSPACE_NAME>` with the actual workspace you want to delete
+model file
 
-### 3. Find JPM-Data Module Version
-```bash
-tfl state show | grep terraform/modules/jpm_data
-```
+apiVersion: model/v1
+kind: Model
+metadata:
+  type: InfraModel
+  name: aupobas
+  version: v6
+  sealID: "111597"
+  mutable: false
+spec:
+  components:
+    - type: PrivateVPCEndpoints
+      name: xbsdvpct
+    - type: ECRCache
+      name: xbsdecr
+    - type: NATGateway
+      name: ecsnat
+    - type: XRAYBase
+      name: xbase
+    - type: ECSUtils
+      name: ecsutils
 
-### 4. Prepare Cleanup Directory
-```bash
-mkdir I:\ds\workspace-cleanup
-cd I:\ds\workspace-cleanup
-unzip jpm-data.zip
-```
 
-### 5. Update Module Version
-Edit `main.tf` with the module version found in step 3
-
-### 6. Apply Cleanup Configuration
-```bash
-tfl apply
-```
-
-### 7. Destroy JPM-Data Module
-```bash
-tfl destroy
-```
-
-### 8. Delete Workspace
-```bash
-tfl workspace delete <WORKSPACE_NAME>
-```
-
-## Final Verification
-- Double-check all steps have been completed
-- Confirm workspace has been successfully deleted
-- Verify no lingering resources remain
-
-## Troubleshooting
-If you encounter any issues:
-- Verify your permissions
-- Check group memberships at https://ars7.jpmchase.net/admin/
-- Consult your team's DevOps support if needed
+why am i getting below error. when component names in deployment file and model file are same
