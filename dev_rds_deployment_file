@@ -1,4 +1,28 @@
-deploment file
+model file :
+
+apiVersion: model/v1
+kind: Model
+metadata:
+  type: InfraModel
+  name: aupobas
+  version: v6
+  sealID: "111597"
+  mutable: false
+spec:
+  components:
+    - type: PrivateVPCEndpoints
+      name: xbsdvpct
+    - type: ECRCache
+      name: xbsdecr
+    - type: NATGateway
+      name: ecsnat
+    - type: XRAYBase
+      name: xbase
+    - type: ECSUtils
+      name: ecsutils
+	  
+	  
+deployment file :
 
 # yaml-language-server: $schema=schema/aupobas_deployment_schema.json
 apiVersion: deployment/v1
@@ -22,6 +46,8 @@ spec:
           name: xbsdvpct
           action: apply
           properties:
+            service_names:
+                - name: lambda
         - type: ECRCache
           name: xbsdecr
           action: apply
@@ -35,38 +61,200 @@ spec:
           action: apply
           properties:
         - type: ECSUtils
-          name: ecsutil
+          name: ecsutils
           action: apply
           properties:
 
 
 
-model file
 
+error details:
+
+Exception
+Error: creating EC2 VPC Endpoint (com.amazonaws.us-east-1.lambda): InvalidParameter: private-dns-enabled cannot be set because there is already a conflicting DNS domain for lambda.us-east-1.amazonaws.com in the VPC vpc-09bec40d464580243 │ status code: 400, request id: 9c086495-fec6-4307-b748-c3f8767d2056 │ │ with module.vpc_endpoint["lambda"].aws_vpc_endpoint.default, │ on .terraform/modules/vpc_endpoint/main.tf line 83, in resource "aws_vpc_endpoint" "default": │ 83: resource "aws_vpc_endpoint" "default" { │ ╵ Executing post-apply hook...
+
+Starting custom finalise script... run-49ccbC68YVz5cUue finished with response code: 200 Operation failed: failed running terraform apply (exit 1)
+
+
+
+data from enginering page
+AWS VPC Endpoint
+Overview and Details for provisioning AWS VPC Endpoint using EaC
+
+Last Updated:
+2025-01-24
+Overview
+AWS VPC Endpoint allows you to create a VPC endpoint inside a specific subnet for a specified product.
+
+It enables you to privately connect your VPC to supported AWS services and VPC endpoint services powered by AWS PrivateLink without requiring an internet gateway, NAT device, VPN connection, or AWS Direct Connect connection. Instances in your VPC do not require public IP addresses to communicate with resources in the service. Traffic between your VPC and the other service does not leave the Amazon network.
+
+Component: PrivateVPCEndpoints
+Model Component Type: PrivateVPCEndpoints
+
+Configurable Properties
+Name	Description	Type	Default	Required
+attribution_enabled	n/a	bool	false	no
+global_config	Specify global endpoint parameters	
+object({
+    enabled          = bool
+    secondary_region = optional(string)
+})
+{
+  "enabled": false,
+  "secondary_region": ""
+}
+no
+service_names	n/a	
+list(object({
+    name                  = string
+    cidr_blocks_primary   = optional(list(string))
+    cidr_blocks_secondary = optional(list(string))
+  }))
+n/a	yes
+tags	n/a	map(string)	{}	no
+Outputs
+Name	Description
+primary-endpoint_creation	Name of the Primary VPC enpoints selected and created.
+secondary-endpoint_creation	Name of the Secondary VPC enpoints selected and created..
+Examples
+We recommend that you do not copy and paste and leverage our Model and Deployment Schema to populate your files.
+EaC gives you ability to auto populate your model file leveraging our model schema.
+Model Schema will help users create a model file with an Auto-complete feature in IDE (VS-Code recommended with 'YAML' extension install ). This will help assist and avoid manual errors that may come up while writing a model file from scratch.
+Press CTRL-SPACE for model autocompletion and assistance.
+Private vpc-endpoint Deployment with Custom Enpoints Configurations
+Model File
+# yaml-language-server: $schema=schema/model_schema.json
 apiVersion: model/v1
 kind: Model
 metadata:
   type: InfraModel
-  name: aupobas
-  version: v6
-  sealID: "111597"
-  mutable: false
+  name: <Model Name>
+  version: "v1"
+  sealID: <SEAL ID>
+  mutable: <true | false>
 spec:
   components:
     - type: PrivateVPCEndpoints
-      name: xbsdvpct
-    - type: ECRCache
-      name: xbsdecr
-    - type: NATGateway
-      name: ecsnat
-    - type: XRAYBase
-      name: xbase
-    - type: ECSUtils
-      name: ecsutils
-
-
-why am i getting below error. when component names in deployment file and model file are same
-WARN[0004] Failed to run Deployment Plan before Init     error="status: FAILURE\nstate: CLIENT_REQUEST\ncode: 500\nerror: '[ERROR_DEPLOYMENT_VALIDATION]: the components in you
-r model and deployment do not match; expect non-base components to match between deployment and model: deployment.components=[{xbsdvpct PrivateVPCEndpoints v1} {xbsdecr ECRCac
-he v1} {ecsnat NATGateway v1} {xbase XRAYBase v1}], model.components=[{xbsdvpct PrivateVPCEndpoints } {xbsdecr ECRCache } {ecsnat NATGateway } {xbase XRAYBase } {ecsutils ECSU
-tils }]'\n"
+      name: <Component Name>
+Deployment File for versions of MP < 0.13.0
+# yaml-language-server: $schema=schema/deployment_schema.json
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+  name: <Deployment Name>
+  model:
+    name: <Model Name>
+    version: v1
+  sealID: <SEAL ID>
+spec:
+  environment:
+    awsAccountID: <AWS Account >
+    awsRegion: <AWS region>
+    tfeOrganization: <TFE Org>
+  modulepack:
+    name: default
+    version: <Provide_ModulePack_Version_here>
+    components:
+        - type: PrivateVPCEndpoints
+          name: pvpce
+          action: apply
+          properties:
+            service_names:
+                - "elasticfilesystem"
+                - "appconfig"
+              global_config:
+                enabled: true <Provide_enabled_here>
+                secondary_region: us-east-2 <Provide_secondary_region_here>
+Deployment File for inline upgrade from 0.12.0 to 0.13.0
+# yaml-language-server: $schema=schema/deployment_schema.json
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+  name: <Deployment Name>
+  model:
+    name: <Model Name>
+    version: v1
+  sealID: <SEAL ID>
+spec:
+  environment:
+    awsAccountID: <AWS Account >
+    awsRegion: <AWS region>
+    tfeOrganization: <TFE Org>
+  modulepack:
+    name: default
+    version: <Provide_ModulePack_Version_here>
+    components:
+        - type: PrivateVPCEndpoints
+          name: vpcpnts
+          action: apply
+          properties:
+            service_names:
+                - name: elasticfilesystem
+                - name: appconfig
+              global_config:
+                enabled: true <Provide_enabled_here>
+                secondary_region: us-east-2 <Provide_secondary_region_here>
+Deployment File with all parameters for MP > 0.13.0
+# yaml-language-server: $schema=schema/deployment_schema.json
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+  name: <Deployment Name>
+  model:
+    name: <Model Name>
+    version: v1
+  sealID: <SEAL ID>
+spec:
+  environment:
+    awsAccountID: <AWS Account >
+    awsRegion: <AWS region>
+    tfeOrganization: <TFE Org>
+  modulepack:
+    name: default
+    version: <Provide_ModulePack_Version_here>
+    components:
+        - type: PrivateVPCEndpoints
+          name: vpcpnts
+          action: apply
+          properties:
+            service_names:
+                - name: <Name of the service>
+                  cidr_blocks_primary: <Provide  cidr block for primary endpoint security group>
+                  cidr_blocks_secondary: <Provide  cidr block for primary endpoint security group works only if global config is enabled>
+              global_config:
+                enabled: true <Provide_enabled_here>
+                secondary_region: us-east-2 <Provide_secondary_region_here>
+AWS Services and Respective VPC Endpoint Names
+AWS Service Name	VPC Enpoint Name	Type	Required
+Athena	athena	Analytics	Yes
+Glue	glue	Analytics	Yes
+EMR	elasticmapreduce,emr-serverless	Analytics	Yes
+Lakeformation	lakeformation	Analytics	Yes
+Redshift	redshift redshift-data	Analytics	Yes
+kinesis Streams	kinesis-streams	Analytics	Yes
+kinesis Firehose	kinesis-firehose	Analytics	Yes
+API Gateway	execute-api	Network	Yes
+ECS Cluster	ecr.api ,ecr.dkr	Compute	Yes
+Lambda	lambda	Compute	Yes
+Elasticache	elasticache	Compute	Yes
+S3	s3	Storage	Yes
+S3 Public VPC endpoint	com.amazonaws.s3-global.accesspoint	Storage	Yes
+RDS (Auoura PostgressSQL,MYSQL,Oracle)	rds	Analytics	Yes
+RDS Backup and Restore	backup	Analytics	Yes
+Dynamodb	dynamodb	Storage	Yes
+Elastic File System	elasticfilesystem	Storage	Yes
+KMS	kms	Security	Yes
+SecretsManager	secretsmanager	Security	Yes
+CloudWatch 	logs	Monitoing	Yes
+CloudTrail  	logs	Monitoing	Yes
+Xray	xray	Monitoing	Yes
+AppConfig	config	Monitoing	Yes
+SNS	sns	Event	Yes
+SQS	sqs	Event	Yes
+EventBridge	events	Event	Yes
+References
+Atlas Modules Bundled
+Name	Source	Version
+jpm_data	tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/jpm-data/aws	9.4.0
+secondary_vpc_endpoint	tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws	7.0.0
+vpc_endpoint	tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws	7.0.0
