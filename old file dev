@@ -141,15 +141,53 @@ TCP
 
 
 
-components:
-  - type: PrivateVPCEndpoints
-    name: xbsdvpct
-    action: apply
-    properties:
-      service_names:
-        - name: rds
-          cidr_blocks_primary: ["100.74.16.64/26", "100.72.64.0/18", "100.72.0.0/18"]
-        - name: lambda
-          cidr_blocks_primary: ["100.74.16.64/26", "100.72.64.0/18", "100.72.0.0/18"]
-      # Try adding this if your platform allows it
-      private_dns_enabled: false
+# yaml-language-server: $schema=schema/aupobas_deployment_schema.json
+apiVersion: deployment/v1
+kind: Deployment
+metadata:
+    name: "aupobast"
+    sealID: "111597"
+    model:
+        name: aupobas
+        version: v6
+spec:
+    modulepack:
+        name: default
+        version: 0.14.5
+    environment:
+        awsAccountID: "533267018973"
+        awsRegion: us-east-1
+        tfeOrganization: 111597-114116-TEST
+    components:
+        - type: PrivateVPCEndpoints
+          name: xbsdvpct
+          action: apply
+          properties:
+            service_names:
+                - name: rds
+                  cidr_blocks_primary: ["100.74.16.64/26", "100.72.64.0/18", "100.72.0.0/18"]
+            private_dns_enabled: false
+        - type: ECRCache
+          name: xbsdecr
+          action: skip
+          properties:
+        - type: NATGateway
+          name: ecsnat
+          action: skip
+          properties:
+        - type: XRAYBase
+          name: xbase
+          action: skip
+          properties:
+        - type: ECSUtils
+          name: ecsutils
+          action: skip
+          properties:
+
+
+
+
+Exception
+Error: creating EC2 VPC Endpoint (com.amazonaws.us-east-1.rds): InvalidParameter: private-dns-enabled cannot be set because there is already a conflicting DNS domain for rds.us-east-1.amazonaws.com in the VPC vpc-09bec40d464580243 │ status code: 400, request id: 9b6fc2f0-9be4-497c-b142-739adfca1832 │ │ with module.vpc_endpoint["rds"].aws_vpc_endpoint.default, │ on .terraform/modules/vpc_endpoint/main.tf line 83, in resource "aws_vpc_endpoint" "default": │ 83: resource "aws_vpc_endpoint" "default" { │ ╵ Executing post-apply hook...
+
+Starting custom finalise script... run-oGXwUUb2kGpU3CpG finished with response code: 200 Operation failed: failed running terraform apply (exit 1)
