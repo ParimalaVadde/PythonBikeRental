@@ -2,3 +2,17 @@ Exception
 Error: creating EC2 VPC Endpoint (com.amazonaws.us-east-1.rds): InvalidParameter: private-dns-enabled cannot be set because there is already a conflicting DNS domain for rds.us-east-1.amazonaws.com in the VPC vpc-09bec40d464580243 │ status code: 400, request id: 93ed928d-6ddc-420f-a1ef-e10bbab52906 │ │ with module.vpc_endpoint["rds"].aws_vpc_endpoint.default, │ on .terraform/modules/vpc_endpoint/main.tf line 83, in resource "aws_vpc_endpoint" "default": │ 83: resource "aws_vpc_endpoint" "default" { │ ╵ Executing post-apply hook...
 
 Starting custom finalise script... run-JSVK2MPSYK5CmCB3 finished with response code: 200 Operation failed: failed running terraform apply (exit 1)
+
+
+
+111597	533267000000	com.amazonaws.us-east-1.elasticloadbalancing	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+111597	533267000000	com.amazonaws.us-east-1.states	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+111597	533267000000	com.amazonaws.us-east-1.lambda	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+111597	533267000000	com.amazonaws.us-east-1.elasticfilesystem	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+111597	533267000000	com.amazonaws.us-east-1.logs	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+111597	533267000000	com.amazonaws.us-east-1.execute-api	vpc-endpoint	6.2.0	tfe.jpmchase.net/111597-114116-TEST/Default Project/nlapiladbt-533267018973-us-east-1-apigwttol-nlapiladbt-v1
+111597	533267000000	com.amazonaws.us-east-1.application-autoscaling	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+111597	533267000000	com.amazonaws.us-east-1.autoscaling	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+111597	533267000000	com.amazonaws.us-east-1.rds	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+111597	533267000000	com.amazonaws.us-east-1.elasticmapreduce	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+
