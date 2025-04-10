@@ -138,3 +138,18 @@ TCP
 443
 100.72.0.0/18
 –
+
+
+
+components:
+  - type: PrivateVPCEndpoints
+    name: xbsdvpct
+    action: apply
+    properties:
+      service_names:
+        - name: rds
+          cidr_blocks_primary: ["100.74.16.64/26", "100.72.64.0/18", "100.72.0.0/18"]
+        - name: lambda
+          cidr_blocks_primary: ["100.74.16.64/26", "100.72.64.0/18", "100.72.0.0/18"]
+      # Try adding this if your platform allows it
+      private_dns_enabled: false
