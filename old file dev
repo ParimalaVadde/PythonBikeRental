@@ -16,3 +16,125 @@ Starting custom finalise script... run-JSVK2MPSYK5CmCB3 finished with response c
 111597	533267000000	com.amazonaws.us-east-1.rds	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
 111597	533267000000	com.amazonaws.us-east-1.elasticmapreduce	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
 
+
+
+rds
+
+	
+Name
+	
+Security group rule ID
+	
+IP version
+	
+Type
+	
+Protocol
+	
+Port range
+	
+Source
+	
+Description
+
+Name
+	
+Security group rule ID
+	
+IP version
+	
+Type
+	
+Protocol
+	
+Port range
+	
+Source
+	
+Description
+
+–
+sgr-0e1ca2a3c1994f96e
+IPv4
+HTTPS
+TCP
+443
+100.74.16.64/26
+–
+–
+sgr-0718869268162c1ab
+IPv4
+HTTPS
+TCP
+443
+100.72.64.0/18
+–
+–
+sgr-0bd1f39da3b2a80d4
+IPv4
+HTTPS
+TCP
+443
+100.72.0.0/18
+–
+
+
+
+lambda
+
+Name
+	
+Security group rule ID
+	
+IP version
+	
+Type
+	
+Protocol
+	
+Port range
+	
+Source
+	
+Description
+
+Name
+	
+Security group rule ID
+	
+IP version
+	
+Type
+	
+Protocol
+	
+Port range
+	
+Source
+	
+Description
+
+–
+sgr-0ebfcc99d7b329325
+IPv4
+HTTPS
+TCP
+443
+100.74.16.64/26
+–
+–
+sgr-0734886fb74d1ddc9
+IPv4
+HTTPS
+TCP
+443
+100.72.64.0/18
+–
+–
+sgr-0cbbec5a0d264a036
+IPv4
+HTTPS
+TCP
+443
+100.72.0.0/18
+–
