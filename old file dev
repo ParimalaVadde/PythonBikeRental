@@ -190,4 +190,33 @@ spec:
 Exception
 Error: creating EC2 VPC Endpoint (com.amazonaws.us-east-1.rds): InvalidParameter: private-dns-enabled cannot be set because there is already a conflicting DNS domain for rds.us-east-1.amazonaws.com in the VPC vpc-09bec40d464580243 │ status code: 400, request id: 9b6fc2f0-9be4-497c-b142-739adfca1832 │ │ with module.vpc_endpoint["rds"].aws_vpc_endpoint.default, │ on .terraform/modules/vpc_endpoint/main.tf line 83, in resource "aws_vpc_endpoint" "default": │ 83: resource "aws_vpc_endpoint" "default" { │ ╵ Executing post-apply hook...
 
+
+Here's a comprehensive subject line and description for your EAC team request:
+
+**Subject Line:** URGENT: Multiple AWS VPC Endpoint Creation Failures Due to DNS Conflicts - Production Blocking Issue
+
+**Description:**
+
+We're encountering critical DNS conflicts preventing the creation of multiple AWS VPC endpoints in VPC vpc-09bec40d464580243. The error message received is: "private-dns-enabled cannot be set because there is already a conflicting DNS domain for [service].us-east-1.amazonaws.com"
+
+This issue affects multiple AWS services including:
+- RDS
+- ElasticLoadBalancing
+- Lambda
+- States
+- ElasticFileSystem
+- CloudWatch Logs
+- Execute-API
+- Application-AutoScaling
+- AutoScaling
+- ElasticMapReduce
+
+These endpoints are being provisioned through Terraform modules at tfe.jpmchase.net under account 533267000000 in project 111597-114116-TEST.
+
+We need immediate assistance with either:
+1) Modifying the underlying Terraform modules to allow setting private_dns_enabled=false for all affected endpoints, or
+2) Resolving the DNS conflicts in the VPC configuration
+
+This is a production-blocking issue requiring urgent attention as it prevents our deployment pipeline from completing successfully.
+
 Starting custom finalise script... run-oGXwUUb2kGpU3CpG finished with response code: 200 Operation failed: failed running terraform apply (exit 1)
