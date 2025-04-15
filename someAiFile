@@ -167,3 +167,61 @@ sample implementation steps
 
 give me implemenatation steps and pre implementation steps
 
+**************************************************************************************************************************
+
+
+
+Here are the corrected pre-implementation and implementation steps:
+
+## Pre-Implementation Steps
+
+1. Request TFE Pave Role Access:
+   - Role: AWS-992382575964-tfe-module-pave
+   - Click on the provided Microsoft Teams link
+   - Fill in required fields:
+     - Application: B2B Payables X-Business Supplier Directory Services
+     - Scope: Cloud Account
+     - Application Environment: app-prod-111597-xbsd
+     - Cloud Environment ID: 992382575964
+     - Group to Manage: AWS-992382575964-tfe-module-pave
+     - Role: Terraform Enterprise
+     - Action: Add
+     - Justification: Require Access to following role to carry out day to day business requirement
+
+## Implementation Steps
+
+1. Verify access to role "AWS-992382575964-tfe-module-pave"
+
+2. In Dev Shell:
+   - Run `tfl configure`
+   - Select org as "111597-114116-PRD"
+   - Select "Default Project" 
+   - Select the workspace (repeat for each of these workspaces):
+     - base-992382575964-us-east-1-PrivateVPCEndpoints
+     - nlapiladbp-992382575964-us-east-1-apigwttol-nlapiladbp-v1
+     - nlapiladbp-992382575964-us-east-1-vpce-nlapiladbp-v1
+   - Run `tfl workspace destroy` for each workspace
+
+3. Execute below commands to login into AWS and to select desired role:
+   - `pcl aws login -s`
+   - Choose the role "AWS-992382575964-tfe-module-pave"
+
+4. Get the feature branch details from development team
+
+5. Clone the feature branch:
+   - `git clone -b <feature_branch_name> ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git`
+
+6. Verify the code of all YAML files with development team and make any required changes
+
+7. Execute these commands in presence of dev team:
+   - `eac model validate -f <model_file_name>`
+   - `eac model apply -f <model_file_name>`
+   - `eac deployment plan -f <deployment_file_name>`
+   - `eac deployment preflight -f <deployment_file_name>`
+   - `eac config set -b <feature_branch_name>`
+   - `eac config set -r "ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git"`
+   - `eac config set -c <get the commit msg from dev team>`
+   - `eac config set -p <feature_branch_name>`
+   - `eac config set -f <feature_branch_name>`
+   - `eac deployment pipeline init -f <deployment_file_name>`
+   - `eac deployment apply -f <deployment_file_name>`
