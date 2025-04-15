@@ -1,58 +1,169 @@
-how to install orphan
+old CR for aurora postgres version upgrade
+CHG34471614 --- which was successfull
 
-Products
-Cloud Foundational Services
-Atlas Platform
-Atlas 1.0 - AWS
-Guides
-Public Cloud How-to and Setup
-ORCA
-User Guide
+**************************************************************************************************************************
+
+Below steps goes to pre implementation step
+
+tfe pave role access request
+AWS-992382575964-tfe-module-pave
+
+step 1: click on below link
+https://teams.microsoft.com/l/message/19:473380d7-64f0-487b-b1b8-19724529c19a_5cf63381-f6c7-4ec7-9572-48790ef925ae@unq.gbl.spaces/1744720257923?context=%7B%22contextType%22%3A%22chat%22%7D
+
+step 2: fill the below fields
+
+Application : B2B Payables X-Business Supplier Directory Services
+
+Scope : Cloud Account
+
+Application Environment : app-prod-111597-xbsd
+
+Cloud Environment ID : 992382575964
+
+Group to Manage : AWS-992382575964-tfe-module-pave
+
+Role : Terraform Enterprise
+
+What do you want to do ? : Add
+
+Justification : Require Access to following role to carry out day to day business requirement.
 
 
-Orphan Resource Cleanup Application (ORCA) User Guide
-User Guide for ORCA
+*************************************************************************************************************
 
-Last Updated:
-2025-04-07
-Before you use ORCA
-This is available in Gold Development environment for users with application-engineer role.
-This is available in Gold Test and Production environments for users with application-operator role.
-Users would need to review carefully the list of resources to be deleted. This tool doesn't include undo functionality.
-ORCA is not a replacement for Terraform Destroy. To clean up corresponding Terraform state for a workspace where the whereabout of code is unknown, please refer to Workspace issues and destroying resources
-ORCA (Orphan Resource Clean-up Application) is a tool that allows application engineer/operator roles to clean-up Terraform orphan resources by themselves (i.e. self-service). This tool helps public cloud Terraform users who encounter the issue of not being able to programmatically remove AWS resources provisioned via Terraform due to orphaned resources still running, in an out-of-sync state or in corrupted/deleted workspaces.
+Below steps goes to implementation step
 
-ORCA also extends support to delete resources provisioned through Service Catalog. This is in consideration of provisioned product in tainted state resulting to unmanaged resource.
+wat i am doing in this process is 
 
-Prerequisites
-Review Prerequisites here - **please ensure these are reviewed**
-List of Supported Resources
-Expand to see the list of supported resources for deletion.
-Invoking ORCA Step Function
-Expand to see how to invoke ORCA.
-Request and Response Templates
-Expand to see request and response templates.
-Sample Request and Response
-Expand to see sample execution with Resource ARN list as input.
+111597	992383000000	com.amazonaws.us-east-1.lambda	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-PRD/base-992382575964-us-east-1-PrivateVPCEndpoints	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.execute-api	vpc-endpoint	6.2.0	tfe.jpmchase.net/111597-114116-PRD/Default Project/nlapiladbp-992382575964-us-east-1-apigwttol-nlapiladbp-v1	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.application-autoscaling	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-PRD/base-992382575964-us-east-1-PrivateVPCEndpoints	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.logs	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-PRD/base-992382575964-us-east-1-PrivateVPCEndpoints	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.autoscaling	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-PRD/base-992382575964-us-east-1-PrivateVPCEndpoints	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.execute-api	vpc-endpoint	6.2.0	tfe.jpmchase.net/111597-114116-PRD/nlapiladbp-992382575964-us-east-1-vpce-nlapiladbp-v1	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.elasticloadbalancing	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-PRD/base-992382575964-us-east-1-PrivateVPCEndpoints	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.elasticmapreduce	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-PRD/base-992382575964-us-east-1-PrivateVPCEndpoints	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.elasticfilesystem	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-PRD/base-992382575964-us-east-1-PrivateVPCEndpoints	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.states	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-PRD/base-992382575964-us-east-1-PrivateVPCEndpoints	Need to CR
+111597	992383000000	com.amazonaws.us-east-1.rds	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-PRD/base-992382575964-us-east-1-PrivateVPCEndpoints	Need to CR
 
-Before you proceed...
-Refer to ORCA FAQ for more guidance on resource list.
-Users would need to carefully review the list of resources to be deleted. This tool doesn't include undo functionality.
-Expand to see sample execution with AWS Resource Group name/s as input.
-Before you proceed...
-This feature is currently available in Gold Development environment only.
-ORCA will discover the resources in the AWS resource group name/s provided in resource_group_list.
-You can find the list of resource groups in your account in AWS Console -> AWS Resource Groups (Resource Groups & Tag Editor) -> Resources -> Saved Resource Groups.
-It is advised that dry_run to be set to 'true' in the initial run and confirm on the list of resources to be deleted. Once confirmed, set dry_run to 'false' to proceed with deletion.
-Users would need to carefully review the list of resources to be deleted. This tool doesn't include undo functionality.
-Expand to see sample execution with Terraform Workspace name/s as input.
-Before you proceed...
-This feature is currently available in Gold Development environment only.
-ORCA will discover the resources in the workspace name/s provided in workspace_list.
-You can find the workspace name in the corresponding tags of your resource with tag key as either "TFE_WORKSPACE" or "TFE_WORKSPACE_NAME"
-It is advised that dry_run to be set to 'true' in the initial run and confirm on the list of resources to be deleted. Once confirmed, set dry_run to 'false' to proceed with deletion.
-Users would need to carefully review the list of resources to be deleted. This tool doesn't include undo functionality.
-Viewing Execution Logs
-Expand to see on how to view execution logs.
 
+all above belongs to prod
+
+we have below terraform workspaces from above data
+
+base-992382575964-us-east-1-PrivateVPCEndpoints
+nlapiladbp-992382575964-us-east-1-apigwttol-nlapiladbp-v1
+nlapiladbp-992382575964-us-east-1-vpce-nlapiladbp-v1
+
+first step is one should have access to the role "AWS-992382575964-tfe-module-pave"
+
+next in open dev shell
+
+execute below cmds
+
+>tfl configure
+then select org as "111597-114116-PRD"
+Org>
+after selecting org
+then for Project select "Default Project"
+Project>
+then select the workspace (from above 3 listed workspace , these step should be repeated for all of them one by one)
+after selecting workspace we get msg like "tfl configured"
+
+now after this, need to execute below cmd
+>tfl workspace destroy
+
+after destroying 
+
+
+then need to execute below cmds in dev shell
+
+take a clone of feature branch (get the feature branch details from development team)
+
+git clone -b <feature_branch_name> ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git
+
+verify the code of all yamls files with development team 
+if any required changes suggested by dev team, then need to add these changes.
+
+after the verfication of  files by dev team
+
+execute the below cmds in presence of dev team
+
+$ eac model validate -f <model_file_name>
+
+$ eac model apply -f <model_file_name>
+
+on successfull execution of above cmds , execute below cmds
+
+$ eac deployment plan -f <deployment_file_name>
+
+$ eac deployment preflight -f <deployment_file_name>
+
+$ eac config set -b <feature_branch_name>
+
+$ eac config set -r "ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git"
+
+$ eac config set -c <get the commit msg from dev team>
+
+$ eac config set -p <feature_branch_name>
+
+$ eac config set -f <feature_branch_name>
+
+$ eac deployment pipeline init -f <deployment_file_name>
+
+$ eac deployment apply -f <deployment_file_name>
+
+**********************************************************************************************************************
+
+suggest me SNOW Change Title 
+SNOW Change Title:	SupplierDirectoryServices-CIient-Impact=N <APP NOT LIVE> XBSD (111597) - VPC Endpoints version upgrade.
+
+sample pre implementation steps
+
+
+
+sample implementtaion steps
+Task #	Detailed Task Instructions	Assigned Group/Name	Environment	"Planned Start 
+mm/dd hh:mm
+central time 
+24hr clock"	"Est.
+Duration
+hh:mm"	Expected Results	Task Status	Comments
+	Activity Marker: Begin Pre-deploy Activities							
+3	"Obtain AWS Prod FID K048784 password through Breakglass
+a. login go/epvpsp
+b. click on ""establish session or retrieve password""
+c. Select ""HRA"" as vault from dropdown
+d. In account search provide FID and search, select the resulted O/P
+e. select ""Windows Domain Session"" as PSP Session Type from dropdown
+f. Select ""Service Now"" as Ticketing System from dropdown
+g. Provide active SNOW# under Ticket 
+h.  Select ""AWS login"" as Ticketing Reason from dropdown
+i. Select ""File Edits"" as Ticketing Sub Reason from dropdown
+j. Click the check box ""I understand my session will be recorded""
+k. Click on Next to get the password and use this for go/awsconsolefid login"	L2 Prod Support	PROD	2/26/2025 16:00	0:05	Successfully Completed with No Errors.	Not started	
+
+
+
+sample implementation steps
+			Verify that the SNOW change ticket is in Implement Status						
+1	NONE	Not started	Verify that the SNOW change ticket  snow ticket No CHG33599721 is in Ready to Implement Status	Event Coordinator	Prod	2/26/2025 16:00	00:05	Snow Request in Implement state	
+2	NONE	Not started	Starts deployment chat	Event Coordinator	Prod	2/26/2025 16:05	00:05	Chat started	
+3	NONE	Not started	"Follow the below steps:-
+1.Merge the following feature branches with the master branch: 
+       a. feature/xbsd-aws-backup-aurora-rds-postgres
+       b. feature/eacversionupgrade_prod
+2. A pull request for the above two feature branches, with the necessary changes, has been raised to merge with the master. Get the pull request details from the AD Team.
+      a. https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-aurora-postgresql/pull-requests/34/builds
+      b. https://bitbucketdc.jpmchase.net/projects/XBSD/repos/xbsd-ecs/pull-requests/32/builds
+3. Get the pull request Approved and merged to master on the bitbucket by an authorised person
+4. Once Pull request is approved jules build will trigger automatically.
+
+"	L2 Prod Support	Prod	2/26/2025 16:25	00:20		
+
+
+
+give me implemenatation steps and pre implementation steps
 
