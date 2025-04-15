@@ -1,229 +1,119 @@
-apiVersion: deployment/v1
-kind: Deployment
-metadata:
-  name: auroratdb
-  sealID: "111597"
-  model:
-    name: xbsddbts
-    version: v5
-spec:
-  modulepack:
-    name: default
-    version: 0.14.4
-  environment:
-    awsAccountID: "484862117635"
-    awsRegion: us-east-1
-    tfeOrganization: 111597-114116-DEV
-  components:
-    - type: KMS
-      name: rdstestkms
-      labels: {}
-      action: skip
-      properties:
-        key_alias: rdsdevkms
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: LightSwitch
-      name: lswitch
-      labels: {}
-      action: skip
-      properties:
-        lightswitch_enabled: true
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: S3
-      name: bucket
-      labels: {}
-      action: skip
-      properties:
-        core_backups_retention: 70DAYS
-        enable_bucket_versioning: Enabled
-        lifecycle_rules:
-          - expiration:
-              - expired_object_delete_marker: true
-            filter:
-              prefix: ""
-            id: default
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: RDSAuroraPostgres
-      name: xbsdtestdb
-      labels: {}
-      action: skip
-      connectsTo:
-        - type: KMS
-          name: rdstestkms
-        - type: LightSwitch
-          name: lswitch
-      dependsOn:
-        - type: PrivateVPCEndpoints
-          name: vpce
-      properties:
-        aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
-        aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
-        ca_cert_identifier: rds-ca-rsa2048-g1
-        centralized_backup: PITRBACKUP
-        centralized_backup_pitr_schedule: cron(30 15 ? * * *)
-        custom_db_names:
-          - custom
-        database_name: xbsddevdb
-        db_backup_retention_days: 35
-        db_instance_type: db.r6g.large
-        deletion_protection: "false"
-        enable_immutable_backups: true
-        enable_nlb_connectivity: true
-        engine_version: "15.3"
-        healthcheck_enabled: true
-        identifier_prefix: xbsddevdb
-        is_serverless: true
-        lightswitch_config:
-          enabled: true
-          holiday_schedule_expressions: []
-          start_action:
-            schedule: cron(00 7 ? * MON-FRI *)
-          stop_action:
-            schedule: cron(00 20 ? * MON-FRI *)
-        max_capacity: 8
-        min_capacity: 1
-        monitoring_interval: "5"
-        performance_insights_enabled: true
-        performance_insights_retention_period: 7
-        preferred_maintenance_window: Sun:22:00-Sun:23:00
-        rds_proxy: false
-        replica_count: 1
-        serverless_db_type: db.serverless
-        skip_final_snapshot: false
-        subnets:
-          - PrivateSubnet01
-          - PrivateSubnet02
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: CloudWatch
-      name: dbcwalms
-      labels: {}
-      action: skip
-      properties:
-        alarms:
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
-            alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: AuroraReplicaLagMaximum
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Connection Attempts alarm"
-            alarm_name: "Aurora Postgres: Connection Attempts"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: ConnectionAttempts
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 90
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Deadlocks alarm"
-            alarm_name: "Aurora Postgres: Deadlocks"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: Deadlocks
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 5
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Read IOPS alarm"
-            alarm_name: "Aurora Postgres: Read IOPS"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: ReadIOPS
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Read Throughput alarm"
-            alarm_name: "Aurora Postgres: Read Throughput"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: ReadThroughput
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Write IOPS alarm"
-            alarm_name: "Aurora Postgres: Write IOPS"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: WriteIOPS
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Write Throughput alarm"
-            alarm_name: "Aurora Postgres: Write Throughput"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: WriteThroughput
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: PrivateVPCEndpoints
-      name: vpce
-      labels: {}
-      action: skip
-      properties:
-        service_names:
-          - name: rds
-        tags:
-          name: ecs_vpc
-    - type: RDSProxy
-      name: proxy
-      labels: {}
-      action: apply
-      connectsTo:
-        - type: RDSAuroraPostgres
-          name: xbsdtestdb
-      properties:
-        global_config:
-          enabled: false
-          primary_secrets_vpc_endpoint_dns_names: []
-          secondary_region: us-east-1
-          secondary_secrets_vpc_endpoint_dns_names: []
-          secondary_vpc_subnet_names: []
-        interactive_reader_endpoint: true
-        recovery_window_in_days: 0
+vpce-0dc203e852ed3d793
+Actions
+Details
+Endpoint ID
+
+vpce-0dc203e852ed3d793
+VPC ID
+vpc-0278eb782f17766e4 (Spoke VPC)
+DNS record IP type
+ipv4
+Status
+Available
+Status message
+–
+IP address type
+ipv4
+Creation time
+Friday, July 19, 2024 at 19:24:00 GMT+5:30
+Service name
+
+com.amazonaws.us-east-1.execute-api
+DNS names
+
+vpce-0dc203e852ed3d793-ljt2p02y.execute-api.us-east-1.vpce.amazonaws.com
+- (Z7HUB22UULQXV)
+
+vpce-0dc203e852ed3d793-ljt2p02y-us-east-1d.execute-api.us-east-1.vpce.amazonaws.com
+- (Z7HUB22UULQXV)
+
+vpce-0dc203e852ed3d793-ljt2p02y-us-east-1b.execute-api.us-east-1.vpce.amazonaws.com
+- (Z7HUB22UULQXV)
+Endpoint type
+Interface
+Private DNS names enabled
+No
+
+Subnets
+
+Security Groups
+
+Notification
+
+Policy
+
+Monitoring
+
+Tags
+Subnets (2)
+
+Manage subnets
+
+1
+
+
+Subnet ID
+	
+Availability Zone
+	
+IPv4 addresses
+	
+IPv6 addresses
+	
+Network Interface ID
+	
+Outpost ID
+
+Subnet ID
+	
+Availability Zone
+	
+IPv4 addresses
+	
+IPv6 addresses
+	
+Network Interface ID
+	
+Outpost ID
+
+subnet-075fe19c06d714656 (PublicSubnet02)
+us-east-1d (use1-az4)
+100.74.16.124
+–
+eni-01593ef346cbb676e 
+–
+subnet-030d8e8eb11534c9c (PublicSubnet01)
+us-east-1b (use1-az1)
+100.74.16.94
+–
+eni-052bd026b4302aa0a 
+–
+
+
+Security groups (1) Info
+
+Manage security groups
+
+1
+
+
+Group ID
+	
+Group name
+	
+VPC ID
+	
+Description
+
+Group ID
+	
+Group name
+	
+VPC ID
+	
+Description
+
+sg-0346932be56be6177
+EdgeSecurityGroup
+vpc-0278eb782f17766e4
+Edge/Boundary HTTPS only access from the on premise CIDR ranges
