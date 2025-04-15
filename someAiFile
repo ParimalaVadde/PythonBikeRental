@@ -1,10 +1,58 @@
-module "vpc-endpoint-apignlal" {
-  source  = "tfe.jpmchase.net/ATLAS-MODULE-REGISTRY/vpc-endpoint/aws"
-  version = "7.0.0"
-  
-  configuration = {
-    service_name     = "execute-api"
-    subnet_type      = "Private"
-    vpc_endpoint_name = "apignlal-484862117635-us-east-1-apigw-apignlal-v1"
-  }
-}
+how to install orphan
+
+Products
+Cloud Foundational Services
+Atlas Platform
+Atlas 1.0 - AWS
+Guides
+Public Cloud How-to and Setup
+ORCA
+User Guide
+
+
+Orphan Resource Cleanup Application (ORCA) User Guide
+User Guide for ORCA
+
+Last Updated:
+2025-04-07
+Before you use ORCA
+This is available in Gold Development environment for users with application-engineer role.
+This is available in Gold Test and Production environments for users with application-operator role.
+Users would need to review carefully the list of resources to be deleted. This tool doesn't include undo functionality.
+ORCA is not a replacement for Terraform Destroy. To clean up corresponding Terraform state for a workspace where the whereabout of code is unknown, please refer to Workspace issues and destroying resources
+ORCA (Orphan Resource Clean-up Application) is a tool that allows application engineer/operator roles to clean-up Terraform orphan resources by themselves (i.e. self-service). This tool helps public cloud Terraform users who encounter the issue of not being able to programmatically remove AWS resources provisioned via Terraform due to orphaned resources still running, in an out-of-sync state or in corrupted/deleted workspaces.
+
+ORCA also extends support to delete resources provisioned through Service Catalog. This is in consideration of provisioned product in tainted state resulting to unmanaged resource.
+
+Prerequisites
+Review Prerequisites here - **please ensure these are reviewed**
+List of Supported Resources
+Expand to see the list of supported resources for deletion.
+Invoking ORCA Step Function
+Expand to see how to invoke ORCA.
+Request and Response Templates
+Expand to see request and response templates.
+Sample Request and Response
+Expand to see sample execution with Resource ARN list as input.
+
+Before you proceed...
+Refer to ORCA FAQ for more guidance on resource list.
+Users would need to carefully review the list of resources to be deleted. This tool doesn't include undo functionality.
+Expand to see sample execution with AWS Resource Group name/s as input.
+Before you proceed...
+This feature is currently available in Gold Development environment only.
+ORCA will discover the resources in the AWS resource group name/s provided in resource_group_list.
+You can find the list of resource groups in your account in AWS Console -> AWS Resource Groups (Resource Groups & Tag Editor) -> Resources -> Saved Resource Groups.
+It is advised that dry_run to be set to 'true' in the initial run and confirm on the list of resources to be deleted. Once confirmed, set dry_run to 'false' to proceed with deletion.
+Users would need to carefully review the list of resources to be deleted. This tool doesn't include undo functionality.
+Expand to see sample execution with Terraform Workspace name/s as input.
+Before you proceed...
+This feature is currently available in Gold Development environment only.
+ORCA will discover the resources in the workspace name/s provided in workspace_list.
+You can find the workspace name in the corresponding tags of your resource with tag key as either "TFE_WORKSPACE" or "TFE_WORKSPACE_NAME"
+It is advised that dry_run to be set to 'true' in the initial run and confirm on the list of resources to be deleted. Once confirmed, set dry_run to 'false' to proceed with deletion.
+Users would need to carefully review the list of resources to be deleted. This tool doesn't include undo functionality.
+Viewing Execution Logs
+Expand to see on how to view execution logs.
+
+
