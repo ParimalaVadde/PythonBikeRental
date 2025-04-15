@@ -124,3 +124,14 @@ W619378@WH-1AB5C35118 I:\ds
 $ aws ec2 delete-vpc-endpoints --vpc-endpoint-ids vpce-0dc203e852ed3d793
 
 An error occurred (UnauthorizedOperation) when calling the DeleteVpcEndpoints operation: You are not authorized to perform this operation. User: arn:aws:sts::484862117635:assumed-role/tfe-module-pave/W619378@ASIAPAC.AD.JPMORGANCHASE.com is not authorized to perform: ec2:DeleteVpcEndpoints on resource: arn:aws:ec2:us-east-1:484862117635:vpc-endpoint/vpce-0dc203e852ed3d793 because no identity-based policy allows the ec2:DeleteVpcEndpoints action. Encoded authorization failure message: BYWODAqVIcp6ZmDX_oAohnmCqR7U2xGecAy9jUC0CMffCSX69QOGtwUz5qQYWotqMzdkAOaUMIRHGcOF_6dmdtL9e0fKkoL0oHwzriK0zuSMgkwILQV6Xz3GLxcNx1up7aJqu5274X7t05mtSopkLDtz-2nRF8n7rFssLOXb8XP52Z8wT-hoA3077QzR54ONYY9_-fUDujFkJhtLX-889R8BW3n3JM1mPu-g4WGe1spWIp9yBMMeUDWPIa7qbjLr77SNl1QH1eZwsDWE_FxKXu63izV-9fdzPX3WFHiLNAqcJzZO5FziN_2kZImEJnIGN4OV0bNoVJ6AsGx_4fSEk9zr1v0jBMQ-TnGTVhzBkJcQe_80BwyJycQ7OU6kM0gRjI8pzQ2dEQuze0CwdKtffzULDtgzcODsgPyzZJLTLsmvwMGtM_hMbVg2nEVx96pNaQiJUx-Q9Si9w2H1LqWT6yyrkuCy84FRNeN2487XTAhZZVbqfeHJsmLDG9P43xaZ3xqGOxvhux1PceImRmNIcKmiPvdwrYruhTOgl9ddhZGw04awhyHeg86LXsFWAjRZIO-92kJFyi1op4CHY0s3bC23eu6n-jgiiaRvSLSuCmlozefs7bH37IkSA7LApL_OA2zNSTxSA1DNHq68sc3Xv_glOwuywizZguOvs4NE1GnxWghGPF50hNhB_uObQkyPiBkW-OVFiVE0L7NTFA5Emt1n8MmdWfThFHfhUHwPk_75Lp8YLT9bMu7XL2DCZ3AairwWNjpxje3YY1Ba0tGNZi6aLR5TKVbqTq9ay6qHFNNDCvZi65V5GkaiJRKNPXJfQPjXolMBXeCHt8VXfBNO0hZfnCncMWDRSOWNF5EQtSppdLzbBK3A6HkDCIQ_ESi_gbxuRqWypAfzYuYZ0HPSnCVN1i5NHugpUvyyBQn_0B-3nqz6tjRiwXOjOllz90K3gORStppL1BMhtjIDtZwFDA6_CNQR5ch_7Ezvs-qmQmBzcQ0FhEw_nXS8ekh6M-KqEECDvtgOo38vfnf1eDJ5USIP8_U25GOtRLuwCBcbGQrQDs9Gh2JtuAjzKpm9YINpnl3PwjKcZPYG6Xc0vR647ButfvDq0xdg9aonrfHUm3U
+
+Here's a clear update for your Jira ticket:
+
+VPC Endpoint Upgrade Status:
+- Total VPC Endpoints: 26
+- Completed Upgrades: 14 endpoints
+  - 10 in Test environment
+  - 4 in Dev environment
+- Pending Upgrades (12 endpoints):
+  - 11 Production endpoints (scheduled for next sprint)
+  - 1 Dev environment endpoint (facing access permission issues - requires AWS administration team assistance, scheduled for next sprint)
