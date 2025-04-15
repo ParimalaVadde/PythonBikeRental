@@ -135,3 +135,5 @@ VPC Endpoint Upgrade Status:
 - Pending Upgrades (12 endpoints):
   - 11 Production endpoints (scheduled for next sprint)
   - 1 Dev environment endpoint (facing access permission issues - requires AWS administration team assistance, scheduled for next sprint)
+
+Completed VPC Endpoint upgrades for 14 endpoints (10 Test, 4 Dev environments).
