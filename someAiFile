@@ -490,3 +490,32 @@ For the 1 Dev environment endpoint with access issues, we'll need coordination w
 
 old CR for aurora postgres version upgrade
 CHG34471614 --- which was successfull
+
+
+*************************************************************************
+
+
+# Steps for Raising SNOW Change Request for VPC Endpoint Upgrades
+
+1. Locate the previous successful change request for Aurora PostgreSQL version upgrade (CHG34471614)
+
+2. Open the previous change request in ServiceNow
+
+3. Click on "Copy Change" to create a new change request based on the previous one
+
+4. Update the following fields:
+   - Short Description: "SupplierDirectoryServices-Client-Impact=N <APP NOT LIVE> XBSD (111597) - VPC Endpoints version upgrade"
+   - Description: Include details about the VPC endpoint upgrades in Production environment
+
+5. Set "Release Attestation" field to "Yes" as this involves code-related changes
+
+6. Review all other fields from the previous change request and update as needed
+
+7. Create the following change tasks:
+   - Task 1: UTA Sign-off 
+   - Task 2: Pre-implementation validation
+   - Task 3: Implementation of VPC endpoint upgrades
+   - Task 4: Post-implementation validation
+   - (Refer to previous change tasks for proper format and assignment)
+
+8. After completing all the above steps, click on "Access" then "Request Authorize" to submit the change request for approval
