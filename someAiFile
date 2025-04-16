@@ -258,3 +258,15 @@ The implementation will be performed using Terraform Enterprise workspaces:
 - nlapiladbp-992382575964-us-east-1-vpce-nlapiladbp-v1
 
 This is a maintenance activity to ensure VPC endpoints are running on current versions. No client impact expected as the application is not live.
+
+***********************************************************************************************************************************
+
+
+SDS AOCOMM - Deprecation of VPC Endpoint module version
+
+1. Identify all VPC Endpoints across DEV, TEST, and PROD environments that are using outdated module-vpc-endpoint versions
+2. Update Terraform code for all identified VPC endpoints to use version 7.0.0
+3. Run Spinnaker/Jules pipeline or TFL plan/apply on each repository
+4. Verify successful upgrade by confirming MODULE_VERSION tag shows 7.0.0 in AWS Console for each VPC endpoint
+5. Complete verification that all VPC endpoints are functioning as expected after upgrade
+6. Complete upgrade before May 15, 2025 to avoid FARM breaks and security vulnerabilities
