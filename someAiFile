@@ -519,3 +519,16 @@ CHG34471614 --- which was successfull
    - (Refer to previous change tasks for proper format and assignment)
 
 8. After completing all the above steps, click on "Access" then "Request Authorize" to submit the change request for approval
+
+
+***********************************************************
+
+
+{
+  "account": "484862117635",
+  "resource_list": [
+    "arn:aws:ec2:us-east-1:484862117635:vpc-endpoint/vpce-0dc203e852ed3d793",
+  ],
+  "aws_regions": ["us-east-1"],
+  "dry_run": false   
+}
