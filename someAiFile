@@ -23,6 +23,94 @@ Cloud Environment ID : 992382575964
 
 Group to Manage : AWS-992382575964-tfe-module-pave
 
+
+********************************************************************
+
+
+# VPC Endpoint Upgrade Documentation Steps
+
+## Pre-Implementation Steps
+
+1. Request TFE Pave Role Access:
+   - Role: AWS-992382575964-tfe-module-pave
+   - Click on the Microsoft Teams link to submit the request
+   - Fill in required fields:
+     - Application: B2B Payables X-Business Supplier Directory Services
+     - Scope: Cloud Account
+     - Application Environment: app-prod-111597-xbsd
+     - Cloud Environment ID: 992382575964
+     - Group to Manage: AWS-992382575964-tfe-module-pave
+     - Role: Terraform Enterprise
+     - Action: Add
+     - Justification: Require Access to following role to carry out day to day business requirement
+
+2. Create and submit SNOW Change Request for Production upgrades
+   - Title: SupplierDirectoryServices-Client-Impact=N <APP NOT LIVE> XBSD (111597) - VPC Endpoints version upgrade
+   - Include list of Production VPC endpoints to be upgraded
+
+## Implementation Steps
+
+1. Verify access to role "AWS-992382575964-tfe-module-pave"
+
+2. Execute commands to login into AWS and select the desired role:
+   - `pcl aws login -s`
+   - Choose the role "AWS-992382575964-tfe-module-pave"
+
+3. In Dev Shell:
+   - Run `tfl configure`
+   - Select org as "111597-114116-PRD"
+   - Select "Default Project" 
+   - Select the workspace (repeat for each of these workspaces):
+     - base-992382575964-us-east-1-PrivateVPCEndpoints
+     - nlapiladbp-992382575964-us-east-1-apigwttol-nlapiladbp-v1
+     - nlapiladbp-992382575964-us-east-1-vpce-nlapiladbp-v1
+   - Run `tfl workspace destroy` for each workspace
+
+4. Get the feature branch details from development team
+
+5. Clone the feature branch:
+   - `git clone -b <feature_branch_name> ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git`
+
+6. Verify the code of all YAML files with development team and make any required changes
+
+7. Execute these commands in presence of dev team:
+   - `eac model validate -f <model_file_name>`
+   - `eac model apply -f <model_file_name>`
+   - `eac deployment plan -f <deployment_file_name>`
+   - `eac deployment preflight -f <deployment_file_name>`
+   - `eac config set -b <feature_branch_name>`
+   - `eac config set -r "ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git"`
+   - `eac config set -c <get the commit msg from dev team>`
+   - `eac config set -p <feature_branch_name>`
+   - `eac config set -f <feature_branch_name>`
+   - `eac deployment pipeline init -f <deployment_file_name>`
+   - `eac deployment apply -f <deployment_file_name>`
+
+## Post-Implementation Steps
+
+1. Verify successful upgrade of all VPC endpoints:
+   - Run `aws ec2 describe-vpc-endpoints` to verify endpoint status
+   - Confirm version numbers have been updated
+
+2. Document all upgraded endpoints in the tracking spreadsheet:
+   - Environment (Prod/Dev)
+   - VPC Endpoint ID
+   - Service name
+   - Previous version
+   - New version
+   - Date of upgrade
+
+3. For Dev endpoint with access issues:
+   - Document communication with AWS administration team
+   - Record resolution steps for the permission issues
+   - Document any special steps required for this endpoint
+
+4. Update the Jira ticket with completion status
+   - Attach logs showing successful upgrades
+   - Document any issues encountered and resolutions
+
+5. Close SNOW Change Request with successful completion notes
+
 Role : Terraform Enterprise
 
 What do you want to do ? : Add
