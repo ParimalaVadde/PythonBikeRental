@@ -282,3 +282,30 @@ Completed Upgrades: 14 endpoints
 Pending Upgrades (12 endpoints):
 11 Production endpoints (scheduled for next sprint)
 1 Dev environment endpoint (facing access permission issues - requires AWS administration team assistance, will be taken up in next sprint)
+'
+
+***************************************************************************************************************
+
+
+# Jira Story
+
+## Subject Line
+Upgrade 12 VPC Endpoints (11 Prod, 1 Dev) in XBSD Application
+
+## Description
+As part of our ongoing infrastructure maintenance, we need to upgrade 12 VPC endpoints for the XBSD application. This includes:
+- 11 VPC endpoints in the Production environment
+- 1 VPC endpoint in the Development environment that has pending access permission issues
+
+This task is part of the full scope of upgrading all 26 VPC endpoints across all environments. The other 14 endpoints (10 in Test, 4 in Dev environments) have already been completed.
+
+For the 1 Dev environment endpoint with access issues, we'll need coordination with the AWS administration team to resolve permission-related blockers before proceeding with the upgrade.
+
+## Acceptance Criteria
+1. All 11 Production VPC endpoints successfully upgraded to the latest version
+2. Access permission issues resolved for the Dev endpoint with AWS administration team assistance
+3. Upgrade successfully completed for the 1 Dev endpoint with previous access issues
+4. Post-upgrade validation to ensure all endpoints are functioning correctly
+5. Documentation updated with details of all upgraded endpoints
+6. SNOW Change Request raised and approved for Production environment upgrades
+7. All 26 VPC endpoints (100%) upgraded across Test, Dev, and Production environments
