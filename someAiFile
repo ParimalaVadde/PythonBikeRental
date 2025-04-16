@@ -484,3 +484,9 @@ For the 1 Dev environment endpoint with access issues, we'll need coordination w
    - Document any issues encountered and resolutions
 
 5. Close SNOW Change Request with successful completion notes
+
+
+********************************************************************************************************
+
+old CR for aurora postgres version upgrade
+CHG34471614 --- which was successfull
