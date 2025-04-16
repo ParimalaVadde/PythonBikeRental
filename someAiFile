@@ -270,3 +270,15 @@ SDS AOCOMM - Deprecation of VPC Endpoint module version
 4. Verify successful upgrade by confirming MODULE_VERSION tag shows 7.0.0 in AWS Console for each VPC endpoint
 5. Complete verification that all VPC endpoints are functioning as expected after upgrade
 6. Complete upgrade before May 15, 2025 to avoid FARM breaks and security vulnerabilities
+
+
+
+VPC Endpoint Upgrade Status:
+
+Total VPC Endpoints: 26
+Completed Upgrades: 14 endpoints
+10 in Test environment
+4 in Dev environment
+Pending Upgrades (12 endpoints):
+11 Production endpoints (scheduled for next sprint)
+1 Dev environment endpoint (facing access permission issues - requires AWS administration team assistance, will be taken up in next sprint)
