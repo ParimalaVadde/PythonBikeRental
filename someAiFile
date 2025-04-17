@@ -642,3 +642,50 @@ Select a role:
  111597-aurora-app-rw
  111597-rdsproxy-ro
  tfe-module-pave
+
+****************************************************************************************************************************
+
+
+Hi Aishwarya, Jayesh, and team,
+
+As discussed on our call, we require access to the role "AWS-992382575964-tfe-module-pave" in the PRD environment for implementing the VPC endpoints version upgrade change.
+
+Please login to AWS console via go/awsconsole. As shown in the screenshot below, we already have access to the tfe-module-pave role in dev and test environments. Similarly, you should have access to this role in prod.
+
+In case you don't have access to this role, please follow these steps to request access:
+
+1) Request TFE Pave Role Access:
+   - Role: AWS-992382575964-tfe-module-pave
+   - Click on this link: https://jpmorganchase.service-now.com/atlas_scope?id=sc_cat_item&sys_id=f3d0782ddb057094d8dc389239961915&sysparm_category=6cf0aa32dbc9b304ce7d3e5f9d96198a
+   
+   a) Fill in required fields:
+     - Application: B2B Payables X-Business Supplier Directory Services
+     - Scope: Cloud Account
+     - Application Environment: app-prod-111597-xbsd
+     - Cloud Environment ID: 992382575964
+     - Group to Manage: AWS-992382575964-tfe-module-pave
+     - Role: Terraform Enterprise
+     - Action: Add
+     - Justification: Require Access to following role to carry out day to day business requirement
+
+Current available roles:
+Account: app-dev-111597-xbsd (484862117635)
+- 111597-application-engineer
+- 111597-application-operator-view-only
+- 111597-aurora-app-admin
+- 111597-aurora-app-rw
+- 111597-rdsproxy-ro
+- tfe-module-pave
+
+Account: app-prd-111597-xbsd (992382575964)
+- 111597-application-operator-view-only
+- 111597-rdsproxy-ro
+
+Account: app-test-111597-xbsd (533267018973)
+- 111597-application-operator
+- 111597-application-operator-view-only
+- 111597-aurora-admin
+- 111597-aurora-app-admin
+- 111597-aurora-app-rw
+- 111597-rdsproxy-ro
+- tfe-module-pave
