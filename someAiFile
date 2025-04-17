@@ -619,3 +619,26 @@ Can we connect now or sometime in the next 2 hours? It won't take more than 10 m
      - Role: Terraform Enterprise
      - Action: Add
      - Justification: Require Access to following role to carry out day to day business requirement
+
+
+Select a role:
+
+
+ Account: app-dev-111597-xbsd (484862117635)
+ 111597-application-engineer
+ 111597-application-operator-view-only
+ 111597-aurora-app-admin
+ 111597-aurora-app-rw
+ 111597-rdsproxy-ro
+ tfe-module-pave
+ Account: app-prd-111597-xbsd (992382575964)
+ 111597-application-operator-view-only
+ 111597-rdsproxy-ro
+ Account: app-test-111597-xbsd (533267018973)
+ 111597-application-operator
+ 111597-application-operator-view-only
+ 111597-aurora-admin
+ 111597-aurora-app-admin
+ 111597-aurora-app-rw
+ 111597-rdsproxy-ro
+ tfe-module-pave
