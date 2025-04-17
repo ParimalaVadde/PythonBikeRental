@@ -564,3 +564,16 @@ Request you to join the meeting. In case of conflict with the time, please propo
 
 Thanks,
 Parimala
+
+*********************************************************************************
+
+CommercialCard client-impact=N-SEAL ID 88450 - Moneta upgrade and stability changes for MasterCard batch
+ 
+Impacted Platform:  TASAT MasterCard Batch  SEAL ID: 88450
+Impacted Application -   TASAT MasterCard Batch
+What is the change doing :   This change is for Moneta Upgrade and Stability changes for MasterCard batch  Application
+Why is the change needed :  To close the Moneta PRT and add few Stability changes  
+Impacts to down stream applications(Blast Radius) : No impact as this is tested code deployment to production for Moneta upgrade
+Impact to users(Blast Radius) :  This deployment also does not make any functional changes to existing known working calls to these applications.
+Worst case scenario if the change goes bad : We will revert the commit in "master" branch and re-deploy the application to roll back to last known working BAU version
+How do we react and adjust to protect against worst case scenario -  we will rollback the changes and redeploy
