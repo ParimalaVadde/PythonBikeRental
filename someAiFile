@@ -577,3 +577,23 @@ Impacts to down stream applications(Blast Radius) : No impact as this is tested 
 Impact to users(Blast Radius) :  This deployment also does not make any functional changes to existing known working calls to these applications.
 Worst case scenario if the change goes bad : We will revert the commit in "master" branch and re-deploy the application to roll back to last known working BAU version
 How do we react and adjust to protect against worst case scenario -  we will rollback the changes and redeploy
+
+
+***************************************************
+
+SupplierDirectoryServices-Client-Impact=N <APP NOT LIVE> XBSD (111597) - VPC Endpoints version upgrade.
+
+Impacted Platform: XBSD VPC Endpoints  SEAL ID: 111597
+Impacted Application - B2B Payables X-Business Supplier Directory Services
+
+What is the change doing: This change is upgrading 11 VPC endpoints in Production environment and 1 VPC endpoint in Dev environment to latest versions
+
+Why is the change needed: To ensure all VPC endpoints are running on current versions as part of infrastructure maintenance and compliance
+
+Impacts to downstream applications(Blast Radius): No impact as this is infrastructure upgrade with no functional changes to application flows
+
+Impact to users(Blast Radius): No user impact as the application is not live yet and the upgrades will maintain the same functionality
+
+Worst case scenario if the change goes bad: VPC connectivity issues that could affect AWS service access from the VPC
+
+How do we react and adjust to protect against worst case scenario: We will execute rollback by restoring the previous Terraform workspace state and revert to the prior endpoint configuration
