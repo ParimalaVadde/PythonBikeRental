@@ -597,3 +597,9 @@ Impact to users(Blast Radius): No user impact as the application is not live yet
 Worst case scenario if the change goes bad: VPC connectivity issues that could affect AWS service access from the VPC
 
 How do we react and adjust to protect against worst case scenario: We will execute rollback by restoring the previous Terraform workspace state and revert to the prior endpoint configuration
+
+
+******************************************************************************
+
+I had set up a call at 3:30pm for the runbook review for the change request, but no one has joined.
+Can we connect now or sometime in the next 2 hours? It won't take more than 10 minutes.
