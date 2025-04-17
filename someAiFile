@@ -603,3 +603,19 @@ How do we react and adjust to protect against worst case scenario: We will execu
 
 I had set up a call at 3:30pm for the runbook review for the change request, but no one has joined.
 Can we connect now or sometime in the next 2 hours? It won't take more than 10 minutes.
+
+
+********************************************************
+
+1)Request TFE Pave Role Access:
+   - Role: AWS-992382575964-tfe-module-pave
+   - Click on the provided link: https://jpmorganchase.service-now.com/atlas_scope?id=sc_cat_item&sys_id=f3d0782ddb057094d8dc389239961915&sysparm_category=6cf0aa32dbc9b304ce7d3e5f9d96198a
+   a)Fill in required fields:
+     - Application: B2B Payables X-Business Supplier Directory Services
+     - Scope: Cloud Account
+     - Application Environment: app-prod-111597-xbsd
+     - Cloud Environment ID: 992382575964
+     - Group to Manage: AWS-992382575964-tfe-module-pave
+     - Role: Terraform Enterprise
+     - Action: Add
+     - Justification: Require Access to following role to carry out day to day business requirement
