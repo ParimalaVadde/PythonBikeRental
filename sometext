@@ -1,127 +1,76 @@
-# ServiceNow Change Request Procedure
-## B2B Supplier Directory Services (SEAL ID: 111597)
+"In aws console
+   a) Use go/awsconsole to access the AWS console.
+   b) Select role for PRD env
+   c) Select following step function (pcsre-CleanupTfeResources)
+   d) paste the below json and execute it
 
-## Pre-Requisites
-Before initiating a change request, ensure:
-- Create and run notebook in lower environments
-- Capture test evidence from lower environments
+{
+  ""account"": ""992382575964"",
+  ""resource_list"": [
+    ""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-067272ef7f165fa42"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-026030a141b1ea6bb"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-0f8792e23b4e7d60c"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-06b4d638457c39970"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-018e501ba55995709"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-0382b22e92b1b0d0a"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-00a8950594c75e596"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-0423ed091ef71a868"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-0deab8148a6fb0bc8"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-0ed069ea24f7caa49"",
+	""arn:aws:ec2:us-east-1:992382575964:vpc-endpoint/vpce-05f62e7ec5f5dee51""	
+  ],
+  ""aws_regions"": [""us-east-1""],
+  ""dry_run"": false   
+}"
+"Execute below commands to login into AWS and to select desired role:
+   a) `pcl aws login -s`
+   b) Choose the role ""AWS-992382575964-tfe-module-pave"""
+"a) Get the feature branch details from development team
+b) Clone the feature branch:
+   i) `git clone -b <feature_branch_name> ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git`
+   ii) git switch <feature branch name>"
+"1) ASK development team to verify the code of all YAML files.
+2).ensure deployment file need to be updated with PROD details
+    a. awsAccountID and tfeOrganization (Under Environment)
+    b. certificate_arn (Under Properties)
+    c. id (postgressql cluster Under Properties)"
+"Execute these commands in presence of dev team:
+   a) `eac model validate -f <model_file_name>`
+   b) `eac model apply -f <model_file_name>`
+   c) `eac deployment plan -f <deployment_file_name>`
+   d) `eac deployment preflight -f <deployment_file_name>`
+   e) `eac config set -b <feature_branch_name>`
+   f) `eac config set -r ""ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git""`
+   g) `eac config set -c <get the commit msg from dev team>`
+   h) `eac config set -p <feature_branch_name>`
+   i) `eac config set -f <feature_branch_name>`
+   j) `eac deployment pipeline init -f <deployment_file_name>`
+   h) `eac deployment apply -f <deployment_file_name>`"
+"If preflight, plan or deploy errors out, try -
+A. Check if the model file has applied in the prior step correctly.
+B. In the prod environment, ensure that mutable is set to 'False' in model file
+C. Reach out the the AppDev team"
+"The build link can be obtained from below link
 
-## Change Request Creation Process
+""https://spinnaker.prod.aws.jpmchase.net/#/applications/111597_xbsd-base/executions""  - to view the status of deployment - 
 
-### Step 1: Locate Previous Change Request
-Find the most recent successful change request (Reference: CHG35514839)
+1. Login into the spinnaker using your SID and credentials
+2. Monitor the spinnaker build to ensure its completion and provide inputs on test validation completion for build to proceed further whenever requested."
+"If build encounter an error, perform the following steps - 
+1. Login into the spinnaker using your SID and credentials
+2. Click on the build that failed on the bottom left corner (Use https://spinnaker.prod.aws.jpmchase.net/#/applications/111597_xbsd-base/executions)
+3. On the left pane click on the console output to check the log and view the error
+(OR)
+1. Goto go/eacui
+2. From the drop down list, select CIB - Corporate and Investment Bank
+3. Select the 111597 B2B Supplier Directory from the list
+4. Under Environments, select          icon from beside the relevant deploy file name
 
-### Step 2: Access Previous Change Request
-Open the previous change request in ServiceNow
+5. Click on the pipelines tab to check the status"
+Check on go/eacui the Base component is available and all the pipeline tasks are in green.
+"Send an email to the DEV team with the validation status.
 
-### Step 3: Create New Change Request
-Click on "Copy Change" to create a new change request based on the previous one
-
-### Step 4: Update Required Fields
-Ensure the following fields are properly updated:
-
-**Critical Naming Convention:**  
-Short Description and Description must begin with:
-- `"CommercialCard Client-Impact=N <APP-NOT-LIVE> - B2B Supplier Directory Services (111597) - "`
-- Note: Update `Client-Impact` and `<APP-NOT-LIVE>` accordingly once app is live in production
-
-**Sample Format:**  
-- **Short Description:** "CommercialCard Client-Impact=N <APP-NOT-LIVE> - B2B Supplier Directory Services (111597) - Upgrade VPC Endpoints via Spinnaker to AWS Production environment"
-
-- **Description:** Follow this exact format:  
-  CommercialCard Client-Impact=N <APP-NOT-LIVE> - B2B Supplier Directory Services (111597) - Upgrade VPC Endpoints via Spinnaker to AWS Production environment
-  
-  Impacted Platform: XBSD SEAL ID: 111597  
-  Impacted Application - B2B Payables X-Business Supplier Directory Services
-  
-  What is the change doing: [Describe specific changes]
-  
-  Why is the change needed: [Explain business/technical justification]
-  
-  Impacts to downstream applications(Blast Radius): [Detail any impacts]
-  
-  Impact to users(Blast Radius): [Detail any user impacts]
-  
-  Worst case scenario if the change goes bad: [Describe worst-case outcomes]
-  
-  How do we react and adjust to protect against worst case scenario: [Detail contingency plan]
-
-### Step 5: Release Attestation
-Set "Release Attestation" field to "Yes" for code-related changes (infrastructure or functional)
-
-### Step 6: Field Review
-Thoroughly review all other fields from the previous change request and update as needed
-
-### Step 7: Create Change Tasks
-Create the following tasks:
-1. UTA Sign-off
-2. Pre-implementation validation (optional)
-3. Implementation (create 2 implementation tasks for CCTOPS)
-4. Post-implementation validation
-
-Reference previous change tasks for proper formatting and assignment
-
-### Step 8: Change Request Review
-Have the change request reviewed by appropriate team members
-
-### Step 9: Submit for Approval
-Click on "Access" then "Request Authorize" to submit the change request for approval
-
-## Implementation Process
-
-### Step 10: Coordination with Implementation Team
-- Set up call with CCTOPS implementation team
-- Contact: is_pradeep_shukla@restricted.chase.com, Commercial Card Prod Support Tech
-- Have the run book reviewed by the team
-
-### Step 11: Production Implementation
-On implementation day, follow these steps to promote changes from lower environments to production:
-
-#### a) Branch Management
-1. Create feature branch to be merged with master
-2. Clone the feature branch:
-   ```
-   git clone -b <feature_branch_name> <ssh link>
-   git switch <feature_branch_name>
-   ```
-
-#### b) Execution Steps
-Open VS Code and execute these commands in terminal:
-1. `eac model validate -f <model_file_name>`
-2. `eac model apply -f <model_file_name>`
-3. `eac deployment plan -f <deployment_file_name>`
-4. `eac deployment preflight -f <deployment_file_name>`
-5. `eac config set -b <feature_branch_name>`
-6. `eac config set -r "ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git"`
-7. `eac config set -c <get the commit msg from dev team>`
-8. `eac config set -p <feature_branch_name>`
-9. `eac config set -f <feature_branch_name>`
-10. `eac deployment pipeline init -f <deployment_file_name>`
-11. `eac deployment apply -f <deployment_file_name>`
-
-Note: When running the apply command, you'll need to provide the lower environment deployment file name and lower environment Spinnaker pipeline name.
-
-#### c) Build Monitoring
-- Monitor the build using Spinnaker at: https://spinnaker.prod.aws.jpmchase.net/#/applications/111597_xbsd-base/executions
-- Login with your SID and credentials
-- Monitor the build progress and provide inputs on test validation completion when requested
-
-#### d) Quality Control & Promotion
-1. After successful completion of the test environment build in Spinnaker UI, a JET ID will be created
-2. Navigate to the Quality tab, select the test, and upload evidence
-3. Go to Continuous Delivery and click on Promote
-4. The change will go to Review status
-5. After authorization and approval, the change will enter Implement state
-
-#### e) Production Deployment
-Deploy to production environment in Spinnaker either:
-- Manually triggering the pipeline, or
-- Running the commands
-
-## Reference Resources
-- Pipeline triggering troubleshooting: https://engineers.jpmchase.net/docs/jet/deploy-and-operate/jet-spinnaker/concepts/separating-ci-and-cd/pipeline-triggering-troubleshooting/
-- Deploy to production documentation: https://engineers.jpmchase.net/community/tools/eac/eacv2/tech-primers/deploy-to-prod/
-
-## Latest Reference Information
-- Most recent change request: CHG35514839
-- Reference URL: https://jpmorganchase.service-now.com/now/nav/ui/classic/params/target/change_request.do%3Fsys_id%3D5a512bab973ce25814c151b00153af6f%26sysparm_domain%3Dnull%26sysparm_domain_scope%3Dnull%26sysparm_view%3D%26sysparm_view_forced%3Dtrue
+In case of any failures:
+1. The DEV team should analyze and rectify the error, and re-raise the pull request.
+2. The DEV team should be allowed to rectify and re-raise the pull request up to three times.
+3. The deployment team should merge the re-raised pull request with master."
