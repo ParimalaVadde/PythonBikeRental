@@ -1,1 +1,5 @@
-Successfully completed implementation of VPC endpoint upgrades in AWS Production environment. Post-implementation validation confirms all 11 endpoints are functioning correctly with no issues identified in the B2B Supplier Directory Services.
+I've completed the post-implementation validation for the VPC endpoint upgrades in AWS Production environment. I've updated the CTASK with comments and attached the evidence confirming all 11 endpoints are functioning correctly with no issues in the B2B Supplier Directory Services.
+
+I noticed the CR is currently in review state. Could you please advise on the next steps in the process? Is there anything else required from our end to complete this change request?
+
+Thank you for your assistance.
