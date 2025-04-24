@@ -1,114 +1,127 @@
-Steps for Raising SNOW Change Request.
+# ServiceNow Change Request Procedure
+## B2B Supplier Directory Services (SEAL ID: 111597)
 
-Before raising the change request make sure to create run notebook and capture test evidence of lower env.
+## Pre-Requisites
+Before initiating a change request, ensure:
+- Create and run notebook in lower environments
+- Capture test evidence from lower environments
 
-1. Locate the previous successful change request (CHG35514839)
+## Change Request Creation Process
 
-2. Open the previous change request in ServiceNow
+### Step 1: Locate Previous Change Request
+Find the most recent successful change request (Reference: CHG35514839)
 
-3. Click on "Copy Change" to create a new change request based on the previous one
+### Step 2: Access Previous Change Request
+Open the previous change request in ServiceNow
 
-4. Update the following fields:
-    note : short description and description should start with the phrase "CommercialCard Client-Impact=N <APP-NOT-LIVE> - B2B Supplier Directory Services (111597) - "
-      once app goes live in production then update client-Impact and APP-LIVE accordingly.
+### Step 3: Create New Change Request
+Click on "Copy Change" to create a new change request based on the previous one
 
-sample Short Description and Description format: 
-   - Short Description: "CommercialCard Client-Impact=N <APP-NOT-LIVE> - B2B Supplier Directory Services (111597) - Upgrade VPC Endpoints via Spinnaker to AWS Production environment"
+### Step 4: Update Required Fields
+Ensure the following fields are properly updated:
 
-description should be in below format only
-   - Description: CommercialCard Client-Impact=N <APP-NOT-LIVE> - B2B Supplier Directory Services (111597) - Upgrade VPC Endpoints via Spinnaker to AWS Production environment 
+**Critical Naming Convention:**  
+Short Description and Description must begin with:
+- `"CommercialCard Client-Impact=N <APP-NOT-LIVE> - B2B Supplier Directory Services (111597) - "`
+- Note: Update `Client-Impact` and `<APP-NOT-LIVE>` accordingly once app is live in production
 
-Impacted Platform: XBSD SEAL ID: 111597
-Impacted Application - B2B Payables X-Business Supplier Directory Services
+**Sample Format:**  
+- **Short Description:** "CommercialCard Client-Impact=N <APP-NOT-LIVE> - B2B Supplier Directory Services (111597) - Upgrade VPC Endpoints via Spinnaker to AWS Production environment"
 
-What is the change doing: This change is upgrading 11 VPC endpoints in Production environment to latest versions
+- **Description:** Follow this exact format:  
+  CommercialCard Client-Impact=N <APP-NOT-LIVE> - B2B Supplier Directory Services (111597) - Upgrade VPC Endpoints via Spinnaker to AWS Production environment
+  
+  Impacted Platform: XBSD SEAL ID: 111597  
+  Impacted Application - B2B Payables X-Business Supplier Directory Services
+  
+  What is the change doing: [Describe specific changes]
+  
+  Why is the change needed: [Explain business/technical justification]
+  
+  Impacts to downstream applications(Blast Radius): [Detail any impacts]
+  
+  Impact to users(Blast Radius): [Detail any user impacts]
+  
+  Worst case scenario if the change goes bad: [Describe worst-case outcomes]
+  
+  How do we react and adjust to protect against worst case scenario: [Detail contingency plan]
 
-Why is the change needed: To ensure all VPC endpoints are running on current versions as part of infrastructure maintenance and compliance
+### Step 5: Release Attestation
+Set "Release Attestation" field to "Yes" for code-related changes (infrastructure or functional)
 
-Impacts to downstream applications(Blast Radius): No impact as this is infrastructure upgrade with no functional changes to application flows
+### Step 6: Field Review
+Thoroughly review all other fields from the previous change request and update as needed
 
-Impact to users(Blast Radius): No user impact as the application is not live yet and the upgrades will maintain the same functionality
+### Step 7: Create Change Tasks
+Create the following tasks:
+1. UTA Sign-off
+2. Pre-implementation validation (optional)
+3. Implementation (create 2 implementation tasks for CCTOPS)
+4. Post-implementation validation
 
-Worst case scenario if the change goes bad: VPC connectivity issues that could affect AWS service access from the VPC
+Reference previous change tasks for proper formatting and assignment
 
-How do we react and adjust to protect against worst case scenario: We will execute rollback by restoring the previous Terraform workspace state and revert to the prior endpoint configuration
+### Step 8: Change Request Review
+Have the change request reviewed by appropriate team members
 
-5. Set "Release Attestation" field to "Yes" as it involves code-related changes(either infra or functional related)
+### Step 9: Submit for Approval
+Click on "Access" then "Request Authorize" to submit the change request for approval
 
-6. Review all other fields from the previous change request and update as needed
+## Implementation Process
 
-7. Create the following change tasks:
-   - Task 1: UTA Sign-off 
-   - Task 2: Pre-implementation validation (optional)
-   - Task 3: Implementation (2 implementation tasks for CCTOPS)
-   - Task 4: Post-implementation validation
-   - (Refer to previous change tasks for proper format and assignment)
+### Step 10: Coordination with Implementation Team
+- Set up call with CCTOPS implementation team
+- Contact: is_pradeep_shukla@restricted.chase.com, Commercial Card Prod Support Tech
+- Have the run book reviewed by the team
 
-8. After creating the change request get it reviewed.
+### Step 11: Production Implementation
+On implementation day, follow these steps to promote changes from lower environments to production:
 
-9. After completing all the above steps, click on "Access" then "Request Authorize" to submit the change request for approval
+#### a) Branch Management
+1. Create feature branch to be merged with master
+2. Clone the feature branch:
+   ```
+   git clone -b <feature_branch_name> <ssh link>
+   git switch <feature_branch_name>
+   ```
 
+#### b) Execution Steps
+Open VS Code and execute these commands in terminal:
+1. `eac model validate -f <model_file_name>`
+2. `eac model apply -f <model_file_name>`
+3. `eac deployment plan -f <deployment_file_name>`
+4. `eac deployment preflight -f <deployment_file_name>`
+5. `eac config set -b <feature_branch_name>`
+6. `eac config set -r "ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git"`
+7. `eac config set -c <get the commit msg from dev team>`
+8. `eac config set -p <feature_branch_name>`
+9. `eac config set -f <feature_branch_name>`
+10. `eac deployment pipeline init -f <deployment_file_name>`
+11. `eac deployment apply -f <deployment_file_name>`
 
+Note: When running the apply command, you'll need to provide the lower environment deployment file name and lower environment Spinnaker pipeline name.
 
-latest change req num : CHG35514839
-https://jpmorganchase.service-now.com/now/nav/ui/classic/params/target/change_request.do%3Fsys_id%3D5a512bab973ce25814c151b00153af6f%26sysparm_domain%3Dnull%26sysparm_domain_scope%3Dnull%26sysparm_view%3D%26sysparm_view_forced%3Dtrue
+#### c) Build Monitoring
+- Monitor the build using Spinnaker at: https://spinnaker.prod.aws.jpmchase.net/#/applications/111597_xbsd-base/executions
+- Login with your SID and credentials
+- Monitor the build progress and provide inputs on test validation completion when requested
 
-CCTOPS dl : is_pradeep_shukla@restricted.chase.com, Commercial Card Prod Support Tech 
+#### d) Quality Control & Promotion
+1. After successful completion of the test environment build in Spinnaker UI, a JET ID will be created
+2. Navigate to the Quality tab, select the test, and upload evidence
+3. Go to Continuous Delivery and click on Promote
+4. The change will go to Review status
+5. After authorization and approval, the change will enter Implement state
 
-10. after creating change request set up call with CCTOPS implementation team (CCTOPS dl : is_pradeep_shukla@restricted.chase.com, Commercial Card Prod Support Tech ), get the run book reviewed from the team.
+#### e) Production Deployment
+Deploy to production environment in Spinnaker either:
+- Manually triggering the pipeline, or
+- Running the commands
 
-11. on implemenation day . wat ever execution completed in lower env (i.e dev and test ) need to be pushed to prod
+## Reference Resources
+- Pipeline triggering troubleshooting: https://engineers.jpmchase.net/docs/jet/deploy-and-operate/jet-spinnaker/concepts/separating-ci-and-cd/pipeline-triggering-troubleshooting/
+- Deploy to production documentation: https://engineers.jpmchase.net/community/tools/eac/eacv2/tech-primers/deploy-to-prod/
 
-steps to be followed
-
-a) create feature branch which needs to be merged with master.
-b) Clone the feature branch:
-   
-i) `git clone -b <feature_branch_name> <ssh link>`
-
-ii) git switch <feature branch name>"
-
-open vs code
-
-Execute these commands in terminal:
-   a) `eac model validate -f <model_file_name>`
-   b) `eac model apply -f <model_file_name>`
-   c) `eac deployment plan -f <deployment_file_name>`
-   d) `eac deployment preflight -f <deployment_file_name>`
-   e) `eac config set -b <feature_branch_name>`
-   f) `eac config set -r "ssh://git@bitbucketdc-ssh.jpmchase.net:7999/xbsd/xbsd-base.git"`
-   g) `eac config set -c <get the commit msg from dev team>`
-   h) `eac config set -p <feature_branch_name>`
-   i) `eac config set -f <feature_branch_name>`
-   j) `eac deployment pipeline init -f <deployment_file_name>`
-   h) `eac deployment apply -f <deployment_file_name>`
-
-after running apply cmd it asks for lower env deployment file name and lower env spinnaker pipeline name , provide the test env deployment file name and test env spinnaker pipeline name
-
-then build will be triggered in test env spinnaker pipeline, build will be triggered for test env first
-
-The build link can be obtained from below link
-
-"https://spinnaker.prod.aws.jpmchase.net/#/applications/111597_xbsd-base/executions"  - to view the status of deployment - 
-
-1. Login into the spinnaker using your SID and credentials
-2. Monitor the spinnaker build to ensure its completion and provide inputs on test validation completion for build to proceed further whenever requested.
-
-
-After successful completion of build for test env in spinnaker UI
-
-then a jetid gets created in JET UI
-
-Click on quality tab and select the test , and upload the edvidence
-
-then go to continuous delivery and click on promote
-
-after click on promote, it go to review. which rohit has authrize and approve this review
-
-only then change goes to implement state
-
-then deploy in prod env in spinnaker either manually triggering the pipeline or by running the cmds
-
-refer to below link for more details:
-https://engineers.jpmchase.net/docs/jet/deploy-and-operate/jet-spinnaker/concepts/separating-ci-and-cd/pipeline-triggering-troubleshooting/
-https://engineers.jpmchase.net/community/tools/eac/eacv2/tech-primers/deploy-to-prod/
+## Latest Reference Information
+- Most recent change request: CHG35514839
+- Reference URL: https://jpmorganchase.service-now.com/now/nav/ui/classic/params/target/change_request.do%3Fsys_id%3D5a512bab973ce25814c151b00153af6f%26sysparm_domain%3Dnull%26sysparm_domain_scope%3Dnull%26sysparm_view%3D%26sysparm_view_forced%3Dtrue
