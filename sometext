@@ -23,3 +23,89 @@ VPC endpoints version upgrade evidence document  VPC Endpoint Upgrade - Evidence
 VPC endpoints version upgrade run notebook Runbook_XBSD_SDS_111597_vpc_endpoints_V2.xlsx
 VPC endpoints version upgrade list. vpc-endpoint-remediation_all.xlsx
 ServiceNow Change Request Procedure ServiceNow Change Request Procedure.docx
+
+Got it — you want **3 subtasks** created based on your user story, **each with proper description and comments** that you can directly use in your **Jira ticket**.
+
+Here's the complete structure you can use:
+
+---
+
+# **Main User Story Title:**  
+**SDS AOCOMM - Upgrade VPC Endpoints (11 Prod, 1 Dev) in XBSD Application**
+
+---
+
+## **Sub-task 1: Raise ServiceNow Change Request and Carry Out End-to-End Process**
+
+**Sub-task Title:**  
+Raise ServiceNow CR and Complete End-to-End Process for Prod VPC Endpoint Upgrade
+
+**Sub-task Description:**  
+- Raise ServiceNow Change Request (CHG) for Production VPC endpoint upgrades.  
+- Prepare the runbook for the upgrade steps and rollback procedures.  
+- Perform upgrade in coordination with the AWS implementation team.  
+- Capture detailed test evidence before and after the upgrade.  
+- Conduct post-implementation validation to ensure VPC endpoints are functioning correctly.  
+- Update related documentation (runbook, evidence, endpoint list).  
+- Close ServiceNow CR post successful validation and evidence submission.
+
+**Sub-task Comment (for Jira):**  
+> Raised and completed ServiceNow CR (CHG35514839) for Production VPC endpoint upgrades.  
+> Post-validation confirmed successful functioning of all 11 endpoints.  
+> Documents uploaded:  
+> - **Runbook:** `Runbook_XBSD_SDS_111597_vpc_endpoints_V2.xlsx`  
+> - **Evidence:** `VPC Endpoint Upgrade - Evidence.docx`  
+> - **Endpoint List:** `vpc-endpoint-remediation_all.xlsx`  
+> - **Procedure:** `ServiceNow Change Request Procedure.docx`
+
+---
+
+## **Sub-task 2: Production Environment VPC Endpoints Upgrade**
+
+**Sub-task Title:**  
+Upgrade 11 VPC Endpoints in Production Environment
+
+**Sub-task Description:**  
+- Coordinate with the AWS implementation team to carry out the VPC endpoint upgrade for 11 Production endpoints.  
+- Execute the upgrade as per the approved ServiceNow Change Request.  
+- Perform pre- and post-validation checks on all upgraded endpoints.  
+- Ensure zero downtime or issues post-upgrade.  
+- Document and update the endpoint list accordingly.
+
+**Sub-task Comment (for Jira):**  
+> Successfully upgraded 11 Production VPC endpoints to the latest version.  
+> Post-upgrade validation confirmed no service impact to B2B Supplier Directory Services.  
+> All upgrade evidence captured and documented.
+
+---
+
+## **Sub-task 3: Dev Environment VPC Endpoint Upgrade (Access Permission Issue)**
+
+**Sub-task Title:**  
+Resolve Dev Endpoint Permission Issue and Complete Upgrade
+
+**Sub-task Description:**  
+- Coordinate with the AWS administration team to resolve access permission issues for the Development VPC endpoint.  
+- Once access is granted, proceed with upgrading the endpoint to the latest version.  
+- Perform post-upgrade validation to ensure proper functionality.  
+- Update the documentation with the final upgrade status.
+
+**Sub-task Comment (for Jira):**  
+> Coordinated with AWS administration team to resolve Dev endpoint permission issues.  
+> Successfully upgraded the Development VPC endpoint post-resolution.  
+> Validation completed; no issues observed.  
+> Evidence added to the upgrade document.
+
+---
+
+# **Summary of What You'll Get in Jira:**
+| Sub-task | Focus | What to Add |
+|:---|:---|:---|
+| 1 | Full Change Request process (CR, runbook, test evidence, validation) | Raise SNOW CR, prepare documents, close CR |
+| 2 | Production upgrade | Upgrade 11 Prod endpoints + validate |
+| 3 | Dev endpoint fix | Resolve permission issue + upgrade 1 Dev endpoint |
+
+---
+
+Would you also like me to quickly show you a sample **template** how your **full Jira ticket** (User Story + Sub-tasks) would look cleanly?  
+(If yes, I’ll format it ready for copy-paste!)
