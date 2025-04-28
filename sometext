@@ -1,26 +1,25 @@
-Here's a professional email draft you can use to inform your team about your documentation:
+SDS AOCOMM - Upgrade VPC Endpoints (11 Prod, 1 Dev) in XBSD Application 	
 
-```
-Subject: Documentation of ServiceNow Change Request Process for B2B Supplier Directory Services - Review Request
+1. All 11 Production VPC endpoints successfully upgraded to the latest version
+2. Access permission issues resolved for the Dev endpoint with AWS administration team assistance
+3. Upgrade successfully completed for the 1 Dev endpoint with previous access issues
+4. Post-upgrade validation to ensure all endpoints are functioning correctly
+5. Documentation updated with details of all upgraded endpoints
+6. SNOW Change Request raised and approved for Production environment upgrades
+7. All 26 VPC endpoints (100%) upgraded across Test, Dev, and Production environments
 
-Hi Team,
+As part of our ongoing infrastructure maintenance, we need to upgrade 12 VPC endpoints for the XBSD application. This includes:
 
-I've documented the comprehensive steps for raising and implementing ServiceNow change requests for B2B Supplier Directory Services (SEAL ID: 111597). The document includes:
+11 VPC endpoints in the Production environment.
+1 VPC endpoint in the Development environment that has pending access permission issues
+This task is part of the full scope of upgrading all 26 VPC endpoints across all environments. The other 14 endpoints (10 in Test, 4 in Dev environments) have already been completed.
 
-- Pre-requisite steps required before raising a change request
-- Detailed process for creating change requests with proper formatting
-- Step-by-step implementation procedures for AWS environment changes
-- Post-implementation validation steps and verification process
-- References to key resources and contact information
+For the 1 Dev environment endpoint with access issues, we'll need coordination with the AWS administration team to resolve permission-related blockers before proceeding with the upgrade.
 
-@Abhishek, @Ramsai - Could you please review this documentation and provide feedback? Once approved, I plan to publish it to our Confluence space for team reference to ensure consistent change management procedures.
-
-The document aims to streamline our change request process and serve as a reference guide for the team to follow standard procedures.
-
-Please let me know if there are any additions or modifications needed.
-
-Thank you,
-[Your Name]
-```
-
-Feel free to adjust any details to better match your specific team's context or communication style.
+comments:
+CHG35514839 - Successfully completed implementation of VPC endpoint upgrades in AWS Production environment. Post-implementation validation confirms all 11 endpoints are functioning correctly with no issues identified in the B2B Supplier Directory Services.
+Completed VPC endpoint version upgrade in the Development environment.
+VPC endpoints version upgrade evidence document  VPC Endpoint Upgrade - Evidence.docx
+VPC endpoints version upgrade run notebook Runbook_XBSD_SDS_111597_vpc_endpoints_V2.xlsx
+VPC endpoints version upgrade list. vpc-endpoint-remediation_all.xlsx
+ServiceNow Change Request Procedure ServiceNow Change Request Procedure.docx
