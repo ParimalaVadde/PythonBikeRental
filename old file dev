@@ -1,222 +1,64 @@
-Exception
-Error: creating EC2 VPC Endpoint (com.amazonaws.us-east-1.rds): InvalidParameter: private-dns-enabled cannot be set because there is already a conflicting DNS domain for rds.us-east-1.amazonaws.com in the VPC vpc-09bec40d464580243 │ status code: 400, request id: 93ed928d-6ddc-420f-a1ef-e10bbab52906 │ │ with module.vpc_endpoint["rds"].aws_vpc_endpoint.default, │ on .terraform/modules/vpc_endpoint/main.tf line 83, in resource "aws_vpc_endpoint" "default": │ 83: resource "aws_vpc_endpoint" "default" { │ ╵ Executing post-apply hook...
 
-Starting custom finalise script... run-JSVK2MPSYK5CmCB3 finished with response code: 200 Operation failed: failed running terraform apply (exit 1)
+# User Story: Mapping Changes for New PFD Fields
 
+## Story Title
+Implement mapping changes for new PFD fields to staging tables
 
+## Story ID
+SDS-XXX
 
-111597	533267000000	com.amazonaws.us-east-1.elasticloadbalancing	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
-111597	533267000000	com.amazonaws.us-east-1.states	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
-111597	533267000000	com.amazonaws.us-east-1.lambda	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
-111597	533267000000	com.amazonaws.us-east-1.elasticfilesystem	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
-111597	533267000000	com.amazonaws.us-east-1.logs	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
-111597	533267000000	com.amazonaws.us-east-1.execute-api	vpc-endpoint	6.2.0	tfe.jpmchase.net/111597-114116-TEST/Default Project/nlapiladbt-533267018973-us-east-1-apigwttol-nlapiladbt-v1
-111597	533267000000	com.amazonaws.us-east-1.application-autoscaling	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
-111597	533267000000	com.amazonaws.us-east-1.autoscaling	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
-111597	533267000000	com.amazonaws.us-east-1.rds	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
-111597	533267000000	com.amazonaws.us-east-1.elasticmapreduce	vpc-endpoint	6.0.0	tfe.jpmchase.net/111597-114116-TEST/base-533267018973-us-east-1-PrivateVPCEndpoints
+## Epic Link
+[Data Ingestion Improvements]
 
+## Description
+As a data engineer, I need to update the mapping between the analysis_pfd source system and our SDS staging tables to accommodate new fields and mapping changes, so that we can ensure all relevant data is properly loaded into our data model.
 
+## Background
+The current mapping between analysis_pfd and our staging tables needs to be updated to support new fields and changed mappings. This work is part of our ongoing efforts to improve data completeness and quality in the Supplier Data Service.
 
-rds
+## Acceptance Criteria
+1. Update the mapping configuration to include all new PFD fields
+2. Ensure existing mappings that are changing are correctly updated
+3. Handle any unmapped fields appropriately (either map to new targets or mark as not required)
+4. Update data loading processes to accommodate the new mapping
+5. Test the updated mapping with sample data to ensure proper data loading
+6. Document all mapping changes for reference
 
-	
-Name
-	
-Security group rule ID
-	
-IP version
-	
-Type
-	
-Protocol
-	
-Port range
-	
-Source
-	
-Description
+## Technical Details
+- The changes will affect the following staging tables:
+  - sds_staging.business_entity
+  - sds_staging.business_entity_details
+  - sds_staging.business_entity_characteristics 
+  - sds_staging.business_entity_identifiers
+  - sds_staging.physical_address
+  - sds_staging.telecommunication_address
+  - sds_staging.electronic_address
+  - sds_staging.business_entity_spend_analysis
+  - sds_staging.business_entity_payment_profile_attribute
+  - sds_staging.restrictions
+  - sds_staging.business_entity_industry_classification
+  - sds_staging.business_entity_card_association
+  - sds_staging.business_entity_card_revenues
 
-Name
-	
-Security group rule ID
-	
-IP version
-	
-Type
-	
-Protocol
-	
-Port range
-	
-Source
-	
-Description
+- Current mapping configuration is stored in [location/repository/file]
+- Source system schema definitions are available in [location/repository/file]
+- Target schema definitions are defined in our DDL scripts
 
-–
-sgr-0e1ca2a3c1994f96e
-IPv4
-HTTPS
-TCP
-443
-100.74.16.64/26
-–
-–
-sgr-0718869268162c1ab
-IPv4
-HTTPS
-TCP
-443
-100.72.64.0/18
-–
-–
-sgr-0bd1f39da3b2a80d4
-IPv4
-HTTPS
-TCP
-443
-100.72.0.0/18
-–
+## Dependencies
+- Access to the latest version of the analysis_pfd data structure
+- Confirmation of all new fields that need to be mapped
+- Testing environment with sample data
+
+## Effort Estimation
+Story Points: [5]
+
+## Definition of Done
+- Mapping configuration is updated
+- Data loading processes successfully use the new mapping
+- All tests pass with sample data
+- Documentation is updated
+- Code review is completed and approved
+- Changes are merged to the appropriate branch
 
 
 
-lambda
-
-Name
-	
-Security group rule ID
-	
-IP version
-	
-Type
-	
-Protocol
-	
-Port range
-	
-Source
-	
-Description
-
-Name
-	
-Security group rule ID
-	
-IP version
-	
-Type
-	
-Protocol
-	
-Port range
-	
-Source
-	
-Description
-
-–
-sgr-0ebfcc99d7b329325
-IPv4
-HTTPS
-TCP
-443
-100.74.16.64/26
-–
-–
-sgr-0734886fb74d1ddc9
-IPv4
-HTTPS
-TCP
-443
-100.72.64.0/18
-–
-–
-sgr-0cbbec5a0d264a036
-IPv4
-HTTPS
-TCP
-443
-100.72.0.0/18
-–
-
-
-
-# yaml-language-server: $schema=schema/aupobas_deployment_schema.json
-apiVersion: deployment/v1
-kind: Deployment
-metadata:
-    name: "aupobast"
-    sealID: "111597"
-    model:
-        name: aupobas
-        version: v6
-spec:
-    modulepack:
-        name: default
-        version: 0.14.5
-    environment:
-        awsAccountID: "533267018973"
-        awsRegion: us-east-1
-        tfeOrganization: 111597-114116-TEST
-    components:
-        - type: PrivateVPCEndpoints
-          name: xbsdvpct
-          action: apply
-          properties:
-            service_names:
-                - name: rds
-                  cidr_blocks_primary: ["100.74.16.64/26", "100.72.64.0/18", "100.72.0.0/18"]
-            private_dns_enabled: false
-        - type: ECRCache
-          name: xbsdecr
-          action: skip
-          properties:
-        - type: NATGateway
-          name: ecsnat
-          action: skip
-          properties:
-        - type: XRAYBase
-          name: xbase
-          action: skip
-          properties:
-        - type: ECSUtils
-          name: ecsutils
-          action: skip
-          properties:
-
-
-
-
-Exception
-Error: creating EC2 VPC Endpoint (com.amazonaws.us-east-1.rds): InvalidParameter: private-dns-enabled cannot be set because there is already a conflicting DNS domain for rds.us-east-1.amazonaws.com in the VPC vpc-09bec40d464580243 │ status code: 400, request id: 9b6fc2f0-9be4-497c-b142-739adfca1832 │ │ with module.vpc_endpoint["rds"].aws_vpc_endpoint.default, │ on .terraform/modules/vpc_endpoint/main.tf line 83, in resource "aws_vpc_endpoint" "default": │ 83: resource "aws_vpc_endpoint" "default" { │ ╵ Executing post-apply hook...
-
-
-Here's a comprehensive subject line and description for your EAC team request:
-
-**Subject Line:** URGENT: Multiple AWS VPC Endpoint Creation Failures Due to DNS Conflicts - Production Blocking Issue
-
-**Description:**
-
-We're encountering critical DNS conflicts preventing the creation of multiple AWS VPC endpoints in VPC vpc-09bec40d464580243. The error message received is: "private-dns-enabled cannot be set because there is already a conflicting DNS domain for [service].us-east-1.amazonaws.com"
-
-This issue affects multiple AWS services including:
-- RDS
-- ElasticLoadBalancing
-- Lambda
-- States
-- ElasticFileSystem
-- CloudWatch Logs
-- Execute-API
-- Application-AutoScaling
-- AutoScaling
-- ElasticMapReduce
-
-These endpoints are being provisioned through Terraform modules at tfe.jpmchase.net under account 533267000000 in project 111597-114116-TEST.
-
-We need immediate assistance with either:
-1) Modifying the underlying Terraform modules to allow setting private_dns_enabled=false for all affected endpoints, or
-2) Resolving the DNS conflicts in the VPC configuration
-
-This is a production-blocking issue requiring urgent attention as it prevents our deployment pipeline from completing successfully.
-
-Starting custom finalise script... run-oGXwUUb2kGpU3CpG finished with response code: 200 Operation failed: failed running terraform apply (exit 1)
