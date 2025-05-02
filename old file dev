@@ -62,3 +62,121 @@ Story Points: [5]
 
 
 
+# Jira Subtasks for "Mapping Changes for New PFD Fields"
+
+## Subtask 1: Analysis of New PFD Fields
+
+**Title:** Analyze New PFD Fields and Determine Mapping Requirements
+
+**Description:**
+Review the updated analysis_pfd source system documentation to identify all new fields and changes to existing fields. Document the data types, formats, and business meaning of each field.
+
+**Acceptance Criteria:**
+- Complete inventory of all new PFD fields documented
+- Data types and formats identified for each new field
+- Existing fields with mapping changes identified
+- Initial mapping recommendations documented
+
+**Effort Estimate:** 1 SP
+
+---
+
+## Subtask 2: Target Schema Review
+
+**Title:** Review Target Schema and Identify Required Changes
+
+**Description:**
+Review the existing staging table structures to determine if they can accommodate all new fields. Identify any schema changes needed in the staging tables.
+
+**Acceptance Criteria:**
+- Appropriate target tables and columns identified for all new fields
+- Any required schema changes documented
+- DDL scripts prepared for any new columns needed
+
+**Effort Estimate:** 1 SP
+
+---
+
+## Subtask 3: Update Mapping Configuration
+
+**Title:** Update Mapping Configuration File with New Field Mappings
+
+**Description:**
+Update the mapping configuration file to include all new field mappings and changes to existing mappings. Include any required transformations or constants.
+
+**Acceptance Criteria:**
+- Mapping file updated with all new mappings
+- Changes to existing mappings implemented
+- Mapping file validated for syntax and correctness
+- "No mapping" fields properly handled
+
+**Effort Estimate:** 2 SP
+
+---
+
+## Subtask 4: Update ETL Processes
+
+**Title:** Modify ETL Processes to Support New Mappings
+
+**Description:**
+Update the data loading processes to accommodate the new field mappings. Implement any required data transformations and update error handling.
+
+**Acceptance Criteria:**
+- ETL processes modified to handle new mappings
+- Data transformation logic implemented where needed
+- Error handling updated for new fields
+- Process changes tested with sample data
+
+**Effort Estimate:** 2 SP
+
+---
+
+## Subtask 5: Testing and Validation
+
+**Title:** Test and Validate New Mapping Implementation
+
+**Description:**
+Conduct thorough testing of the updated mapping and ETL processes using sample data. Verify that all fields are correctly mapped and loaded.
+
+**Acceptance Criteria:**
+- Unit tests completed for individual field mappings
+- Integration tests completed for the end-to-end process
+- Regression tests performed to ensure existing functionality works
+- All test results documented
+
+**Effort Estimate:** 1 SP
+
+---
+
+## Subtask 6: Documentation and Knowledge Transfer
+
+**Title:** Update Documentation and Conduct Knowledge Transfer
+
+**Description:**
+Update all relevant documentation with the new mapping details. Create or update operational guidelines and conduct knowledge transfer sessions as needed.
+
+**Acceptance Criteria:**
+- Mapping documentation updated
+- Operational guidelines updated
+- Knowledge transfer sessions completed
+- All changes documented in the appropriate repositories
+
+**Effort Estimate:** 1 SP
+
+---
+
+## Subtask 7: Deployment Planning and Execution
+
+**Title:** Plan and Execute Deployment of Mapping Changes
+
+**Description:**
+Create a deployment plan for the mapping changes, including rollback procedures. Execute the deployment in the production environment.
+
+**Acceptance Criteria:**
+- Deployment scripts created
+- Rollback procedures established
+- Changes deployed to production
+- Initial data loads monitored and verified
+- Any issues addressed promptly
+
+**Effort Estimate:** 1 SP
