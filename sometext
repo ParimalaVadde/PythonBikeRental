@@ -1,111 +1,646 @@
-SDS AOCOMM - Upgrade VPC Endpoints (11 Prod, 1 Dev) in XBSD Application 	
+CREATE TABLE IF NOT EXISTS sds_main.business_entity
+(
+    business_entity_id   varchar not null primary key,
+    hierarchy_identifier varchar,
+    hierarchy_level      varchar,
+    hierarchy_role       varchar,
+    parent_id            varchar,
+    is_active            boolean,
+    last_updated_by      varchar,
+    last_updated_date    timestamp,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_details
+(
+	business_entity_details_id varchar not null primary key,
+    business_entity_id   varchar ,
+    business_entity_name varchar,
+    company_structure         varchar,
+    market_segment_type  varchar,
+	year_incorporated varchar,
+	reported_annual_revenue  varchar,
+    is_active            boolean,
+    last_updated_by      varchar,
+    last_updated_date    timestamp,
+    created_by           varchar,
+    created_date         timestamp
+);
 
-1. All 11 Production VPC endpoints successfully upgraded to the latest version
-2. Access permission issues resolved for the Dev endpoint with AWS administration team assistance
-3. Upgrade successfully completed for the 1 Dev endpoint with previous access issues
-4. Post-upgrade validation to ensure all endpoints are functioning correctly
-5. Documentation updated with details of all upgraded endpoints
-6. SNOW Change Request raised and approved for Production environment upgrades
-7. All 26 VPC endpoints (100%) upgraded across Test, Dev, and Production environments
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_identifiers
+(
+    identifier_id      varchar not null primary key,
+	related_identifier	varchar,
+	related_identifier_source  varchar,
+	identifier_type    varchar,
+    identifier_value   varchar,
+    is_active          boolean,
+    last_updated_by    varchar,
+    last_updated_date  timestamp,
+    created_by         varchar,
+    created_date       timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_characteristics
+(
+    characteristics_id   varchar not null primary key,
+    business_entity_id   varchar,
+    characteristic_type varchar,
+    characteristic_value varchar,
+    is_active            boolean,
+    last_updated_by      varchar,
+    last_updated_date    timestamp,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_contacts
+(
+    business_entity_contact_id varchar not null primary key,
+    business_entity_id         varchar,
+    contact_type               varchar,
+    contact_name               varchar,
+    contact_title              varchar,
+    contact_active_indicator   boolean,
+    contact_deactivated_date   timestamp,
+	decision_maker_indicator   varchar,
+	decision_maker_type   varchar,
+    is_active                  boolean,
+    last_updated_by            varchar,
+    last_updated_date          timestamp,
+    created_by                 varchar,
+    created_date               timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_relationships
+(
+    business_entity_relationship_id    varchar not null primary key,
+    business_entity_id                 varchar,
+    business_entity_contact_id         varchar,
+    related_business_entity_id         varchar,
+    related_business_entity_contact_id varchar,
+    business_entity_role               varchar,
+    related_business_entity_role       varchar,
+	is_active                  boolean,
+    last_updated_by                    varchar,
+    last_updated_date                  timestamp,
+    created_by                         varchar,
+    created_date                       timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_spend_analysis
+(
+    spend_analysis_id        varchar not null primary key,
+    payor_business_entity_id varchar,
+    payee_business_entity_id varchar,
+	analysis_conducted_dt varchar,
+	analysis_external_reference_id varchar,
+	analysis_stage  varchar,
+	count_of_invoices       numeric,
+    payment_terms            varchar,
+    count_of_payments        numeric,
+    sum_of_payments          numeric,
+    period_start_date        date,
+    period_end_date          date,
+    payment_ccy              varchar,
+    chargeback_amount        numeric,
+    chargeback_percentage    numeric,
+	actual_days_payment_outstanding numeric,
+    payment_mode             varchar,
+	payment_term_days       numeric,
+	payment_terms_discount_ind   varchar,
+	payment_terms_discount_rate  numeric,
+	payment_terms_discount_days       numeric,
+	is_active                  boolean,
+    last_updated_by          varchar,
+    last_updated_date        timestamp,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.physical_address
+(
+    physical_address_id     varchar not null primary key,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    physical_address_type     varchar,
+    street_line_1             varchar,
+    street_line_2             varchar,
+    street_line_3             varchar,
+    country                   varchar,
+    city                      varchar,
+    state_province            varchar,
+    postal_code               varchar,
+    location_name             varchar,
+    site_identifier           varchar,
+    is_active                 boolean,
+    last_updated_by           varchar,
+    last_updated_date         timestamp,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.electronic_address
+(
+    electronic_address_id    varchar not null primary key,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    electronic_address_type   varchar,
+    electronic_address        varchar,
+    is_active                 boolean,
+    last_updated_by           varchar,
+    last_updated_date         timestamp,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.telecommunication_address
+(
+    telecommunication_address_id  varchar not null primary key,
+    related_identifier             varchar,
+    related_identifier_source      varchar,
+    telecommunication_address_type varchar,
+    area_dialing_code              varchar,
+    phone_number                   varchar,
+    extension_number               varchar,
+    is_active                      boolean,
+    last_updated_by                varchar,
+    last_updated_date              timestamp,
+    created_by                     varchar,
+    created_date                   timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.restrictions
+(
+    restriction_id            varchar not null primary key,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    restriction_type          varchar,
+    restriction_indicator     boolean,
+    restriction_reason        varchar,
+	restriction_for_products varchar,
+	restriction_added_dt  date,
+    is_active                 boolean,
+    last_updated_by           varchar,
+    last_updated_date         timestamp,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_receivables_attribute
+(
+    attribute_id    varchar not null primary key,
+    business_entity_id       varchar,
+    receivables_attribute_type  varchar,
+    receivables_attribute_value varchar,
+    is_active                boolean,
+    last_updated_by          varchar,
+    last_updated_date        timestamp,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_card_association
+(
+    card_association_id    varchar not null primary key,
+    business_entity_id       varchar,
+    association_name  varchar,
+    match_confidence   varchar,
+	matched_level_2   boolean,
+	matched_level_3_summary boolean,
+	matched_level_3_lineitem boolean,
+	matched_fleet_ind  varchar,
+	matched_mcc  varchar,
+	matched_data_quality  varchar,
+    is_active                boolean,
+    last_updated_by          varchar,
+    last_updated_date        timestamp,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_industry_classification
+(
+    classification_id    varchar not null primary key,
+    business_entity_id       varchar,
+    classification_type  varchar,
+    classification_code   varchar,
+	classification_description  varchar,
+	is_active                  boolean,
+    last_updated_by          varchar,
+    last_updated_date        timestamp,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_card_revenues
+(
+    revenue_id    varchar not null primary key,
+    business_entity_id       varchar,
+    end_date  date,
+	card_revenue__1m__start_date date,
+	card_revenue__1m__average_monthly_amount numeric,
+    card_revenue__3m__start_date date,
+    card_revenue__3m__average_monthly_amount numeric,
+    card_revenue__12m__start_date date,
+    card_revenue__12m__average_monthly_amount numeric,
+	is_active                  boolean,
+    last_updated_by          varchar,
+    last_updated_date        timestamp,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.business_entity_card_transactions_stability
+(
+    card_transactions_stability_id    varchar not null primary key,
+    business_entity_id       varchar,
+    end_date  timestamp,
+	date_accessible date,
+    card_transactions_stability__1m__start_date date,
+    card_transactions_stability__1m__days_present         varchar,
+    card_transactions_stability__1m__weeks_present        varchar,
+    card_transactions_stability__1m__months_present         varchar,
+    card_transactions_stability__1m__daily_coverage_ratio   numeric,
+    card_transactions_stability__1m__weekly_coverage_ratio   numeric,
+    card_transactions_stability__1m__monthly_coverage_ratio    numeric,
+    card_transactions_stability__3m__start_date date,
+    card_transactions_stability__3m__days_present      varchar,
+    card_transactions_stability__3m__weeks_present     varchar,
+    card_transactions_stability__3m__months_present     varchar,
+    card_transactions_stability__3m__daily_coverage_ratio    numeric,
+    card_transactions_stability__3m__weekly_coverage_ratio numeric,
+    card_transactions_stability__3m__monthly_coverage_ratio   numeric,
+    card_transactions_stability__12m__start_date date,
+    card_transactions_stability__12m__days_present      varchar,
+    card_transactions_stability__12m__weeks_present     varchar,
+    card_transactions_stability__12m__months_present     varchar,
+    card_transactions_stability__12m__daily_coverage_ratio   numeric,
+    card_transactions_stability__12m__weekly_coverage_ratio    numeric,
+    card_transactions_stability__12m__monthly_coverage_ratio    numeric,
+	is_active                  boolean,
+    last_updated_by          varchar,
+    last_updated_date        timestamp,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.exclusion
+(
+	processname varchar,
+	exclusion_table varchar
+ 
+);
+CREATE TABLE IF NOT EXISTS sds_main.type
+(
+	id  SERIAL PRIMARY KEY,
+    key varchar,
+	value varchar,
+	mapped_value varchar,
+	last_updated_by          varchar,
+    last_updated_date        timestamp,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_main.product_segmentation
+(
+	id  SERIAL PRIMARY KEY,
+    product_segmentation_cd	varchar,
+	product_segmentation_definition	varchar,
+	criteria varchar,
+	last_updated_by          varchar,
+    last_updated_date        timestamp,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity
+(
+    stg_business_entity_id   varchar ,
+    source_system_id       varchar,
+    source_system_name     varchar,
+    hierarchy_identifier varchar,
+    hierarchy_level      varchar,
+    hierarchy_role       varchar,
+    parent_id            varchar,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_details
+(
+	business_entity_details_id varchar ,
+    stg_business_entity_id   varchar ,
+    business_entity_name varchar,
+    company_structure         varchar,
+    market_segment_type  varchar,
+	year_incorporated varchar,
+	reported_annual_revenue  varchar,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_identifiers
+(
+    identifier_id      varchar ,
+    identifier_type    varchar,
+    identifier_value   varchar,
+	related_identifier	varchar,
+	related_identifier_source  varchar,
+    created_by         varchar,
+    created_date       timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_characteristics
+(
+    characteristics_id   varchar ,
+    stg_business_entity_id   varchar,
+    characteristic_type varchar,
+    characteristic_value varchar,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_contacts
+(
+    business_entity_contact_id varchar ,
+    stg_business_entity_id         varchar,
+	source_system_contact_id   varchar,
+    source_system_name         varchar,
+    contact_type               varchar,
+    contact_name               varchar,
+    contact_title              varchar,
+    contact_active_indicator   boolean,
+    contact_deactivated_date   timestamp,
+	decision_maker_indicator   varchar,
+	decision_maker_type   varchar,
+    created_by                 varchar,
+    created_date               timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_relationships
+(
+    business_entity_relationship_id    varchar ,
+    stg_business_entity_id                 varchar,
+    business_entity_contact_id         varchar,
+    stg_related_business_entity_id         varchar,
+    related_business_entity_contact_id varchar,
+    business_entity_role               varchar,
+    related_business_entity_role       varchar,
+    created_by                         varchar,
+    created_date                       timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_spend_analysis
+(
+    spend_analysis_id        varchar,
+    stg_payor_business_entity_id varchar,
+    stg_payee_business_entity_id varchar,
+	analysis_conducted_dt varchar,
+	analysis_external_reference_id varchar,
+	analysis_stage  varchar,
+	count_of_invoices       numeric,
+    payment_terms            varchar,
+    count_of_payments        numeric,
+    sum_of_payments          numeric,
+    period_start_date        date,
+    period_end_date          date,
+    payment_ccy              varchar,
+    chargeback_amount        numeric,
+    chargeback_percentage    numeric,
+	actual_days_payment_outstanding numeric,
+    payment_mode             varchar,
+	payment_term_days       numeric,
+	payment_terms_discount_ind   varchar,
+	payment_terms_discount_rate  numeric,
+	payment_terms_discount_days       numeric,
+	source_system_id             varchar,
+    source_system_name           varchar,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.physical_address
+(
+    physical_address_id     varchar ,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    physical_address_type     varchar,
+    street_line_1             varchar,
+    street_line_2             varchar,
+    street_line_3             varchar,
+    country                   varchar,
+    city                      varchar,
+    state_province            varchar,
+    postal_code               varchar,
+    location_name             varchar,
+    site_identifier           varchar,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.electronic_address
+(
+    electronic_address_id    varchar ,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    electronic_address_type   varchar,
+    electronic_address        varchar,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.telecommunication_address
+(
+    telecommunication_address_id  varchar ,
+    related_identifier             varchar,
+    related_identifier_source      varchar,
+    telecommunication_address_type varchar,
+    area_dialing_code              varchar,
+    phone_number                   varchar,
+    extension_number               varchar,
+    created_by                     varchar,
+    created_date                   timestamp
+);              
+CREATE TABLE IF NOT EXISTS sds_staging.restrictions
+(
+    restriction_id            varchar ,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    restriction_type          varchar,
+    restriction_indicator     boolean,
+    restriction_reason        varchar,
+	restriction_for_products varchar,
+	restriction_added_dt  date,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_receivables_attribute
+(
+    attribute_id    varchar ,
+    stg_business_entity_id       varchar,
+    receivables_attribute_type  varchar,
+    receivables_attribute_value varchar,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_association
+(
+    card_association_id    varchar ,
+    stg_business_entity_id       varchar,
+    association_name  varchar,
+    match_confidence   varchar,
+	matched_level_2   boolean,
+	matched_level_3_summary boolean,
+	matched_level_3_lineitem boolean,
+	matched_fleet_ind  varchar,
+	matched_mcc  varchar,
+	matched_data_quality  varchar,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_industry_classification
+(
+    classification_id    varchar ,
+    stg_business_entity_id       varchar,
+    classification_type  varchar,
+    classification_code   varchar,
+	classification_description  varchar,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_revenues
+(
+    revenue_id    varchar ,
+    stg_business_entity_id       varchar,
+    end_date  date,
+	card_revenue__1m__start_date date,
+	card_revenue__1m__average_monthly_amount numeric,
+    card_revenue__3m__start_date date,
+    card_revenue__3m__average_monthly_amount numeric,
+    card_revenue__12m__start_date date,
+    card_revenue__12m__average_monthly_amount numeric,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_transactions_stability
+(
+    card_transactions_stability_id    varchar ,
+    stg_business_entity_id       varchar,
+    end_date  timestamp,
+	date_accessible date,
+    card_transactions_stability__1m__start_date date,
+    card_transactions_stability__1m__days_present         varchar,
+    card_transactions_stability__1m__weeks_present        varchar,
+    card_transactions_stability__1m__months_present         varchar,
+    card_transactions_stability__1m__daily_coverage_ratio   numeric,
+    card_transactions_stability__1m__weekly_coverage_ratio   numeric,
+    card_transactions_stability__1m__monthly_coverage_ratio    numeric,
+    card_transactions_stability__3m__start_date date,
+    card_transactions_stability__3m__days_present      varchar,
+    card_transactions_stability__3m__weeks_present     varchar,
+    card_transactions_stability__3m__months_present     varchar,
+    card_transactions_stability__3m__daily_coverage_ratio    numeric,
+    card_transactions_stability__3m__weekly_coverage_ratio numeric,
+    card_transactions_stability__3m__monthly_coverage_ratio   numeric,
+    card_transactions_stability__12m__start_date date,
+    card_transactions_stability__12m__days_present      varchar,
+    card_transactions_stability__12m__weeks_present     varchar,
+    card_transactions_stability__12m__months_present     varchar,
+    card_transactions_stability__12m__daily_coverage_ratio   numeric,
+    card_transactions_stability__12m__weekly_coverage_ratio    numeric,
+    card_transactions_stability__12m__monthly_coverage_ratio    numeric,
+    created_by               varchar,
+    created_date             timestamp
+);
 
-As part of our ongoing infrastructure maintenance, we need to upgrade 12 VPC endpoints for the XBSD application. This includes:
 
-11 VPC endpoints in the Production environment.
-1 VPC endpoint in the Development environment that has pending access permission issues
-This task is part of the full scope of upgrading all 26 VPC endpoints across all environments. The other 14 endpoints (10 in Test, 4 in Dev environments) have already been completed.
 
-For the 1 Dev environment endpoint with access issues, we'll need coordination with the AWS administration team to resolve permission-related blockers before proceeding with the upgrade.
+********************************************************************************************************
 
-comments:
-CHG35514839 - Successfully completed implementation of VPC endpoint upgrades in AWS Production environment. Post-implementation validation confirms all 11 endpoints are functioning correctly with no issues identified in the B2B Supplier Directory Services.
-Completed VPC endpoint version upgrade in the Development environment.
-VPC endpoints version upgrade evidence document  VPC Endpoint Upgrade - Evidence.docx
-VPC endpoints version upgrade run notebook Runbook_XBSD_SDS_111597_vpc_endpoints_V2.xlsx
-VPC endpoints version upgrade list. vpc-endpoint-remediation_all.xlsx
-ServiceNow Change Request Procedure ServiceNow Change Request Procedure.docx
+mapping file
 
-Got it — you want **3 subtasks** created based on your user story, **each with proper description and comments** that you can directly use in your **Jira ticket**.
-
-Here's the complete structure you can use:
-
----
-
-# **Main User Story Title:**  
-**SDS AOCOMM - Upgrade VPC Endpoints (11 Prod, 1 Dev) in XBSD Application**
-
----
-
-## **Sub-task 1: Raise ServiceNow Change Request and Carry Out End-to-End Process**
-
-**Sub-task Title:**  
-Raise ServiceNow CR and Complete End-to-End Process for Prod VPC Endpoint Upgrade
-
-**Sub-task Description:**  
-- Raise ServiceNow Change Request (CHG) for Production VPC endpoint upgrades.  
-- Prepare the runbook for the upgrade steps and rollback procedures.  
-- Perform upgrade in coordination with the AWS implementation team.  
-- Capture detailed test evidence before and after the upgrade.  
-- Conduct post-implementation validation to ensure VPC endpoints are functioning correctly.  
-- Update related documentation (runbook, evidence, endpoint list).  
-- Close ServiceNow CR post successful validation and evidence submission.
-
-**Sub-task Comment (for Jira):**  
-> Raised and completed ServiceNow CR (CHG35514839) for Production VPC endpoint upgrades.  
-> Post-validation confirmed successful functioning of all 11 endpoints.  
-> Documents uploaded:  
-> - **Runbook:** `Runbook_XBSD_SDS_111597_vpc_endpoints_V2.xlsx`  
-> - **Evidence:** `VPC Endpoint Upgrade - Evidence.docx`  
-> - **Endpoint List:** `vpc-endpoint-remediation_all.xlsx`  
-> - **Procedure:** `ServiceNow Change Request Procedure.docx`
-
----
-
-## **Sub-task 2: Production Environment VPC Endpoints Upgrade**
-
-**Sub-task Title:**  
-Upgrade 11 VPC Endpoints in Production Environment
-
-**Sub-task Description:**  
-- Coordinate with the AWS implementation team to carry out the VPC endpoint upgrade for 11 Production endpoints.  
-- Execute the upgrade as per the approved ServiceNow Change Request.  
-- Perform pre- and post-validation checks on all upgraded endpoints.  
-- Ensure zero downtime or issues post-upgrade.  
-- Document and update the endpoint list accordingly.
-
-**Sub-task Comment (for Jira):**  
-> Successfully upgraded 11 Production VPC endpoints to the latest version.  
-> Post-upgrade validation confirmed no service impact to B2B Supplier Directory Services.  
-> All upgrade evidence captured and documented.
-
----
-
-## **Sub-task 3: Dev Environment VPC Endpoint Upgrade (Access Permission Issue)**
-
-**Sub-task Title:**  
-Resolve Dev Endpoint Permission Issue and Complete Upgrade
-
-**Sub-task Description:**  
-- Coordinate with the AWS administration team to resolve access permission issues for the Development VPC endpoint.  
-- Once access is granted, proceed with upgrading the endpoint to the latest version.  
-- Perform post-upgrade validation to ensure proper functionality.  
-- Update the documentation with the final upgrade status.
-
-**Sub-task Comment (for Jira):**  
-> Coordinated with AWS administration team to resolve Dev endpoint permission issues.  
-> Successfully upgraded the Development VPC endpoint post-resolution.  
-> Validation completed; no issues observed.  
-> Evidence added to the upgrade document.
-
----
-
-# **Summary of What You'll Get in Jira:**
-| Sub-task | Focus | What to Add |
-|:---|:---|:---|
-| 1 | Full Change Request process (CR, runbook, test evidence, validation) | Raise SNOW CR, prepare documents, close CR |
-| 2 | Production upgrade | Upgrade 11 Prod endpoints + validate |
-| 3 | Dev endpoint fix | Resolve permission issue + upgrade 1 Dev endpoint |
-
----
-
-Would you also like me to quickly show you a sample **template** how your **full Jira ticket** (User Story + Sub-tasks) would look cleanly?  
-(If yes, I’ll format it ready for copy-paste!)
+source_table,source_column,target_table,target_column,constant
+analysis_pfd,vendor_name_cleaned,business_entity,business_entity_name,
+analysis_pfd,,business_entity,stg_business_entity_id,
+analysis_pfd,nomapping,business_entity,source_system_id   ,
+analysis_pfd,nomapping,business_entity,  source_system_name,
+analysis_pfd,nomapping,business_entity,hierarchy_identifier,
+analysis_pfd,nomapping,business_entity,hierarchy_level,
+analysis_pfd,nomapping,business_entity,hierarchy_role,
+analysis_pfd,nomapping,business_entity,parent_id,
+analysis_pfd,nomapping,business_entity,is_active,
+analysis_pfd,vendor_name_cleaned,business_entity_details,business_entity_name,
+analysis_pfd,vendor_annualrevenue,business_entity_details,reported_annual_revenue,
+analysis_pfd,year_incorporated,business_entity_details,year_incorporated,
+analysis_pfd,corp_structures,business_entity_details,company_structure,
+analysis_pfd,industry_sector_dso_25,business_entity_characteristics,scf_industry_sector_dso_25,
+analysis_pfd,industry_sector_dso_50,business_entity_characteristics,scf_industry_sector_dso_50,
+analysis_pfd,industry_sector_dso_75,business_entity_characteristics,scf_industry_sector_dso_75,
+analysis_pfd,industry_group_dso_25,business_entity_characteristics,scf_industry_group_dso_25,
+analysis_pfd,industry_group_dso_50,business_entity_characteristics,scf_industry_group_dso_50,
+analysis_pfd,industry_group_dso_75,business_entity_characteristics,scf_industry_group_dso_75,
+analysis_pfd,vendor_credit_rating_moody,business_entity_characteristics,Moody,
+analysis_pfd,vendor_credit_rating_sp,business_entity_characteristics,SP,
+analysis_pfd,vendor_credit_revolver_rate,business_entity_characteristics,credit_revolver_rate,
+analysis_pfd,vendor_cogs,business_entity_characteristics,cost_of_goods_sold,
+analysis_pfd,ind_vc_campaign,business_entity_characteristics,vc_campaigned_previously,
+analysis_pfd,virtualcard_accpetance_tier_legacy,business_entity_characteristics,vc_acceptance_tier_legacy,
+analysis_pfd,virtualcard_accpetance_tier_model,business_entity_characteristics,vc_acceptance_tier_model,
+analysis_pfd,virtualcard_accpetance_tier_userdefined,business_entity_characteristics,vc_acceptance_tier_userdefined,
+analysis_pfd,ind_virtual_card_campaign_count,business_entity_characteristics,vc_campaign_count,
+analysis_pfd,vc_campaign_accepts,business_entity_characteristics,vc_campaign_accepts,
+analysis_pfd,registered_agents,business_entity_characteristics,registered_agents,
+analysis_pfd,vendor_government_id,business_entity_identifiers,Tax_Id,
+analysis_pfd,vendor_alternate_name,business_entity_identifiers,DBA,
+analysis_pfd,google_places_id,business_entity_identifiers,google_places_id,
+analysis_pfd,Enigma_id,business_entity_identifiers,enigma_id,
+analysis_pfd,Enigma_business_id,business_entity_identifiers,enigma_business_id,
+analysis_pfd,eins,business_entity_identifiers,associated_tax_ids,
+analysis_pfd,vendor_country,physical_address,country,
+analysis_pfd,vendor_state,physical_address,state_province,
+analysis_pfd,vendor_postcode,physical_address,postal_code,
+analysis_pfd,vendor_address_ln_1,physical_address,street_line_1,
+analysis_pfd,vendor_address_ln_2,physical_address,street_line_2,
+analysis_pfd,vendor_address_ln_3,physical_address,city,
+analysis_pfd,vendor_phone_number,telecommunication_address,primary_phone_number,
+analysis_pfd,vendor_phone_number_2,telecommunication_address,mobile,
+analysis_pfd,vendor_email,electronic_address,email,
+analysis_pfd,vendor_website,electronic_address,website,
+analysis_pfd,,business_entity_spend_analysis,spend_analysis_id,
+analysis_pfd,stg_buying_entity,business_entity_spend_analysis,stg_payor_business_entity_id,
+analysis_pfd,partition_id,business_entity_spend_analysis,analysis_conducted_dt,
+analysis_pfd,user_request_id,business_entity_spend_analysis,analysis_external_reference_id,
+analysis_pfd,analysis_type,business_entity_spend_analysis,analysis_stage,
+analysis_pfd,annual_invoice_count,business_entity_spend_analysis,count_of_invoices,
+analysis_pfd,payment_terms,business_entity_spend_analysis,payment_terms,
+analysis_pfd,annual_transaction_count,business_entity_spend_analysis,count_of_payments,
+analysis_pfd,annual_spend_usd,business_entity_spend_analysis,sum_of_payments,
+analysis_pfd,business_start_date,business_entity_spend_analysis,period_start_date,
+analysis_pfd,business_end_date,business_entity_spend_analysis,period_end_date,
+analysis_pfd,payment_currency,business_entity_spend_analysis,payment_ccy,
+analysis_pfd,Nomapping,business_entity_spend_analysis,chargeback_amount,
+analysis_pfd,Nomapping,business_entity_spend_analysis,chargeback_percentage,
+analysis_pfd,payment_actual_days,business_entity_spend_analysis,actual_days_payment_outstanding,
+analysis_pfd,payment_type,business_entity_spend_analysis,payment_mode,
+analysis_pfd,payment_terms_days,business_entity_spend_analysis,payment_term_days,
+analysis_pfd,payment_terms_discount_ind,business_entity_spend_analysis,payment_terms_discount_ind,
+analysis_pfd,payment_terms_discount_rate,business_entity_spend_analysis,payment_terms_discount_rate,
+analysis_pfd,payment_terms_discount_days,business_entity_spend_analysis,payment_terms_discount_days,
+analysis_pfd,,business_entity_payment_profile_attribute,payment_profile_attribute_type,
+analysis_pfd,vendor_dso,business_entity_payment_profile_attribute,average_vendor_dso,
+analysis_pfd,vendor_dpo,business_entity_payment_profile_attribute,average_vendor_dpo,
+analysis_pfd,vendor_dio,business_entity_payment_profile_attribute,average_vendor_dio,
+analysis_pfd,ind_scf,business_entity_payment_profile_attribute,enrolled_scf_supplier,
+analysis_pfd,ind_vc,business_entity_payment_profile_attribute,enrolled_vc_supplier,
+analysis_pfd,ind_virtualcard_concierge,business_entity_payment_profile_attribute,vc_concierge,
+analysis_pfd,ind_virtual_card_vcn,business_entity_payment_profile_attribute,virtual_card_vcn,
+analysis_pfd,vc_receipts,business_entity_payment_profile_attribute,spend_on_jpmc_vc,
+analysis_pfd,vc_recency,business_entity_payment_profile_attribute,vc_enrollment_duration_years,
+analysis_pfd,vc_buyercount,business_entity_payment_profile_attribute,vc_buyercount,
+analysis_pfd,ind_virtualcard_interchange_amount,business_entity_payment_profile_attribute,vc_interchange_amt,
+analysis_pfd,ind_cms,business_entity_payment_profile_attribute,cms_enrolled,
+analysis_pfd,ind_wepay,business_entity_payment_profile_attribute,cms_subacct_enrolled,
+analysis_pfd,ind_bb,business_entity_payment_profile_attribute,businessbank_enrolled,
+analysis_pfd,ind_vcn,business_entity_payment_profile_attribute,vcn_payment_accepted,
+analysis_pfd,stg_codelist,business_entity_payment_profile_attribute,product_segmentation_applicable,
+analysis_pfd,ind_cc,business_entity_payment_profile_attribute,jpmc_cc_payment_accepted,
+analysis_pfd,cc_receipts,business_entity_payment_profile_attribute,jpmc_cc_spend,
+analysis_pfd,cc_recency,business_entity_payment_profile_attribute,jpmc_cc_enrolled_years,
+analysis_pfd,cc_buyercount,business_entity_payment_profile_attribute,jpmc_cc_buyer_count,
+analysis_pfd,has_online_payments,business_entity_payment_profile_attribute,has_online_payments,
+analysis_pfd,filter_do_not_campaign,restrictions,Do_Not_Campaign,
+analysis_pfd,vendor_industry_lvl_1,business_entity_industry_classification,Level-1,
+analysis_pfd,vendor_industry_lvl_2,business_entity_industry_classification,Level-2,
+analysis_pfd,vendor_industry_lvl_3,business_entity_industry_classification,Level-3,
+analysis_pfd,filter_trust,business_entity_industry_classification,Trust,
+analysis_pfd,filter_realestate,business_entity_industry_classification,Real_Estate,
+analysis_pfd,filter_govt,business_entity_industry_classification,Govt,
+analysis_pfd,filter_utilities,business_entity_industry_classification,Utilities,
+analysis_pfd,filter_insurance,business_entity_industry_classification,Insurance,
+analysis_pfd,filter_fi,business_entity_industry_classification,Fi,
+analysis_pfd,visa_match_confidence,business_entity_card_association,match_confidence,
+analysis_pfd,visa_matched_level_ii,business_entity_card_association,matched_level_2,
+analysis_pfd,visa_matched_level_iii_summary,business_entity_card_association,matched_level_3_summary,
+analysis_pfd,visa_matched_level_iii_line_item,business_entity_card_association,matched_level_3_lineitem,
+analysis_pfd,visa_matched_fleet_ind,business_entity_card_association,matched_fleet_ind,
+analysis_pfd,visa_matched_data_quality,business_entity_card_association,matched_data_quality,
+analysis_pfd,visa_matched_mcc,business_entity_card_association,matched_mcc,
+analysis_pfd,ind_card_match,business_entity_card_association,ind_card_match,
+analysis_pfd,card_revenues,business_entity_card_revenues,card_revenue,
