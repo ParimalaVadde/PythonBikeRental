@@ -21,3 +21,89 @@ ind_decline	apar	binary (Y/N)	if supplier has previously rejected attempts to on
 * Justification: This is a characteristic of the business entity's relationship with JPMC"
 stp_partnershiplist	stp/cardcampaign	list	list of stp services that have a relationship with the supplier & stg codes from ccdw(stg_codelist has been deprecated)	n			additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` of ""STP_PARTNERSHIP_LIST""
 * Justification: This represents service partnerships for the entity"
+
+
+
+I understand you need a more detailed analysis that includes the current mapping status and specific recommendations. Here's a comprehensive presentation format you can use:
+
+# PFD Source Column Mapping Analysis
+
+## Changes to Existing Mappings
+
+1. **sds_upload_id** → Replace current mapping of `user_request_id` to `business_entity_spend_analysis.analysis_external_reference_id`
+   * Current: `user_request_id` mapped to `analysis_external_reference_id`
+   * Recommendation: Replace with `sds_upload_id` as it's a more reliable unique identifier
+   * Impact: Minor change to ETL logic, no schema changes required
+
+2. **client_name** → Replace current mapping of `stg_buying_entity` to `business_entity_spend_analysis.stg_payor_business_entity_id`
+   * Current: `stg_buying_entity` mapped to `stg_payor_business_entity_id`
+   * Recommendation: Use `client_name` instead as specified in the requirements
+   * Impact: Minor change to ETL logic, no schema changes required
+
+## New Column Mappings (Utilizing Existing Columns)
+
+3. **upload_user** → Map to `business_entity_spend_analysis.created_by`
+   * Current: No mapping exists
+   * Recommendation: Utilize existing `created_by` column which has the same purpose
+   * Impact: No schema changes, just ETL logic update
+
+4. **sds_upload_ts** → Map to `business_entity_spend_analysis.created_date`
+   * Current: No mapping exists
+   * Recommendation: Utilize existing `created_date` column which has the same purpose
+   * Impact: No schema changes, just ETL logic update
+
+5. **supplier_ecid** → Map to `business_entity_identifiers` table
+   * Current: No mapping exists
+   * Recommendation: Add new records with `identifier_type = 'ECID'` and `identifier_value = supplier_ecid`
+   * Impact: No schema changes, uses existing table structure with new identifier type
+
+6. **ind_decline** → Map to `business_entity_characteristics` table
+   * Current: No mapping exists
+   * Recommendation: Add records with `characteristic_type = 'SCF_DECLINE_INDICATOR'` and appropriate value
+   * Impact: No schema changes, uses existing table structure with new characteristic type
+
+7. **stp_partnershiplist** → Map to `business_entity_characteristics` table
+   * Current: No mapping exists
+   * Recommendation: Add records with `characteristic_type = 'STP_PARTNERSHIP_LIST'` and store as delimited string
+   * Impact: No schema changes, uses existing table structure with new characteristic type
+
+## New Columns Requiring Schema Changes
+
+8. **sds_note** → Add new column to `business_entity_spend_analysis`
+   * Current: No mapping exists
+   * Recommendation: Create `analysis_notes VARCHAR` column in `business_entity_spend_analysis`
+   * Impact: Minor schema change to add one column to an existing table
+
+9. **SCF Financial Metrics** (throughput_usd, avg_spread, avg_payment_terms, rate_proposed, rate_offered, esg_discount)
+   * Current: No mapping exists
+   * Recommendation: Create new column `scf_details VARCHAR` in `business_entity_characteristics` to store as JSON
+   * Justification: Keeps related SCF attributes together without creating multiple new columns
+   * Alternative: Add these as individual characteristic types if JSON storage is not preferred
+   * Impact: Minor schema change to add one column OR no schema change if using characteristic types
+
+## Columns Not Requiring Mapping
+
+10. **task_id** → No mapping needed
+    * Current: No mapping exists
+    * Justification: Transactional tracking ID, not needed for downstream analysis
+
+11. **sds_upload_name** → No mapping needed
+    * Current: No mapping exists
+    * Justification: Upload metadata, not needed for entity analysis
+
+12. **buying_entity** → No mapping needed
+    * Current: No mapping exists
+    * Justification: Marked as placeholder column
+
+13. **scf_buyerlist** → No mapping needed
+    * Current: No mapping exists
+    * Justification: Marked as placeholder column
+
+## Summary of Impacts
+
+- **Schema Changes**: 1-2 new columns in existing tables (minimal impact)
+- **ETL Changes**: Update mapping logic for 7 columns (moderate impact)
+- **Data Quality**: No negative impacts identified
+- **Overall**: This approach maintains data model integrity while incorporating all new business-relevant data
+
+This analysis addresses 100% of the new columns while minimizing changes to the existing schema structure.
