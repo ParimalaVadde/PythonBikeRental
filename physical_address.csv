@@ -1,0 +1,4 @@
+"physical_address_id","related_identifier","related_identifier_source","physical_address_type","street_line_1","street_line_2","street_line_3","country","city","state_province","postal_code","location_name","site_identifier","created_by","created_date"
+"b71db9e6-65b4-36aa-d579-e78252e30e90","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity","Billing","3 Oxford Ct",NULL,NULL,"USA",NULL,"DE","03065-8143",NULL,NULL,"PFD","2025-05-05 09:25:19.718"
+"5df7307f-9a3a-c029-57e7-0e649871e100","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity","Billing","3 Oxford Ct",NULL,NULL,"USA","NEWARK","DE","03065-8143",NULL,NULL,"PFD","2025-05-05 09:25:19.718"
+"ced42ba3-6c1e-ea50-e58e-a11379f24cc5","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity","Billing","P.O BOX 2376",NULL,NULL,"USA","LONDON","OH","23411",NULL,NULL,"PFD","2025-05-05 09:25:19.718"

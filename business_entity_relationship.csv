@@ -1,0 +1,6 @@
+"business_entity_relationship_id","stg_business_entity_id","business_entity_contact_id","business_entity_role","related_business_entity_id","related_business_entity_role","created_by","created_date"
+"4bb69c5c-6335-7db7-7077-3e6df9ec9978","cf49fb42-dd63-1eae-454f-6be3d14c2bbe",NULL,"intercompany_supplier","21b12e21-5d50-bdd6-7603-be18b846f93e","intercompany_buyer","PFD","2025-05-05"
+"914db80c-ceba-c5e0-7a13-51f4a62a209b","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","30708a4e-339d-a6ae-544a-52062b7ed84f","Supplier","21b12e21-5d50-bdd6-7603-be18b846f93e","Client","PFD","2025-05-05"
+"bc0526bb-cfc4-45a9-8d64-810ce0b930bf","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","fd79dbc0-6341-ed81-7934-67fdcb9430b5","Supplier","21b12e21-5d50-bdd6-7603-be18b846f93e","Client","PFD","2025-05-05"
+"f262d742-954f-c235-65dd-a2fbda639908","2d35a04a-5fdf-50d5-7750-c1c7621ddc33",NULL,"Firm","21b12e21-5d50-bdd6-7603-be18b846f93e","Client","PFD","2025-05-05"
+"7a1bed71-b3e0-c127-b7d1-c4df627e9943","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","c947b502-02ee-55d3-6b3f-860e3889073c","Supplier","21b12e21-5d50-bdd6-7603-be18b846f93e","Client","PFD","2025-05-05"

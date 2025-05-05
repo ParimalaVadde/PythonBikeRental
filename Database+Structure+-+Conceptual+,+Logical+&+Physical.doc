@@ -1,0 +1,1484 @@
+Date: Mon, 5 May 2025 09:43:59 +0000 (UTC)
+Message-ID: <1698739295.84390.1746438239782@ip-100-73-97-184.ec2.internal>
+Subject: Exported From Confluence
+MIME-Version: 1.0
+Content-Type: multipart/related; 
+	boundary="----=_Part_84389_1090789898.1746438239781"
+
+------=_Part_84389_1090789898.1746438239781
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Content-Location: file:///C:/exported.html
+
+<html xmlns:o=3D'urn:schemas-microsoft-com:office:office'
+      xmlns:w=3D'urn:schemas-microsoft-com:office:word'
+      xmlns:v=3D'urn:schemas-microsoft-com:vml'
+      xmlns=3D'urn:w3-org-ns:HTML'>
+<head>
+    <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8=
+">
+    <title>Database Structure - Conceptual , Logical &amp; Physical</title>
+    <!--[if gte mso 9]>
+    <xml>
+        <o:OfficeDocumentSettings>
+            <o:TargetScreenSize>1024x640</o:TargetScreenSize>
+            <o:PixelsPerInch>72</o:PixelsPerInch>
+            <o:AllowPNG/>
+        </o:OfficeDocumentSettings>
+        <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>90</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+    </xml>
+    <![endif]-->
+    <style>
+                <!--
+        @page Section1 {
+            size: 8.5in 11.0in;
+            margin: 1.0in;
+            mso-header-margin: .5in;
+            mso-footer-margin: .5in;
+            mso-paper-source: 0;
+        }
+
+        table {
+            border: solid 1px;
+            border-collapse: collapse;
+        }
+
+        table td, table th {
+            border: solid 1px;
+            padding: 5px;
+        }
+
+        td {
+            page-break-inside: avoid;
+        }
+
+        tr {
+            page-break-after: avoid;
+        }
+
+        div.Section1 {
+            page: Section1;
+        }
+
+        /* Confluence print stylesheet. Common to all themes for print medi=
+a */
+/* Full of !important until we improve batching for print CSS */
+
+@media print {
+    #main {
+        padding-bottom: 1em !important; /* The default padding of 6em is to=
+o much for printouts */
+    }
+
+    body {
+        font-family: Arial, Helvetica, FreeSans, sans-serif;
+        font-size: 10pt;
+        line-height: 1.2;
+    }
+
+    body, #full-height-container, #main, #page, #content, .has-personal-sid=
+ebar #content {
+        background: var(--ds-surface, #fff) !important;
+        color: var(--ds-text, #000) !important;
+        border: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+    }
+
+    a, a:link, a:visited, a:focus, a:hover, a:active {
+        color: var(--ds-link-pressed, #000);
+    }
+
+    #content h1,
+    #content h2,
+    #content h3,
+    #content h4,
+    #content h5,
+    #content h6 {
+        font-family: Arial, Helvetica, FreeSans, sans-serif;
+        page-break-after: avoid;
+    }
+
+    pre {
+        font-family: Monaco, "Courier New", monospace;
+    }
+
+    #header,
+    .aui-header-inner,
+    #navigation,
+    #sidebar,
+    .sidebar,
+    #personal-info-sidebar,
+    .ia-fixed-sidebar,
+    .page-actions,
+    .navmenu,
+    .ajs-menu-bar,
+    .noprint,
+    .inline-control-link,
+    .inline-control-link a,
+    a.show-labels-editor,
+    .global-comment-actions,
+    .comment-actions,
+    .quick-comment-container,
+    #addcomment {
+        display: none !important;
+    }
+
+    /* CONF-28544 cannot print multiple pages in IE */
+    #splitter-content {
+        position: relative !important;
+    }
+
+    .comment .date::before {
+        content: none !important; /* remove middot for print view */
+    }
+
+    h1.pagetitle img {
+        height: auto;
+        width: auto;
+    }
+
+    .print-only {
+        display: block;
+    }
+
+    #footer {
+        position: relative !important; /* CONF-17506 Place the footer at en=
+d of the content */
+        margin: 0;
+        padding: 0;
+        background: none;
+        clear: both;
+    }
+
+    #poweredby {
+        border-top: none;
+        background: none;
+    }
+
+    #poweredby li.print-only {
+        display: list-item;
+        font-style: italic;
+    }
+
+    #poweredby li.noprint {
+        display: none;
+    }
+
+    /* no width controls in print */
+    .wiki-content .table-wrap,
+    .wiki-content p,
+    .panel .codeContent,
+    .panel .codeContent pre,
+    .image-wrap {
+        overflow: visible !important;
+    }
+
+    /* TODO - should this work? */
+    #children-section,
+    #comments-section .comment,
+    #comments-section .comment .comment-body,
+    #comments-section .comment .comment-content,
+    #comments-section .comment p {
+        page-break-inside: avoid;
+    }
+
+    #page-children a {
+        text-decoration: none;
+    }
+
+    /**
+     hide twixies
+
+     the specificity here is a hack because print styles
+     are getting loaded before the base styles. */
+    #comments-section.pageSection .section-header,
+    #comments-section.pageSection .section-title,
+    #children-section.pageSection .section-header,
+    #children-section.pageSection .section-title,
+    .children-show-hide {
+        padding-left: 0;
+        margin-left: 0;
+    }
+
+    .children-show-hide.icon {
+        display: none;
+    }
+
+    /* personal sidebar */
+    .has-personal-sidebar #content {
+        margin-right: 0px;
+    }
+
+    .has-personal-sidebar #content .pageSection {
+        margin-right: 0px;
+    }
+
+    .no-print, .no-print * {
+        display: none !important;
+    }
+}
+-->
+    </style>
+</head>
+<body>
+    <h1>Database Structure - Conceptual , Logical &amp; Physical</h1>
+    <div class=3D"Section1">
+        <h1 id=3D"DatabaseStructureConceptual,Logical&amp;Physical-Conceptu=
+alDataModel"><strong>
+  <style type=3D"text/css">/*<![CDATA[*/
+div.rbtoc1746438239743 {padding: 0px;}
+div.rbtoc1746438239743 ul {margin-left: 0px;}
+div.rbtoc1746438239743 li {margin-left: 0px;padding-left: 0px;}
+
+/*]]>*/</style>
+  <div class=3D"toc-macro rbtoc1746438239743">
+   <ul class=3D"toc-indentation">
+    <li><a href=3D"#DatabaseStructureConceptual,Logical&amp;Physical-Concep=
+tualDataModel">Conceptual Data Model</a></li>
+    <li><a href=3D"#DatabaseStructureConceptual,Logical&amp;Physical-Logica=
+lDataModel">Logical Data Model</a></li>
+    <li><a href=3D"#DatabaseStructureConceptual,Logical&amp;Physical-Physic=
+alDataModel">Physical Data Model</a></li>
+    <li><a href=3D"#DatabaseStructureConceptual,Logical&amp;Physical-DataDi=
+ctionary">Data Dictionary</a></li>
+   </ul>
+  </div>Conceptual Data Model</strong></h1>
+<p><br></p>
+<p><span> </span><span class=3D"confluence-embedded-file-wrapper"><img clas=
+s=3D"confluence-embedded-image confluence-external-resource" draggable=3D"f=
+alse" src=3D"https://documents.lucid.app/documents/23c51f0f-5381-4076-9506-=
+dbeb340882c3/pages/0_0?a=3D2177&amp;x=3D-585&amp;y=3D-250&amp;w=3D2047&amp;=
+h=3D1081&amp;store=3D1&amp;accept=3Dimage%2F*&amp;auth=3DLCA%20739138f40416=
+02020a0950c769a6d2f52451b224c6c7ffae34e83ebc92178102-ts%3D1714550663" data-=
+image-src=3D"https://documents.lucid.app/documents/23c51f0f-5381-4076-9506-=
+dbeb340882c3/pages/0_0?a=3D2177&amp;x=3D-585&amp;y=3D-250&amp;w=3D2047&amp;=
+h=3D1081&amp;store=3D1&amp;accept=3Dimage%2F*&amp;auth=3DLCA%20739138f40416=
+02020a0950c769a6d2f52451b224c6c7ffae34e83ebc92178102-ts%3D1714550663"></spa=
+n></p>
+<h1 id=3D"DatabaseStructureConceptual,Logical&amp;Physical-LogicalDataModel=
+"><strong>Logical Data Model</strong></h1>
+<p><span> </span><span class=3D"confluence-embedded-file-wrapper"><img clas=
+s=3D"confluence-embedded-image confluence-external-resource" draggable=3D"f=
+alse" src=3D"https://documents.lucid.app/documents/23c51f0f-5381-4076-9506-=
+dbeb340882c3/pages/ZUlxQhbZ_daM?a=3D2177&amp;x=3D-675&amp;y=3D-197&amp;w=3D=
+2840&amp;h=3D1181&amp;store=3D1&amp;accept=3Dimage%2F*&amp;auth=3DLCA%20d54=
+5c97c08e8133e05a93ad109b7f936824930172f6fb43880ec1d455b187ce7-ts%3D17145506=
+63" data-image-src=3D"https://documents.lucid.app/documents/23c51f0f-5381-4=
+076-9506-dbeb340882c3/pages/ZUlxQhbZ_daM?a=3D2177&amp;x=3D-675&amp;y=3D-197=
+&amp;w=3D2840&amp;h=3D1181&amp;store=3D1&amp;accept=3Dimage%2F*&amp;auth=3D=
+LCA%20d545c97c08e8133e05a93ad109b7f936824930172f6fb43880ec1d455b187ce7-ts%3=
+D1714550663"></span></p>
+<p><br></p>
+<h1 id=3D"DatabaseStructureConceptual,Logical&amp;Physical-PhysicalDataMode=
+l"><strong>Physical Data Model</strong></h1>
+<p><span> </span><span class=3D"confluence-embedded-file-wrapper"><img clas=
+s=3D"confluence-embedded-image confluence-external-resource" draggable=3D"f=
+alse" src=3D"https://documents.lucid.app/documents/23c51f0f-5381-4076-9506-=
+dbeb340882c3/pages/mImxA.TWzbpA?a=3D2177&amp;x=3D-1457&amp;y=3D-762&amp;w=
+=3D3433&amp;h=3D1788&amp;store=3D1&amp;accept=3Dimage%2F*&amp;auth=3DLCA%20=
+a5f8287cc235b4450e92a76fb2125a9caa71620bb30843504b423dc1f3a137b7-ts%3D17145=
+50663" data-image-src=3D"https://documents.lucid.app/documents/23c51f0f-538=
+1-4076-9506-dbeb340882c3/pages/mImxA.TWzbpA?a=3D2177&amp;x=3D-1457&amp;y=3D=
+-762&amp;w=3D3433&amp;h=3D1788&amp;store=3D1&amp;accept=3Dimage%2F*&amp;aut=
+h=3DLCA%20a5f8287cc235b4450e92a76fb2125a9caa71620bb30843504b423dc1f3a137b7-=
+ts%3D1714550663"></span></p>
+<p><br></p>
+<h1 id=3D"DatabaseStructureConceptual,Logical&amp;Physical-DataDictionary">=
+<strong>Data Dictionary</strong></h1>
+<div class=3D"table-wrap">
+ <table class=3D"relative-table wrapped confluenceTable" style=3D"width: 68=
+.4931%;">
+  <colgroup>
+   <col style=3D"width: 11.3781%;">
+   <col style=3D"width: 12.637%;">
+   <col style=3D"width: 18.6905%;">
+   <col style=3D"width: 5.85853%;">
+   <col style=3D"width: 5.61644%;">
+   <col style=3D"width: 11.0876%;">
+   <col style=3D"width: 34.7154%;">
+  </colgroup>
+  <tbody class=3D"">
+   <tr class=3D"">
+    <td class=3D"confluenceTd">ENTITY</td>
+    <td class=3D"confluenceTd">ATTRIBUTE</td>
+    <td class=3D"confluenceTd">
+     <p>Critical for Recruitment</p>
+     <p>(Phase 2, nice to have may become must have in Phase 3)</p></td>
+    <td class=3D"confluenceTd">PRIMARY KEY</td>
+    <td class=3D"confluenceTd">FOREIGN KEY</td>
+    <td class=3D"confluenceTd">Description</td>
+    <td class=3D"confluenceTd">Example</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity</td>
+    <td class=3D"confluenceTd">business entity id&nbsp;</td>
+    <td class=3D"confluenceTd">N/A</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Synthetic Primary Key that numerically repre=
+sents a business entity</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Id</=
+td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity</td>
+    <td class=3D"confluenceTd">business entity name</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Populates with company name</td>
+    <td class=3D"confluenceTd">Legal Name</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity</td>
+    <td class=3D"confluenceTd">hierarchy identifier (PPS change)</td>
+    <td class=3D"confluenceTd">nice to have</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Recognizes a business entity as Parent or Ch=
+ild or Other</td>
+    <td class=3D"confluenceTd">Group id of the hierarchy</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity</td>
+    <td class=3D"confluenceTd">hierarchy level</td>
+    <td class=3D"confluenceTd">nice to have</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically recognizes the relationship betw=
+een a parent and a child entity to enth degree</td>
+    <td class=3D"confluenceTd">1 - Parent , 2- Child and so on&nbsp;</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity</td>
+    <td class=3D"confluenceTd">hierarchy role</td>
+    <td class=3D"confluenceTd">nice to have</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Identifies at what level a business entity i=
+s located in a hierarchy</td>
+    <td class=3D"confluenceTd">Parent , Child, Regional Child,$configurable=
+</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity</td>
+    <td class=3D"confluenceTd">is active</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Active Business Entity Boolean</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">business entity id&nbsp;</td>
+    <td class=3D"confluenceTd">N/A</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Synthetic Primary Key that numerically repre=
+sents a business</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Id</=
+td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">company type id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">The numerical connection between a business =
+entity and legal type</td>
+    <td class=3D"confluenceTd">Individual, Sole proprietorship, Partnership=
+, Corporation</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">market segment type id&nbsp;</td>
+    <td class=3D"confluenceTd">N&nbsp;</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Identifies which market best represents a bu=
+siness</td>
+    <td class=3D"confluenceTd">Consumer &amp; Retail, Energy &amp; Power, D=
+iversified Industrials, Technology, Media, Telecom (TMT),Healthcare</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">industry type id - PPS change - PPS change</=
+td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Categorizes the business entities industry</=
+td>
+    <td class=3D"confluenceTd">Administration of Economic Programs, Adminis=
+trative and Support Services, Air Transportation, Beverage and Tobacco Prod=
+uct Manufacturing, Chemical Manufacturing, Clothing and Clothing Accessorie=
+s Stores, Computer and Electronic Product Manufacturing, Construction of Bu=
+ildings, Electrical Equipment, Appliance, and Component Manufacturing, Elec=
+tronics and Appliance Stores, Executive, Legislative, and Other General Gov=
+ernment Support, Fabricated Metal Product Manufacturing, Food Manufacturing=
+, Food Services and Drinking Places, Gasoline Stations, General Merchandise=
+ Stores, Heavy and Civil Engineering Construction, Machinery Manufacturing,=
+ Merchant Wholesalers, Durable Goods, Merchant Wholesalers, Non-durable Goo=
+ds, Mining (except Oil and Gas), Miscellaneous Manufacturing, National Secu=
+rity and International Affairs, Nonmetallic Mineral Product Manufacturing, =
+Non-store Retailers, Oil and Gas Extraction, Other Information Services, Pa=
+per Manufacturing, Petroleum and Coal Products Manufacturing, Plastics and =
+Rubber Products Manufacturing, Primary Metal Manufacturing, Printing and Re=
+lated Support Activities, Professional, Scientific, and Technical Services,=
+ Rail Transportation, Real Estate, Repair and Maintenance, Telecommunicatio=
+ns, Textile Mills, Textile Product Mills, Transit and Ground Passenger Tran=
+sportation, Transportation Equipment Manufacturing, Truck Transportation, U=
+tilities, Warehousing and Storage, Waste Management and Remediation Service=
+s, $configurable</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">website&nbsp;</td>
+    <td class=3D"confluenceTd">nice to have</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Business Entity website</td>
+    <td class=3D"confluenceTd">Web URL</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">phones assignment id</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Relates Business Entity entity to Phone Numb=
+er entity</td>
+    <td class=3D"confluenceTd">Phone numbers with country code</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">emails assignment id</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Relates Business Entity ID to Email Entity</=
+td>
+    <td class=3D"confluenceTd">Link to email addressees for the entity&nbsp=
+;</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">addresses assignment id</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Relates Business Entity ID to Address Entity=
+</td>
+    <td class=3D"confluenceTd">Link to all addresses assigned to business e=
+ntity</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">restrictions assignment id</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Relates Business Entity ID to Restriction En=
+tity</td>
+    <td class=3D"confluenceTd">Link to all restrictions assigned to busines=
+s entity</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">contacts assignment id</td>
+    <td class=3D"confluenceTd">nice to have</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Relates Business Entity ID to Contact Entity=
+</td>
+    <td class=3D"confluenceTd">Link to all contacts assigned to business en=
+tity</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Details</td>
+    <td class=3D"confluenceTd">is active</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Active Business Entity details Boolean</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Identifiers</td>
+    <td class=3D"confluenceTd">identifier id&nbsp;</td>
+    <td class=3D"confluenceTd">N/A</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Connects business entity to Numerical legal =
+Identifiers&nbsp;</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Iden=
+tifier Id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Identifiers</td>
+    <td class=3D"confluenceTd">enterprise entity id&nbsp;</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Identifiers</td>
+    <td class=3D"confluenceTd">identifier type id&nbsp;</td>
+    <td class=3D"confluenceTd">N/A</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Connects business entity to Numerical legal =
+Identifiers in Sales Force</td>
+    <td class=3D"confluenceTd">CC_SE_Salesforce_ID</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Identifiers</td>
+    <td class=3D"confluenceTd">identifier value</td>
+    <td class=3D"confluenceTd">Y (Cresendo_ID,Tax_ID)| Nice to have (Visa_I=
+D, MC_ID)|No (Rest of Types)</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Related number to legal identifier</td>
+    <td class=3D"confluenceTd">ECI, CAS, DUNS, CC_SE_Salesforce_Id, VISA_ID=
+, MC_ID, VC_Supplier_ID, CC_Org_id, $configurable</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Identifiers</td>
+    <td class=3D"confluenceTd">is active</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Active Business Entity identifier Boolean</t=
+d>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Characteristic</td>
+    <td class=3D"confluenceTd">characteristics id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Relates Business entity to characteristic el=
+ement</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Char=
+acteristic Id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Characteristic</td>
+    <td class=3D"confluenceTd">business entity id&nbsp;</td>
+    <td class=3D"confluenceTd">N/A</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Synthetic Primary Key that numerically repre=
+sents a business</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Id</=
+td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Characteristic</td>
+    <td class=3D"confluenceTd">characteristics type id&nbsp;</td>
+    <td class=3D"confluenceTd">N/A</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Numerically recognizes a business entity typ=
+e</td>
+    <td class=3D"confluenceTd">Numerically recognizes a business entity typ=
+e</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Characteristic</td>
+    <td class=3D"confluenceTd">characteristic value</td>
+    <td class=3D"confluenceTd">?</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Related number to Characteristic Type</td>
+    <td class=3D"confluenceTd">Dependent on Characteristic</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Characteristic</td>
+    <td class=3D"confluenceTd">is active</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Active Business Entity Characteristic Boolea=
+n</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">business entity contact id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Relates Business entity to contact</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Cont=
+act Id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">business entity id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Synthetic Primary Key that numerically repre=
+sents a business</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Iden=
+tifier Id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">contact type id&nbsp;</td>
+    <td class=3D"confluenceTd">N/A</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Numerically recognizes a contact type</td>
+    <td class=3D"confluenceTd">Numerically recognizes a contact type</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">contact name</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Name of Business Entity point of contact</td=
+>
+    <td class=3D"confluenceTd">Name for the contact</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">contact title</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Title within the business entity</td>
+    <td class=3D"confluenceTd">Corporate title for the contact</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">contact active indicator</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Is a contact Boolean that shows if a contact=
+ is active</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">contact deactivated date</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Date of contact deactivation</td>
+    <td class=3D"confluenceTd">Date contact was deactivated for this busine=
+ss entity</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">descision maker indicator</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Does this contact have authority</td>
+    <td class=3D"confluenceTd">True/False</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">descision maker type</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">What product alignment does he have authorit=
+y over</td>
+    <td class=3D"confluenceTd">Supply Chain Finance | Virtual Card&nbsp;</t=
+d>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">phones assignment id</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Phone numbers with country code</td>
+    <td class=3D"confluenceTd">Phone numbers with country code</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">emails assignment id</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Link to email addressees for the entity&nbsp=
+;</td>
+    <td class=3D"confluenceTd">Link to email addressees for the entity&nbsp=
+;</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">addresses assignment id</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Link to all addresses assigned to business e=
+ntity</td>
+    <td class=3D"confluenceTd">Link to all addresses assigned to business e=
+ntity</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">restrictions assignment id</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Link to all restrictions assigned to busines=
+s entity</td>
+    <td class=3D"confluenceTd">Link to all restrictions assigned to busines=
+s entity</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Contacts</td>
+    <td class=3D"confluenceTd">is active</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Active Business Entity contacts Boolean</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Relationship</td>
+    <td class=3D"confluenceTd">business entity relationship id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Recognizes a business to business relationsh=
+ip</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Rela=
+tionship Id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Relationship</td>
+    <td class=3D"confluenceTd">business entity id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Synthetic Primary Key that numerically repre=
+sents a business</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Iden=
+tifier Id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Relationship</td>
+    <td class=3D"confluenceTd">related business entity id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Numerically represents a related business en=
+tity</td>
+    <td class=3D"confluenceTd">Related Business Entity Id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Relationship</td>
+    <td class=3D"confluenceTd">business entity contact id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Numerically recognizes contact to business i=
+d&nbsp;</td>
+    <td class=3D"confluenceTd">Synthetically generated Business Entity Cont=
+act Id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Relationship</td>
+    <td class=3D"confluenceTd">related business entity contact id&nbsp;</td=
+>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Contact related to the business to business =
+relationship</td>
+    <td class=3D"confluenceTd">Contact Id related to this relationship</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Relationship</td>
+    <td class=3D"confluenceTd">business entity role</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Categorizes a business in relation to a tran=
+saction or JPMC relation</td>
+    <td class=3D"confluenceTd">Supplier | Buyer | Client | Firm</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Relationship</td>
+    <td class=3D"confluenceTd">related business entity role</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Categorizes counter business in relation to =
+a transaction or JPMC relation</td>
+    <td class=3D"confluenceTd">Supplier | Buyer | Client | Firm</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">spend analysis id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically relates to spend info of busines=
+s entity</td>
+    <td class=3D"confluenceTd">Synthetically generated id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">payor business entity id&nbsp;</td>
+    <td class=3D"confluenceTd">?</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Numerically relates to payor info of busines=
+s entity</td>
+    <td class=3D"confluenceTd">Link to business entity id of the payor</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">payee business entity id&nbsp;</td>
+    <td class=3D"confluenceTd">?</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Link to business entity id of the payee</td>
+    <td class=3D"confluenceTd">Link to business entity id of the payee</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">payment terms</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Terms of the payment&nbsp;</td>
+    <td class=3D"confluenceTd">Terms of the payment</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">count of payments</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Count of payments made during the reported p=
+eriod in that CCY and payment mode</td>
+    <td class=3D"confluenceTd">Count of payments made during the reported p=
+eriod in that ccy and payment mode</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">sum of payments</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Sum of payments made during the reported per=
+iod in that CCY and payment mode</td>
+    <td class=3D"confluenceTd">Sum of payments made during the reported per=
+iod in that ccy and payment mode</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">period start date</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Start date of the reporting period</td>
+    <td class=3D"confluenceTd">Start date of the reporting period</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">period end date</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">End date of the reporting period</td>
+    <td class=3D"confluenceTd">End date of the reporting period</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">payment ccy</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Currency of payment</td>
+    <td class=3D"confluenceTd">Currency of payment</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">chargeback amount</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Amount charged back to the payee for the mod=
+e of payment</td>
+    <td class=3D"confluenceTd">Amount charged back to the payee for the mod=
+e of payment</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">chargeback percentage</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Percentage of the charge back amount to the =
+total payment for the mode of payment&nbsp;</td>
+    <td class=3D"confluenceTd">Percentage of the charge back amount to the =
+total payment for the mode of payment&nbsp;</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Business Entity Spend Analysis</td>
+    <td class=3D"confluenceTd">payment mode</td>
+    <td class=3D"confluenceTd">Y($configurable?)</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Cheque, ACH, VC, $configurable</td>
+    <td class=3D"confluenceTd">Cheque, ACH, VC, $configurable</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Assignments</td>
+    <td class=3D"confluenceTd">assignment id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Synthetically generated assignment id</td>
+    <td class=3D"confluenceTd">Synthetically generated assignment id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Assignments</td>
+    <td class=3D"confluenceTd">assignment from id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Identifier of the "from" entity</td>
+    <td class=3D"confluenceTd">Identifier of the "from" entity</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Assignments</td>
+    <td class=3D"confluenceTd">assigned to id&nbsp;</td>
+    <td class=3D"confluenceTd">?</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Identifier of the "to" entity</td>
+    <td class=3D"confluenceTd">Identifier of the "to" entity</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Assignments</td>
+    <td class=3D"confluenceTd">assignment type&nbsp;</td>
+    <td class=3D"confluenceTd">?</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Type of assignments based on a given busines=
+s entity</td>
+    <td class=3D"confluenceTd">contact-restrictions, entity-restrictions, c=
+ontact-addresses, entity-addresses, contacts-phonenumbers, entity-phonenumb=
+ers, contacts-emails, entity-emails</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">address id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Synthetically generated address id</td>
+    <td class=3D"confluenceTd">Synthetically generated address id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">address type id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Numerically represents address type</td>
+    <td class=3D"confluenceTd">Synthetically generated address type ID</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">address line 1</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Business Entity address</td>
+    <td class=3D"confluenceTd">address line 1</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">address line 2</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Business Entity address</td>
+    <td class=3D"confluenceTd">address line 2</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">address line 3</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Business Entity address</td>
+    <td class=3D"confluenceTd">address line 3</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">country</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Business Entity Country</td>
+    <td class=3D"confluenceTd">Country</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">city</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Business Entity City</td>
+    <td class=3D"confluenceTd">City</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">state/province</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Business Entity State</td>
+    <td class=3D"confluenceTd">State&nbsp;</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">postal code</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Business Entity Zip Code</td>
+    <td class=3D"confluenceTd">Postal code or PIN</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">location name&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Name associated with address</td>
+    <td class=3D"confluenceTd">Additional Location name given to address</t=
+d>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">site identifier</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically represents location</td>
+    <td class=3D"confluenceTd">Additional Site id given to address</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address</td>
+    <td class=3D"confluenceTd">is active</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Active Address Boolean</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Restrictions</td>
+    <td class=3D"confluenceTd">restriction id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically relates business entity to its r=
+estrictions</td>
+    <td class=3D"confluenceTd">Synthetically generated Restriction Id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Restrictions</td>
+    <td class=3D"confluenceTd">restriction type id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Numerically represents restriction type</td>
+    <td class=3D"confluenceTd">Synthetically generated restriction type id<=
+/td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Restrictions</td>
+    <td class=3D"confluenceTd">restriction indicator</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Recognizes a contact/business restriction</t=
+d>
+    <td class=3D"confluenceTd">Dependent on restriction</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Restrictions</td>
+    <td class=3D"confluenceTd">restriction reason</td>
+    <td class=3D"confluenceTd">Y($configurable?)</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Gives context to restriction</td>
+    <td class=3D"confluenceTd">Dependent on restriction</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Restrictions</td>
+    <td class=3D"confluenceTd">is active</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Active Restriction Boolean</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Email Addresses</td>
+    <td class=3D"confluenceTd">email address id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Synthetically generated phone number id</td>
+    <td class=3D"confluenceTd">Synthetically generated phone number id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Email Addresses</td>
+    <td class=3D"confluenceTd">email address type id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically represents email type</td>
+    <td class=3D"confluenceTd">Synthetically generatedemail type id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Email Addresses</td>
+    <td class=3D"confluenceTd">email address</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Email Address</td>
+    <td class=3D"confluenceTd">Email Address</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Email Addresses</td>
+    <td class=3D"confluenceTd">is active</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Active Phone Number Boolean</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Phone Numbers</td>
+    <td class=3D"confluenceTd">phone number id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Synthetically generated phone number id</td>
+    <td class=3D"confluenceTd">Synthetically generated phone number id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Phone Numbers</td>
+    <td class=3D"confluenceTd">phone number type id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Numerically represents phone number type</td=
+>
+    <td class=3D"confluenceTd">Synthetically generated phone number type id=
+</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Phone Numbers</td>
+    <td class=3D"confluenceTd">is mobile</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Is a mobile device</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Phone Numbers</td>
+    <td class=3D"confluenceTd">country code</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Country Code&nbsp;</td>
+    <td class=3D"confluenceTd">Country Code&nbsp;</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Phone Numbers</td>
+    <td class=3D"confluenceTd">number</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Number</td>
+    <td class=3D"confluenceTd">Number</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Phone Numbers</td>
+    <td class=3D"confluenceTd">extension</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Extension</td>
+    <td class=3D"confluenceTd">Extension</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Phone Numbers</td>
+    <td class=3D"confluenceTd">is active</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Active Phone Number Boolean</td>
+    <td class=3D"confluenceTd">Y | N</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Characteristic Type</td>
+    <td class=3D"confluenceTd">characteristics type id&nbsp;</td>
+    <td class=3D"confluenceTd">N/A</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically represents characteristic type</=
+td>
+    <td class=3D"confluenceTd">Synthetically generated characteristic type =
+id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Characteristic Type</td>
+    <td class=3D"confluenceTd">characteristic type</td>
+    <td class=3D"confluenceTd">Y (Sanction_Screening_Status,MC_Card_Associa=
+tion,VISA_Card_Association)| Nice to have (JPM_Risk_Rating, Moodys_Credit_R=
+ating, S&amp;P_Credit_Rating, Fitch_Credit_Rating,Financial_Stress_Score) |=
+? ($configurable) |No (Rest of Types)</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Status underlying business characteristics</=
+td>
+    <td class=3D"confluenceTd">Sanction_Screening_Status, Financial_Stress_=
+Score, ESG_Score, ESG_Score_Provider, Small_Business_Qualified, JPM_Risk_Ra=
+ting, Moodys_Credit_Rating, S&amp;P_Credit_Rating, Fitch_Credit_Rating, MC_=
+Card_Association, VISA_Card_Association, $configurable</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Identifier Type</td>
+    <td class=3D"confluenceTd">identifier type id&nbsp;</td>
+    <td class=3D"confluenceTd">N/A</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically represents identifier type</td>
+    <td class=3D"confluenceTd">Synthetically generated Identifier type Id</=
+td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Identifier Type</td>
+    <td class=3D"confluenceTd">identifier type</td>
+    <td class=3D"confluenceTd">Y (Cresendo_ID,Tax_ID)| Nice to have (Visa_I=
+D, MC_ID)|No (Rest of Types)</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Relates to numerical identifiers to given bu=
+siness entity</td>
+    <td class=3D"confluenceTd">Tax_Id, Crescendo_Id, SCF_Salesforce_Id, ECI=
+, CAS, DUNS, CC_SE_Salesforce_Id, VISA_ID, MC_ID, VC_Supplier_ID, CC_Org_id=
+, $configurable</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Phone Number Type</td>
+    <td class=3D"confluenceTd">phone number type id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically phone type</td>
+    <td class=3D"confluenceTd">Synthetically generated phone type id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Phone Number Type</td>
+    <td class=3D"confluenceTd">phone number type&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Relates to the nature of given phone number<=
+/td>
+    <td class=3D"confluenceTd">Personal, Primary, Alternate, $configurable,=
+&nbsp;</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Email Address Type</td>
+    <td class=3D"confluenceTd">email address type id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically Email Type</td>
+    <td class=3D"confluenceTd">Synthetically generated email type id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Email Address Type</td>
+    <td class=3D"confluenceTd">email address type</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Nature and relevance of a given email</td>
+    <td class=3D"confluenceTd">Primary, Remittance, Support, Personal, $con=
+figurable,&nbsp;</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Contact Type</td>
+    <td class=3D"confluenceTd">contact type id&nbsp;</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically Contact type</td>
+    <td class=3D"confluenceTd">Synthetically generated contact type id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Contact Type</td>
+    <td class=3D"confluenceTd">contact type</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Nature and relevance of a given contact</td>
+    <td class=3D"confluenceTd">Legal, Primary, Receivables Lead, Customer R=
+elations Manager, Vendor Contracts Manager, $configurable</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address Type</td>
+    <td class=3D"confluenceTd">address type id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically Address type</td>
+    <td class=3D"confluenceTd">Synthetically generated address type id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Address Type</td>
+    <td class=3D"confluenceTd">address type</td>
+    <td class=3D"confluenceTd">Y($configurable?)</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Nature and relevance of a given address</td>
+    <td class=3D"confluenceTd">&nbsp;Corporate Headquarter, Regional Headqu=
+arter, Regional office, Remittance, Home, Office, Legal, $configurable</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Restriction Type</td>
+    <td class=3D"confluenceTd">restriction type id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically represents restriction type</td>
+    <td class=3D"confluenceTd">Synthetically generated restriction type id<=
+/td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Restriction Type</td>
+    <td class=3D"confluenceTd">restriction type</td>
+    <td class=3D"confluenceTd">Y|&nbsp;</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Represents restriction reason</td>
+    <td class=3D"confluenceTd">Do Not Call, Do Not Email, $configurable,&nb=
+sp;</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Market Segment Type</td>
+    <td class=3D"confluenceTd">market segment type id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically represents market segment type</=
+td>
+    <td class=3D"confluenceTd">Synthetically generated market segment type =
+id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Market Segment Type</td>
+    <td class=3D"confluenceTd">market segment type</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Market segment is a portion of the economy t=
+hat the business entity represents</td>
+    <td class=3D"confluenceTd">Consumer &amp; Retail, Energy &amp; Power, D=
+iversified Industrials, Technology, Media, Telecom (TMT), Healthcare</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Company Type</td>
+    <td class=3D"confluenceTd">company type id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically represents company type</td>
+    <td class=3D"confluenceTd">Synthetically generated company type id</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Company Type</td>
+    <td class=3D"confluenceTd">company type</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">The nature of how legal business entity is r=
+egistered</td>
+    <td class=3D"confluenceTd">Individual, Sole proprietorship, Partnership=
+, Corporation</td>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Industry Type</td>
+    <td class=3D"confluenceTd">industry type id&nbsp;</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd">Y</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Numerically represents industry type</td>
+    <td class=3D"confluenceTd">Synthetically generated industry type id</td=
+>
+   </tr>
+   <tr class=3D"">
+    <td class=3D"confluenceTd">Industry Type</td>
+    <td class=3D"confluenceTd">industry type</td>
+    <td class=3D"confluenceTd">N</td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd"><br></td>
+    <td class=3D"confluenceTd">Industry type represents a product category =
+that individual business entity sells</td>
+    <td class=3D"confluenceTd">Administration of Economic Programs, Adminis=
+trative and Support Services, Air Transportation, Beverage and Tobacco Prod=
+uct Manufacturing, Chemical Manufacturing, Clothing and Clothing Accessorie=
+s Stores, Computer and Electronic Product Manufacturing, Construction of Bu=
+ildings, Electrical Equipment, Appliance, and Component Manufacturing, Elec=
+tronics and Appliance Stores, Executive, Legislative, and Other General Gov=
+ernment Support, Fabricated Metal Product Manufacturing, Food Manufacturing=
+, Food Services and Drinking Places, Gasoline Stations, General Merchandise=
+ Stores, Heavy and Civil Engineering Construction, Machinery Manufacturing,=
+ Merchant Wholesalers, Durable Goods, Merchant Wholesalers, Non-durable Goo=
+ds, Mining (except Oil and Gas), Miscellaneous Manufacturing, National Secu=
+rity and International Affairs, Nonmetallic Mineral Product Manufacturing, =
+Non-store Retailers, Oil and Gas Extraction, Other Information Services, Pa=
+per Manufacturing, Petroleum and Coal Products Manufacturing, Plastics and =
+Rubber Products Manufacturing, Primary Metal Manufacturing, Printing and Re=
+lated Support Activities, Professional, Scientific, and Technical Services,=
+ Rail Transportation, Real Estate, Repair and Maintenance, Telecommunicatio=
+ns, Textile Mills, Textile Product Mills, Transit and Ground Passenger Tran=
+sportation, Transportation Equipment Manufacturing, Truck Transportation, U=
+tilities, Warehousing and Storage, Waste Management and Remediation Service=
+s, $configurable</td>
+   </tr>
+  </tbody>
+ </table>
+</div>
+    </div>
+</body>
+</html>
+------=_Part_84389_1090789898.1746438239781--

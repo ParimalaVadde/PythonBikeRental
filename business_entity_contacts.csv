@@ -1,0 +1,4 @@
+"business_entity_contact_id","stg_business_entity_id","source_system_contact_id","source_system_name","contact_type","contact_name","contact_title","contact_active_indicator","contact_deactivated_date","decision_maker_indicator","decision_maker_type","created_by","created_date"
+"fd79dbc0-6341-ed81-7934-67fdcb9430b5","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f",NULL,NULL,NULL,"VIRAT KOHLI","OFFICER",NULL,NULL,NULL,NULL,"PFD","2025-05-05 09:25:36.525"
+"c947b502-02ee-55d3-6b3f-860e3889073c","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f",NULL,NULL,NULL,"VIRAT KOHLI","CEO",NULL,NULL,NULL,NULL,"PFD","2025-05-05 09:25:36.525"
+"30708a4e-339d-a6ae-544a-52062b7ed84f","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f",NULL,NULL,NULL,"JADEJA RAVI","OFFICER",NULL,NULL,NULL,NULL,"PFD","2025-05-05 09:25:36.525"
