@@ -1,9 +1,9 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Row, Window
+from pyspark.sql.functions import col, lit, current_date, when, trim, upper, length
 import psycopg2
 from psycopg2.extras import execute_batch
-import pandas as pd
 from urllib.parse import quote_plus
-from datetime import date
+import json
 
 def sync_dataframe_with_postgresql(spark_df, connection_params, table_name, compare_columns, schema_name, column_mapping, load_flag_column):
     """
@@ -21,20 +21,18 @@ def sync_dataframe_with_postgresql(spark_df, connection_params, table_name, comp
     # Apply column mapping (if provided)
     if column_mapping is None:
         column_mapping = {}
-    mapped_columns = {col: column_mapping.get(col, col) for col in spark_df.columns}
     
-    # Convert PySpark DataFrame to Pandas for easier handling with psycopg2
-    # Note: In a production environment with large datasets, consider processing in batches
-    # or using JDBC directly with Spark
-    pandas_df = spark_df.toPandas()
+    # Clean the data
+    # Replace empty strings and "nan" strings with None/null
+    for column in spark_df.columns:
+        spark_df = spark_df.withColumn(
+            column,
+            when((trim(col(column)) == "") | 
+                 (trim(upper(col(column))) == "NAN"), None)
+            .otherwise(col(column))
+        )
     
-    # Replace NaN values with None (to handle NULL in PostgreSQL)
-    pandas_df = pandas_df.where(pd.notna(pandas_df), None)  # Convert all Numpy NaN values to None
-    pandas_df = pandas_df.applymap(lambda x: None if isinstance(x, str) and x.strip().lower() == "nan" else x)  # Replace case-insensitive "nan" with None
-    pandas_df = pandas_df.replace(r'^\s*$', None, regex=True)  # Replace empty or whitespace-only strings with None
-    pandas_df = pandas_df.astype(object).where(pd.notna(pandas_df), None)  # Convert dataframe to python native types
-    
-    # Connect to PostgreSQL
+    # Get database table structure
     conn = psycopg2.connect(
         dbname=connection_params['database'],
         user=connection_params['user'],
@@ -55,102 +53,219 @@ def sync_dataframe_with_postgresql(spark_df, connection_params, table_name, comp
     primary_keys = [row[0] for row in cursor.fetchall()]
     print(f"Primary keys for table {table_name}: {primary_keys}")
     
-    # List to store mismatched records
+    # Create temp tables for batch operations
+    full_table_name = f"{schema_name}.{table_name}"
+    
+    # Get column information for target table
+    cursor.execute(f"""
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_schema = '{schema_name}' 
+        AND table_name = '{table_name}'
+    """)
+    columns_info = {row[0]: row[1] for row in cursor.fetchall()}
+    
+    # Split the dataframe by load flag
+    update_df = spark_df.filter(upper(col(load_flag_column)) == "U")
+    insert_df = spark_df.filter(upper(col(load_flag_column)) == "I")
+    invalid_df = spark_df.filter((upper(col(load_flag_column)) != "U") & (upper(col(load_flag_column)) != "I"))
+    
+    # Process records for update
+    mismatched_updates = []
+    if not update_df.isEmpty():
+        # Create a temporary table for updates
+        temp_update_table = f"temp_update_{table_name}"
+        cursor.execute(f"DROP TABLE IF EXISTS {schema_name}.{temp_update_table}")
+        
+        # Create temp table with same structure as target
+        cursor.execute(f"CREATE TABLE {schema_name}.{temp_update_table} AS SELECT * FROM {full_table_name} LIMIT 0")
+        conn.commit()
+        
+        # Write update candidates to PostgreSQL for batch processing
+        update_jdbc_url = f"jdbc:postgresql://{connection_params['host']}:{connection_params['port']}/{connection_params['database']}"
+        update_properties = {
+            "user": connection_params['user'],
+            "password": connection_params['password'],
+            "driver": "org.postgresql.Driver"
+        }
+        
+        # Prepare update dataframe without load_flag
+        update_df_prepared = update_df.drop(load_flag_column)
+        
+        # Write to temp table
+        update_df_prepared.write \
+            .option("truncate", "true") \
+            .jdbc(
+                url=update_jdbc_url,
+                table=f"{schema_name}.{temp_update_table}",
+                mode="overwrite",
+                properties=update_properties
+            )
+        
+        # Get existing records based on compare columns for updates
+        compare_conditions = " AND ".join([f"a.{mapped_columns.get(col, col)} = b.{mapped_columns.get(col, col)}" 
+                                         for col in compare_columns])
+        
+        update_columns = [col for col in update_df.columns 
+                         if col not in compare_columns 
+                         and mapped_columns.get(col, col) not in primary_keys 
+                         and col != load_flag_column 
+                         and col != "created_by"]
+        
+        if update_columns:
+            set_clause = ", ".join([f"{mapped_columns.get(col, col)} = b.{mapped_columns.get(col, col)}" 
+                                   for col in update_columns])
+            
+            set_clause += ", last_updated_by = b.created_by, last_updated_date = CURRENT_DATE"
+            
+            # Execute batch update
+            cursor.execute(f"""
+                UPDATE {full_table_name} a
+                SET {set_clause}
+                FROM {schema_name}.{temp_update_table} b
+                WHERE {compare_conditions}
+            """)
+            
+            # Find records that should be updated but don't exist
+            cursor.execute(f"""
+                CREATE TEMP TABLE missing_updates AS
+                SELECT b.*
+                FROM {schema_name}.{temp_update_table} b
+                LEFT JOIN {full_table_name} a
+                ON {compare_conditions}
+                WHERE a.{primary_keys[0]} IS NULL
+            """)
+            
+            # Get the mismatched records
+            cursor.execute("SELECT * FROM missing_updates")
+            mismatched_updates = cursor.fetchall()
+            
+            # Clean up
+            cursor.execute("DROP TABLE missing_updates")
+            cursor.execute(f"DROP TABLE {schema_name}.{temp_update_table}")
+            conn.commit()
+    
+    # Process records for insert
+    mismatched_inserts = []
+    if not insert_df.isEmpty():
+        # Create a temporary table for inserts
+        temp_insert_table = f"temp_insert_{table_name}"
+        cursor.execute(f"DROP TABLE IF EXISTS {schema_name}.{temp_insert_table}")
+        
+        # Create temp table with same structure as target
+        cursor.execute(f"CREATE TABLE {schema_name}.{temp_insert_table} AS SELECT * FROM {full_table_name} LIMIT 0")
+        conn.commit()
+        
+        # Write insert candidates to PostgreSQL for batch processing
+        insert_jdbc_url = f"jdbc:postgresql://{connection_params['host']}:{connection_params['port']}/{connection_params['database']}"
+        insert_properties = {
+            "user": connection_params['user'],
+            "password": connection_params['password'],
+            "driver": "org.postgresql.Driver"
+        }
+        
+        # Prepare insert dataframe without load_flag and with additional required fields
+        insert_df_prepared = insert_df.drop(load_flag_column) \
+            .withColumn("is_active", lit(True)) \
+            .withColumn("last_updated_by", col("created_by")) \
+            .withColumn("last_updated_date", current_date())
+        
+        # Apply column mapping for JDBC
+        for original_col, mapped_col in column_mapping.items():
+            if original_col in insert_df_prepared.columns:
+                insert_df_prepared = insert_df_prepared.withColumnRenamed(original_col, mapped_col)
+        
+        # Write to temp table
+        insert_df_prepared.write \
+            .option("truncate", "true") \
+            .jdbc(
+                url=insert_jdbc_url,
+                table=f"{schema_name}.{temp_insert_table}",
+                mode="overwrite",
+                properties=insert_properties
+            )
+        
+        # Get existing records based on compare columns for inserts
+        compare_conditions_insert = " AND ".join([f"a.{mapped_columns.get(col, col)} = b.{mapped_columns.get(col, col)}" 
+                                               for col in compare_columns])
+        
+        # Find records that don't exist yet (for insert)
+        cursor.execute(f"""
+            CREATE TEMP TABLE valid_inserts AS
+            SELECT b.*
+            FROM {schema_name}.{temp_insert_table} b
+            LEFT JOIN {full_table_name} a
+            ON {compare_conditions_insert}
+            WHERE a.{primary_keys[0]} IS NULL
+        """)
+        
+        # Get column list for insertion
+        cursor.execute(f"SELECT column_name FROM information_schema.columns WHERE table_schema = '{schema_name}' AND table_name = '{temp_insert_table}'")
+        insert_columns = [row[0] for row in cursor.fetchall()]
+        columns_str = ", ".join(insert_columns)
+        
+        # Insert valid records
+        cursor.execute(f"""
+            INSERT INTO {full_table_name} ({columns_str})
+            SELECT {columns_str} FROM valid_inserts
+        """)
+        
+        # Find records that already exist (these are mismatches)
+        cursor.execute(f"""
+            CREATE TEMP TABLE duplicate_inserts AS
+            SELECT b.*
+            FROM {schema_name}.{temp_insert_table} b
+            JOIN {full_table_name} a
+            ON {compare_conditions_insert}
+        """)
+        
+        # Get the mismatched records
+        cursor.execute("SELECT * FROM duplicate_inserts")
+        mismatched_inserts = cursor.fetchall()
+        
+        # Clean up
+        cursor.execute("DROP TABLE valid_inserts")
+        cursor.execute("DROP TABLE duplicate_inserts")
+        cursor.execute(f"DROP TABLE {schema_name}.{temp_insert_table}")
+        conn.commit()
+    
+    # Collect invalid and mismatched records into a single Spark DataFrame
     mismatched_records = []
     
-    # Process each row
-    for _, row in pandas_df.iterrows():
-        row_dict = row.to_dict()
-        load_flag = row_dict.get(load_flag_column)
-        
-        try:
-            if load_flag and load_flag.upper() == "U":
-                # Create WHERE clause for comparison
-                where_clause = " AND ".join([f"{mapped_columns[col]} = %s" for col in compare_columns])
-                where_values = [row_dict[col] for col in compare_columns]
-                
-                # Check if record exists
-                cursor.execute(f"SELECT 1 FROM {schema_name}.{table_name} WHERE {where_clause}", where_values)
-                record_exists = cursor.fetchone() is not None
-                
-                if record_exists:
-                    # Prepare update data
-                    update_data = {
-                        mapped_columns[col]: row_dict[col]
-                        for col in pandas_df.columns
-                        if col not in compare_columns and mapped_columns[col] not in primary_keys and col != load_flag_column and col != "created_by"
-                    }
-                    update_data["last_updated_by"] = row_dict["created_by"]
-                    update_data["last_updated_date"] = date.today()
-                    
-                    # Build SET clause
-                    set_clause = ", ".join([f"{col} = %s" for col in update_data.keys()])
-                    set_values = list(update_data.values())
-                    
-                    # Execute update
-                    cursor.execute(
-                        f"UPDATE {schema_name}.{table_name} SET {set_clause} WHERE {where_clause}",
-                        set_values + where_values
-                    )
-                else:
-                    # Record doesn't exist for update
-                    mismatched_records.append(row_dict)
-                    
-            elif load_flag and load_flag.upper() == "I":
-                # Check if record exists
-                where_clause = " AND ".join([f"{mapped_columns[col]} = %s" for col in compare_columns])
-                where_values = [row_dict[col] for col in compare_columns]
-                
-                cursor.execute(f"SELECT 1 FROM {schema_name}.{table_name} WHERE {where_clause}", where_values)
-                record_exists = cursor.fetchone() is not None
-                
-                if not record_exists:
-                    # Prepare insert data
-                    insert_data = {
-                        mapped_columns[col]: row_dict[col]
-                        for col in pandas_df.columns
-                        if col != load_flag_column
-                    }
-                    insert_data["is_active"] = True
-                    insert_data["last_updated_by"] = insert_data["created_by"]
-                    insert_data["last_updated_date"] = date.today()
-                    
-                    # Build INSERT statement
-                    columns = ", ".join(insert_data.keys())
-                    placeholders = ", ".join(["%s"] * len(insert_data))
-                    values = list(insert_data.values())
-                    
-                    # Execute insert
-                    cursor.execute(
-                        f"INSERT INTO {schema_name}.{table_name} ({columns}) VALUES ({placeholders})",
-                        values
-                    )
-                else:
-                    # Record already exists for insert
-                    mismatched_records.append(row_dict)
-            else:
-                # Invalid load_flag
-                mismatched_records.append(row_dict)
-                
-        except Exception as e:
-            print(f"Error processing record: {row_dict}, Error: {e}")
-            mismatched_records.append(row_dict)
+    # Convert mismatched updates to Row objects
+    if mismatched_updates:
+        column_names = [desc[0] for desc in cursor.description]
+        for record in mismatched_updates:
+            mismatched_records.append(dict(zip(column_names, record)))
     
-    # Commit changes and close connection
-    conn.commit()
+    # Convert mismatched inserts to Row objects
+    if mismatched_inserts:
+        column_names = [desc[0] for desc in cursor.description]
+        for record in mismatched_inserts:
+            mismatched_records.append(dict(zip(column_names, record)))
+    
+    # Add invalid records
+    if not invalid_df.isEmpty():
+        for row in invalid_df.collect():
+            mismatched_records.append(row.asDict())
+    
+    # Create mismatched DataFrame and write to CSV
+    if mismatched_records:
+        mismatched_schema = spark_df.schema
+        mismatched_df = spark.createDataFrame(mismatched_records)
+        mismatched_df.write.mode("overwrite").option("header", "true").csv("mismatch_records")
+        print("Mismatched records written to mismatch_records directory")
+    
+    # Close database connection
     cursor.close()
     conn.close()
-    
-    # Write mismatched records to a CSV file
-    if mismatched_records:
-        mismatched_df = pd.DataFrame(mismatched_records)
-        mismatched_df.to_csv("mismatch_records.csv", index=False)
-        print("Mismatched records written to mismatch_records.csv")
 
 def main():
     # Initialize Spark session
+    global spark
     spark = SparkSession.builder \
         .appName("PostgreSQL Data Sync") \
+        .config("spark.jars", "/path/to/postgresql-42.5.1.jar")  # PostgreSQL JDBC driver path
         .getOrCreate()
     
     # Load data from CSV
@@ -171,14 +286,6 @@ def main():
         'port': '6160',
         'database': 'xbsddevdb',
     }
-    
-    # For large datasets, you could use Spark JDBC directly:
-    # jdbc_url = f"jdbc:postgresql://{db_config['host']}:{db_config['port']}/{db_config['database']}"
-    # properties = {
-    #     "user": db_config['user'],
-    #     "password": db_config['password'],
-    #     "driver": "org.postgresql.Driver"
-    # }
     
     schema_name = "sds_main"
     table_name = "business_entity_card_revenues"
