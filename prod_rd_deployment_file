@@ -1,116 +1,168 @@
+from pyspark.sql import SparkSession
+import psycopg2
+from psycopg2.extras import execute_batch
 import pandas as pd
-from sqlalchemy import create_engine, Table, MetaData, and_
-from sqlalchemy.orm import sessionmaker
 from urllib.parse import quote_plus
 from datetime import date
 
-def sync_dataframe_with_postgresql(df, connection_string, table_name, compare_columns, schema_name, column_mapping, load_flag_column):
+def sync_dataframe_with_postgresql(spark_df, connection_params, table_name, compare_columns, schema_name, column_mapping, load_flag_column):
     """
-    Syncs a DataFrame with a PostgreSQL table by comparing records and performing insert or update operations
+    Syncs a PySpark DataFrame with a PostgreSQL table by comparing records and performing insert or update operations
     based on the load_flag column.
 
-    :param df: pandas DataFrame containing the data to sync
-    :param connection_string: SQLAlchemy connection string
+    :param spark_df: PySpark DataFrame containing the data to sync
+    :param connection_params: Dictionary with PostgreSQL connection parameters
     :param table_name: Name of the PostgreSQL table
     :param compare_columns: List of column names to compare for identifying existing records
     :param schema_name: Schema name of the PostgreSQL table
     :param column_mapping: Dictionary mapping DataFrame column names to PostgreSQL table column names
+    :param load_flag_column: Column name containing the load flag ('I' for insert, 'U' for update)
     """
-    # Replace NaN values with None (to handle NULL in PostgreSQL)
-    df = df.where(pd.notna(df), None) #convert all Numpy NaN values to None
-    df = df.applymap(lambda x: None if isinstance(x, str) and x.strip().lower() == "nan" else x) #trim spaces and replace case-insensitive "nan" with none
-    df = df.replace(r'^\s*$', None, regex=True) #replace fully empty or whitespace-only strings with None
-    df = df.astype(object).where(pd.notna(df), None) #convert dataframe to python native types (avoids Numpy NaNs) 
-
-    # Create SQLAlchemy engine and session
-    engine = create_engine(connection_string)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    # Reflect the table structure
-    metadata = MetaData()
-    table = Table(table_name, metadata, schema=schema_name, autoload_with=engine)
-
-    # Dynamically identify primary key columns
-    primary_keys = [key.name for key in table.primary_key.columns]
-    print(f"Primary keys for table {table_name}: {primary_keys}")
-
     # Apply column mapping (if provided)
     if column_mapping is None:
         column_mapping = {}
-    mapped_columns = {col: column_mapping.get(col, col) for col in df.columns}
-
+    mapped_columns = {col: column_mapping.get(col, col) for col in spark_df.columns}
+    
+    # Convert PySpark DataFrame to Pandas for easier handling with psycopg2
+    # Note: In a production environment with large datasets, consider processing in batches
+    # or using JDBC directly with Spark
+    pandas_df = spark_df.toPandas()
+    
+    # Replace NaN values with None (to handle NULL in PostgreSQL)
+    pandas_df = pandas_df.where(pd.notna(pandas_df), None)  # Convert all Numpy NaN values to None
+    pandas_df = pandas_df.applymap(lambda x: None if isinstance(x, str) and x.strip().lower() == "nan" else x)  # Replace case-insensitive "nan" with None
+    pandas_df = pandas_df.replace(r'^\s*$', None, regex=True)  # Replace empty or whitespace-only strings with None
+    pandas_df = pandas_df.astype(object).where(pd.notna(pandas_df), None)  # Convert dataframe to python native types
+    
+    # Connect to PostgreSQL
+    conn = psycopg2.connect(
+        dbname=connection_params['database'],
+        user=connection_params['user'],
+        password=connection_params['password'],
+        host=connection_params['host'],
+        port=connection_params['port']
+    )
+    cursor = conn.cursor()
+    
+    # Get the primary keys of the table
+    cursor.execute(f"""
+        SELECT a.attname
+        FROM pg_index i
+        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE i.indrelid = '{schema_name}.{table_name}'::regclass
+        AND i.indisprimary;
+    """)
+    primary_keys = [row[0] for row in cursor.fetchall()]
+    print(f"Primary keys for table {table_name}: {primary_keys}")
+    
     # List to store mismatched records
     mismatched_records = []
-
-    # Iterate through the DataFrame rows
-    for _, row in df.iterrows():
-        # Check the load_flag to determine whether to update or insert
-        load_flag = row.get(load_flag_column)
+    
+    # Process each row
+    for _, row in pandas_df.iterrows():
+        row_dict = row.to_dict()
+        load_flag = row_dict.get(load_flag_column)
+        
         try:
             if load_flag and load_flag.upper() == "U":
-                # Perform update
-                filter_condition = and_(
-                    *[table.c[mapped_columns[col]] == row[col] for col in compare_columns]
-                )
-                existing_record = session.query(table).filter(filter_condition).first()
-                if existing_record:
-                    # Record exists, perform update
+                # Create WHERE clause for comparison
+                where_clause = " AND ".join([f"{mapped_columns[col]} = %s" for col in compare_columns])
+                where_values = [row_dict[col] for col in compare_columns]
+                
+                # Check if record exists
+                cursor.execute(f"SELECT 1 FROM {schema_name}.{table_name} WHERE {where_clause}", where_values)
+                record_exists = cursor.fetchone() is not None
+                
+                if record_exists:
+                    # Prepare update data
                     update_data = {
-                        mapped_columns[col]: row[col]
-                        for col in df.columns
+                        mapped_columns[col]: row_dict[col]
+                        for col in pandas_df.columns
                         if col not in compare_columns and mapped_columns[col] not in primary_keys and col != load_flag_column and col != "created_by"
                     }
-                    update_data["last_updated_by"] = row["created_by"] # or source_name
+                    update_data["last_updated_by"] = row_dict["created_by"]
                     update_data["last_updated_date"] = date.today()
-
-                    session.query(table).filter(filter_condition).update(update_data)
+                    
+                    # Build SET clause
+                    set_clause = ", ".join([f"{col} = %s" for col in update_data.keys()])
+                    set_values = list(update_data.values())
+                    
+                    # Execute update
+                    cursor.execute(
+                        f"UPDATE {schema_name}.{table_name} SET {set_clause} WHERE {where_clause}",
+                        set_values + where_values
+                    )
                 else:
-                    # Record does not exist, add to mismatched records
-                    mismatched_records.append(row.to_dict())
+                    # Record doesn't exist for update
+                    mismatched_records.append(row_dict)
+                    
             elif load_flag and load_flag.upper() == "I":
-                # Perform insert
-                filter_condition = and_(
-                    *[table.c[mapped_columns[col]] == row[col] for col in compare_columns]
-                )
-                existing_record = session.query(table).filter(filter_condition).first()
-                if existing_record:
-                    # Record already exists, add to mismatched records
-                    mismatched_records.append(row.to_dict())
-                else:
+                # Check if record exists
+                where_clause = " AND ".join([f"{mapped_columns[col]} = %s" for col in compare_columns])
+                where_values = [row_dict[col] for col in compare_columns]
+                
+                cursor.execute(f"SELECT 1 FROM {schema_name}.{table_name} WHERE {where_clause}", where_values)
+                record_exists = cursor.fetchone() is not None
+                
+                if not record_exists:
+                    # Prepare insert data
                     insert_data = {
-                        mapped_columns[col]: row[col]
-                        for col in df.columns
+                        mapped_columns[col]: row_dict[col]
+                        for col in pandas_df.columns
                         if col != load_flag_column
                     }
                     insert_data["is_active"] = True
-                    insert_data["last_updated_by"] = insert_data["created_by"] # or source_name
+                    insert_data["last_updated_by"] = insert_data["created_by"]
                     insert_data["last_updated_date"] = date.today()
-                    session.execute(table.insert().values(insert_data))
+                    
+                    # Build INSERT statement
+                    columns = ", ".join(insert_data.keys())
+                    placeholders = ", ".join(["%s"] * len(insert_data))
+                    values = list(insert_data.values())
+                    
+                    # Execute insert
+                    cursor.execute(
+                        f"INSERT INTO {schema_name}.{table_name} ({columns}) VALUES ({placeholders})",
+                        values
+                    )
+                else:
+                    # Record already exists for insert
+                    mismatched_records.append(row_dict)
             else:
-                # Invalid load_flag, add to mismatched records
-                mismatched_records.append(row.to_dict())
+                # Invalid load_flag
+                mismatched_records.append(row_dict)
+                
         except Exception as e:
-            # Catch any exceptions and add the record to mismatched records
-            print(f"Error processing record: {row.to_dict()}, Error: {e}")
-            mismatched_records.append(row.to_dict())
-
-    # Commit changes and close the session
-    session.commit()
-    session.close()
-
+            print(f"Error processing record: {row_dict}, Error: {e}")
+            mismatched_records.append(row_dict)
+    
+    # Commit changes and close connection
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
     # Write mismatched records to a CSV file
     if mismatched_records:
         mismatched_df = pd.DataFrame(mismatched_records)
-        mismatched_df.to_csv("mismatch_records.csv", index=False)  #it will overwrite the file if it exists
+        mismatched_df.to_csv("mismatch_records.csv", index=False)
         print("Mismatched records written to mismatch_records.csv")
 
 def main():
- 
+    # Initialize Spark session
+    spark = SparkSession.builder \
+        .appName("PostgreSQL Data Sync") \
+        .getOrCreate()
+    
+    # Load data from CSV
     stage_file_path = r"C:/Users/w619378/Downloads/b2b payables/upsert logic/card_revenues.csv"
-    df = pd.read_csv(stage_file_path)
-    print(df)
-
+    
+    # Read CSV into Spark DataFrame
+    spark_df = spark.read.option("header", "true").csv(stage_file_path)
+    
+    # Print dataframe schema
+    spark_df.printSchema()
+    spark_df.show(5)
+    
     # Define the PostgreSQL connection parameters
     db_config = {
         'user': 'xbsddevdbAuroraAppAdmin',
@@ -118,26 +170,39 @@ def main():
         'host': 'nlb-rdsapg86a8-auroratdb-v1-fdcc221bbc9eea60.elb.us-east-1.amazonaws.com',
         'port': '6160',
         'database': 'xbsddevdb',
-        # 'ca_cert_path': 'us-east-1-bundle.pem',  # Path to the CA certificate
     }
-
-    encoded_password = quote_plus(db_config['password'])
-
-    # Create a connection string
-    connection_string = f"postgresql://{db_config['user']}:{encoded_password}@{db_config['host']}:{db_config['port']}/{db_config['database']}"
-    # engine = create_engine(connection_string)
-
+    
+    # For large datasets, you could use Spark JDBC directly:
+    # jdbc_url = f"jdbc:postgresql://{db_config['host']}:{db_config['port']}/{db_config['database']}"
+    # properties = {
+    #     "user": db_config['user'],
+    #     "password": db_config['password'],
+    #     "driver": "org.postgresql.Driver"
+    # }
+    
     schema_name = "sds_main"
     table_name = "business_entity_card_revenues"
-    compare_columns = ["stg_business_entity_id","end_date"]
+    compare_columns = ["stg_business_entity_id", "end_date"]
     column_mapping = {  # Map only the mismatched column
         "stg_business_entity_id": "business_entity_id"
     }
     load_flag_column = "load_flag"
-
-    # Call the upsert function
-    sync_dataframe_with_postgresql(df, connection_string, table_name, compare_columns, schema_name,column_mapping,load_flag_column)
-    # print("Upsert operation completed successfully.")
+    
+    # Call the sync function
+    sync_dataframe_with_postgresql(
+        spark_df, 
+        db_config, 
+        table_name, 
+        compare_columns, 
+        schema_name, 
+        column_mapping, 
+        load_flag_column
+    )
+    
+    print("Sync operation completed successfully.")
+    
+    # Stop Spark session
+    spark.stop()
 
 if __name__ == "__main__":
     main()
