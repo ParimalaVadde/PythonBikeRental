@@ -1,93 +1,143 @@
-I'll analyze the new column requirements and help you determine what changes need to be made to your existing mapping file for the ETL process. Let me go through each of these new columns and provide recommendations.
+import pandas as pd
+from sqlalchemy import create_engine, Table, MetaData, and_
+from sqlalchemy.orm import sessionmaker
+from urllib.parse import quote_plus
+from datetime import date
 
-## Analysis of New Columns for Mapping
+def sync_dataframe_with_postgresql(df, connection_string, table_name, compare_columns, schema_name, column_mapping, load_flag_column):
+    """
+    Syncs a DataFrame with a PostgreSQL table by comparing records and performing insert or update operations
+    based on the load_flag column.
 
-| Column | Data Origin | Current Mapping | Recommendation |
-|--------|-------------|----------------|----------------|
-| task_id | PFD | Not mapped | No need to map (as stated) |
-| sds_upload_name | PFD | Not mapped | No need to map (as stated) |
-| sds_upload_id | PFD | Not mapped | Map to `business_entity_spend_analysis.analysis_external_reference_id` (replacing current mapping from user_request_id) |
-| client_name | PFD | Not mapped | Replace `buying_entity` with `client_name` in mapping to `business_entity_spend_analysis.stg_payor_business_entity_id` |
-| upload_user | PFD | Not mapped | Consider mapping to a metadata or audit table if tracking is important |
-| sds_upload_ts | PFD | Not mapped | Consider mapping to a metadata table or using for ETL logging |
-| sds_note | PFD | Not mapped | Consider creating a new notes/comments table or column |
-| buying_entity | Spend File | Currently mapped | Now a placeholder, replace with client_name as noted above |
-| supplier_ecid | JPMC reference data | Not mapped | Map to `business_entity_identifiers` with a new identifier_type "ECID" |
-| scf_buyerlist | Not specified | Not mapped | Placeholder, no action needed unless further clarified |
-| throughput_usd | APAR | Not mapped | Map to `business_entity_spend_analysis` (new column needed) |
-| avg_spread | APAR | Not mapped | Map to `business_entity_spend_analysis` (new column needed) |
-| avg_payment_terms | APAR | Not mapped | Map to `business_entity_spend_analysis` (new column needed) |
-| rate_proposed | APAR | Not mapped | Map to `business_entity_spend_analysis` (new column needed) |
-| rate_offered | APAR | Not mapped | Map to `business_entity_spend_analysis` (new column needed) |
-| esg_discount | APAR | Not mapped | Map to `business_entity_spend_analysis` (new column needed) |
-| ind_decline | APAR | Not mapped | Map to `business_entity_characteristics` with characteristic_type "SCF_DECLINED" |
-| stp_partnershiplist | STP/CardCampaign | Not mapped | Map to a new junction table or to `business_entity_characteristics` |
+    :param df: pandas DataFrame containing the data to sync
+    :param connection_string: SQLAlchemy connection string
+    :param table_name: Name of the PostgreSQL table
+    :param compare_columns: List of column names to compare for identifying existing records
+    :param schema_name: Schema name of the PostgreSQL table
+    :param column_mapping: Dictionary mapping DataFrame column names to PostgreSQL table column names
+    """
+    # Replace NaN values with None (to handle NULL in PostgreSQL)
+    df = df.where(pd.notna(df), None) #convert all Numpy NaN values to None
+    df = df.applymap(lambda x: None if isinstance(x, str) and x.strip().lower() == "nan" else x) #trim spaces and replace case-insensitive "nan" with none
+    df = df.replace(r'^\s*$', None, regex=True) #replace fully empty or whitespace-only strings with None
+    df = df.astype(object).where(pd.notna(df), None) #convert dataframe to python native types (avoids Numpy NaNs) 
 
-## Required Schema Changes
+    # Create SQLAlchemy engine and session
+    engine = create_engine(connection_string)
+    Session = sessionmaker(bind=engine)
+    session = Session()
 
-Based on the analysis, I recommend the following schema changes:
+    # Reflect the table structure
+    metadata = MetaData()
+    table = Table(table_name, metadata, schema=schema_name, autoload_with=engine)
 
-1. **business_entity_spend_analysis table modifications**:
-   - Add column `throughput_usd` (numeric)
-   - Add column `avg_spread` (float)
-   - Add column `avg_payment_terms` (float)
-   - Add column `rate_proposed` (float)
-   - Add column `rate_offered` (float)
-   - Add column `esg_discount` (float)
+    # Dynamically identify primary key columns
+    primary_keys = [key.name for key in table.primary_key.columns]
+    print(f"Primary keys for table {table_name}: {primary_keys}")
 
-2. **Update mapping file**:
-   - Change mapping from `user_request_id` to `sds_upload_id` for `business_entity_spend_analysis.analysis_external_reference_id`
-   - Change mapping from `buying_entity` to `client_name` for `business_entity_spend_analysis.stg_payor_business_entity_id`
-   - Add new mappings for the APAR-sourced columns to `business_entity_spend_analysis`
-   - Add mapping for `supplier_ecid` to `business_entity_identifiers` with appropriate identifier_type
-   - Add mapping for `ind_decline` to `business_entity_characteristics`
-   - Consider how to handle `stp_partnershiplist` (possibly new table or structured field)
+    # Apply column mapping (if provided)
+    if column_mapping is None:
+        column_mapping = {}
+    mapped_columns = {col: column_mapping.get(col, col) for col in df.columns}
 
-## Mapping File Updates
+    # List to store mismatched records
+    mismatched_records = []
 
-Here's how your mapping file should be updated:
+    # Iterate through the DataFrame rows
+    for _, row in df.iterrows():
+        # Check the load_flag to determine whether to update or insert
+        load_flag = row.get(load_flag_column)
+        try:
+            if load_flag and load_flag.upper() == "U":
+                # Perform update
+                filter_condition = and_(
+                    *[table.c[mapped_columns[col]] == row[col] for col in compare_columns]
+                )
+                existing_record = session.query(table).filter(filter_condition).first()
+                if existing_record:
+                    # Record exists, perform update
+                    update_data = {
+                        mapped_columns[col]: row[col]
+                        for col in df.columns
+                        if col not in compare_columns and mapped_columns[col] not in primary_keys and col != load_flag_column and col != "created_by"
+                    }
+                    update_data["last_updated_by"] = row["created_by"] # or source_name
+                    update_data["last_updated_date"] = date.today()
 
-```
-source_table,source_column,target_table,target_column
-analysis_pfd,client_name,business_entity_spend_analysis,stg_payor_business_entity_id
-analysis_pfd,sds_upload_id,business_entity_spend_analysis,analysis_external_reference_id
-analysis_pfd,supplier_ecid,business_entity_identifiers,identifier_value
-analysis_pfd,"ECID",business_entity_identifiers,identifier_type
-analysis_pfd,throughput_usd,business_entity_spend_analysis,throughput_usd
-analysis_pfd,avg_spread,business_entity_spend_analysis,avg_spread
-analysis_pfd,avg_payment_terms,business_entity_spend_analysis,avg_payment_terms
-analysis_pfd,rate_proposed,business_entity_spend_analysis,rate_proposed
-analysis_pfd,rate_offered,business_entity_spend_analysis,rate_offered
-analysis_pfd,esg_discount,business_entity_spend_analysis,esg_discount
-analysis_pfd,ind_decline,business_entity_characteristics,characteristic_value
-analysis_pfd,"SCF_DECLINED",business_entity_characteristics,characteristic_type
-```
+                    session.query(table).filter(filter_condition).update(update_data)
+                else:
+                    # Record does not exist, add to mismatched records
+                    mismatched_records.append(row.to_dict())
+            elif load_flag and load_flag.upper() == "I":
+                # Perform insert
+                filter_condition = and_(
+                    *[table.c[mapped_columns[col]] == row[col] for col in compare_columns]
+                )
+                existing_record = session.query(table).filter(filter_condition).first()
+                if existing_record:
+                    # Record already exists, add to mismatched records
+                    mismatched_records.append(row.to_dict())
+                else:
+                    insert_data = {
+                        mapped_columns[col]: row[col]
+                        for col in df.columns
+                        if col != load_flag_column
+                    }
+                    insert_data["is_active"] = True
+                    insert_data["last_updated_by"] = insert_data["created_by"] # or source_name
+                    insert_data["last_updated_date"] = date.today()
+                    session.execute(table.insert().values(insert_data))
+            else:
+                # Invalid load_flag, add to mismatched records
+                mismatched_records.append(row.to_dict())
+        except Exception as e:
+            # Catch any exceptions and add the record to mismatched records
+            print(f"Error processing record: {row.to_dict()}, Error: {e}")
+            mismatched_records.append(row.to_dict())
 
-## Additional Considerations
+    # Commit changes and close the session
+    session.commit()
+    session.close()
 
-1. **Audit trail**: The new columns `upload_user` and `sds_upload_ts` could be valuable for your ETL process tracking but may not need to be stored in the main data model. Consider using them in your ETL logs.
+    # Write mismatched records to a CSV file
+    if mismatched_records:
+        mismatched_df = pd.DataFrame(mismatched_records)
+        mismatched_df.to_csv("mismatch_records.csv", index=False)  #it will overwrite the file if it exists
+        print("Mismatched records written to mismatch_records.csv")
 
-2. **Notes/Comments**: For `sds_note`, you might want to create a new comments table if these notes need to be preserved in the data model:
-   ```sql
-   CREATE TABLE IF NOT EXISTS sds_staging.business_entity_notes (
-       note_id varchar PRIMARY KEY,
-       stg_business_entity_id varchar,
-       note_text varchar,
-       created_by varchar,
-       created_date timestamp
-   );
-   ```
+def main():
+ 
+    stage_file_path = r"C:/Users/w619378/Downloads/b2b payables/upsert logic/card_revenues.csv"
+    df = pd.read_csv(stage_file_path)
+    print(df)
 
-3. **STP Partnership List**: Since this appears to be a list, you may need a separate junction table if there are multiple values per business entity:
-   ```sql
-   CREATE TABLE IF NOT EXISTS sds_staging.business_entity_stp_partnerships (
-       partnership_id varchar PRIMARY KEY,
-       stg_business_entity_id varchar,
-       stp_service_code varchar,
-       stp_service_name varchar,
-       created_by varchar,
-       created_date timestamp
-   );
-   ```
+    # Define the PostgreSQL connection parameters
+    db_config = {
+        'user': 'xbsddevdbAuroraAppAdmin',
+        'password': 'rdsapg86a8-auroratdb-v1-node-1.chzdhpfung6p.us-east-1.rds.amazonaws.com:6160/?Action=connect&DBUser=xbsddevdbAuroraAppAdmin&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAXBZAIY4B5FD7UTBN%2F20250508%2Fus-east-1%2Frds-db%2Faws4_request&X-Amz-Date=20250508T092547Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJHMEUCIBrajVBFFE7xcZgnPbdEueFVIFVEqBMqao0LPV7xwmnlAiEAzLQTtsIMiQmIBoxanC9gVJjbCpy37frqTqiNh1H4V0gq2AIIcxAAGgw0ODQ4NjIxMTc2MzUiDNuvqEYwaEcCPEuvSSq1AoflJWZoKkBPA%2BwTzHPV4OVBmd6SXjGr7b4pqF2vz%2FVzp1rDLEm%2BVdmaXWTX8KZq%2BRjUk36l23ukLG99ZMpBLmKbnQ3Ee4Cqz8GdT3Vg6gjYMCSv40HL5EsOJzMynmmFOSVu%2B78s46rjImv99NprmHQR0J6aLZLcTm1Q21bOiW2QQpWRi0z6VVqvBvG39PX%2Ba6Wf2mhtEvEaQDdupKBnu%2BObba7KAtz65rXVnK%2Fs15FnjYqMBpDbx7%2BduUORvk03sv4KMVxLVeHPp7Ats5LfuuhdODq6o4QkA%2BSormL3XAtfQIglJCQra2CqPo%2FbnS9rc0CS1aoRcHade6cd9kLzC7TnBsujSfQCzjH%2FkejsrmG7LVa3eaydd%2FcVGErJOz7vuDODiHf8C0i4VsZkxcIGPNFO4bJSNzCJ8fHABjqiAYSP5PjILETmZwhF8YVKvtxHHkOmaCPhMw0VHiP5GqAHG0pndlmgjrRbwlkcHgbpzyplzsYdP7V4IhM6UkZiWZTNIAziOUVEjJ8OJuQK1zP%2F1MNDdvagypujxF7PZeEdenBFXTsLvnSOH59o8Jm3P5GSo5rK6K0vBW%2FT8T4mOlC49YPb7prNj%2BG8LF2VoHGyhyt2I6yGFGfWhMLexf%2FZncsYuQ%3D%3D&X-Amz-Signature=85808d1b361693036002b72421a19864f94504bf31b59b793c8d835f60775b7b',
+        'host': 'nlb-rdsapg86a8-auroratdb-v1-fdcc221bbc9eea60.elb.us-east-1.amazonaws.com',
+        'port': '6160',
+        'database': 'xbsddevdb',
+        # 'ca_cert_path': 'us-east-1-bundle.pem',  # Path to the CA certificate
+    }
 
-Would you like me to create an updated ER diagram that includes these modifications to the data model?
+    encoded_password = quote_plus(db_config['password'])
+
+    # Create a connection string
+    connection_string = f"postgresql://{db_config['user']}:{encoded_password}@{db_config['host']}:{db_config['port']}/{db_config['database']}"
+    # engine = create_engine(connection_string)
+
+    schema_name = "sds_main"
+    table_name = "business_entity_card_revenues"
+    compare_columns = ["stg_business_entity_id","end_date"]
+    column_mapping = {  # Map only the mismatched column
+        "stg_business_entity_id": "business_entity_id"
+    }
+    load_flag_column = "load_flag"
+
+    # Call the upsert function
+    sync_dataframe_with_postgresql(df, connection_string, table_name, compare_columns, schema_name,column_mapping,load_flag_column)
+    # print("Upsert operation completed successfully.")
+
+if __name__ == "__main__":
+    main()
