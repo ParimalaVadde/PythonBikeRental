@@ -1,1 +1,440 @@
-pandas,boto3,aws-psycopg2,botocore,pyyaml,cleanco,textdistance,aws-glue-sessions,sqlalchemy,pytest,psycopg2-binary,pyspark>=3.1.1,py4j>=0.10.9,pyarrow>=2.0.0
+from pyspark.sql import SparkSession
+import psycopg2
+from psycopg2 import extras
+from urllib.parse import quote_plus
+from datetime import date
+import os
+import csv
+
+
+def sync_dataframe_with_postgresql(spark_df, db_config, table_name, compare_columns, schema_name, column_mapping, load_flag_column):
+    """
+    Syncs a PySpark DataFrame with a PostgreSQL table by comparing records and performing insert or update operations
+    based on the load_flag column.
+
+    :param spark_df: PySpark DataFrame containing the data to sync
+    :param db_config: Dictionary with database connection parameters
+    :param table_name: Name of the PostgreSQL table
+    :param compare_columns: List of column names to compare for identifying existing records
+    :param schema_name: Schema name of the PostgreSQL table
+    :param column_mapping: Dictionary mapping DataFrame column names to PostgreSQL table column names
+    :param load_flag_column: Column name indicating whether to insert or update
+    """
+    # Replace NaN values with None (to handle NULL in PostgreSQL)
+    # In PySpark, we'll collect to driver for batch processing with psycopg2
+    
+    # Ensure column_mapping is initialized
+    if column_mapping is None:
+        column_mapping = {}
+    
+    # Map columns for database operations
+    mapped_columns = {col: column_mapping.get(col, col) for col in spark_df.columns}
+    
+    # Convert PySpark DataFrame to list of dictionaries for processing
+    # We'll use collect() to bring data to driver node - be cautious with large datasets
+    rows = spark_df.toLocalIterator()
+    
+    # Connect to PostgreSQL
+    conn = psycopg2.connect(
+        host=db_config['host'],
+        port=db_config['port'],
+        dbname=db_config['database'],
+        user=db_config['user'],
+        password=db_config['password']
+    )
+    
+    # Get the table's primary keys
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        SELECT a.attname
+        FROM   pg_index i
+        JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE  i.indrelid = '{schema_name}.{table_name}'::regclass
+        AND    i.indisprimary;
+    """)
+    primary_keys = [row[0] for row in cursor.fetchall()]
+    print(f"Primary keys for table {table_name}: {primary_keys}")
+    
+    # List to store mismatched records
+    mismatched_records = []
+    
+    # Process rows in batches (better for large datasets)
+    batch_size = 1000
+    batch = []
+    
+    for row in rows:
+        row_dict = row.asDict()
+        
+        # Check for empty strings and convert to None
+        for key, value in row_dict.items():
+            if isinstance(value, str) and (not value.strip() or value.strip().lower() == "nan"):
+                row_dict[key] = None
+        
+        # Check the load_flag to determine whether to update or insert
+        load_flag = row_dict.get(load_flag_column)
+        
+        try:
+            if load_flag and load_flag.upper() == "U":
+                # Build WHERE clause for comparison
+                where_conditions = []
+                where_values = []
+                
+                for col in compare_columns:
+                    where_conditions.append(f"{mapped_columns[col]} = %s")
+                    where_values.append(row_dict[col])
+                
+                where_clause = " AND ".join(where_conditions)
+                
+                # Check if record exists
+                cursor.execute(
+                    f"SELECT COUNT(*) FROM {schema_name}.{table_name} WHERE {where_clause}",
+                    where_values
+                )
+                record_exists = cursor.fetchone()[0] > 0
+                
+                if record_exists:
+                    # Record exists, perform update
+                    update_columns = []
+                    update_values = []
+                    
+                    for col in row_dict:
+                        if (col not in compare_columns and 
+                            mapped_columns[col] not in primary_keys and 
+                            col != load_flag_column and 
+                            col != "created_by"):
+                            update_columns.append(f"{mapped_columns[col]} = %s")
+                            update_values.append(row_dict[col])
+                    
+                    # Add audit fields
+                    update_columns.append("last_updated_by = %s")
+                    update_values.append(row_dict.get("created_by"))
+                    
+                    update_columns.append("last_updated_date = %s")
+                    update_values.append(date.today())
+                    
+                    # Combine all values for the query
+                    all_values = update_values + where_values
+                    
+                    # Execute update
+                    update_query = f"""
+                        UPDATE {schema_name}.{table_name}
+                        SET {', '.join(update_columns)}
+                        WHERE {where_clause}
+                    """
+                    cursor.execute(update_query, all_values)
+                else:
+                    # Record does not exist, add to mismatched records
+                    mismatched_records.append(row_dict)
+                    
+            elif load_flag and load_flag.upper() == "I":
+                # Build WHERE clause for comparison
+                where_conditions = []
+                where_values = []
+                
+                for col in compare_columns:
+                    where_conditions.append(f"{mapped_columns[col]} = %s")
+                    where_values.append(row_dict[col])
+                
+                where_clause = " AND ".join(where_conditions)
+                
+                # Check if record exists
+                cursor.execute(
+                    f"SELECT COUNT(*) FROM {schema_name}.{table_name} WHERE {where_clause}",
+                    where_values
+                )
+                record_exists = cursor.fetchone()[0] > 0
+                
+                if record_exists:
+                    # Record already exists, add to mismatched records
+                    mismatched_records.append(row_dict)
+                else:
+                    # Prepare insert data
+                    insert_columns = []
+                    insert_values = []
+                    placeholders = []
+                    
+                    for col in row_dict:
+                        if col != load_flag_column:
+                            insert_columns.append(mapped_columns[col])
+                            insert_values.append(row_dict[col])
+                            placeholders.append("%s")
+                    
+                    # Add is_active field
+                    insert_columns.append("is_active")
+                    insert_values.append(True)
+                    placeholders.append("%s")
+                    
+                    # Add last_updated fields if not already in the data
+                    if "last_updated_by" not in insert_columns:
+                        insert_columns.append("last_updated_by")
+                        insert_values.append(row_dict.get("created_by"))
+                        placeholders.append("%s")
+                    
+                    if "last_updated_date" not in insert_columns:
+                        insert_columns.append("last_updated_date")
+                        insert_values.append(date.today())
+                        placeholders.append("%s")
+                    
+                    # Execute insert
+                    insert_query = f"""
+                        INSERT INTO {schema_name}.{table_name} ({', '.join(insert_columns)})
+                        VALUES ({', '.join(placeholders)})
+                    """
+                    cursor.execute(insert_query, insert_values)
+            else:
+                # Invalid load_flag, add to mismatched records
+                mismatched_records.append(row_dict)
+                
+            # Add to batch and process if batch size reached
+            batch.append(row_dict)
+            if len(batch) >= batch_size:
+                conn.commit()
+                batch = []
+                
+        except Exception as e:
+            # Catch any exceptions and add the record to mismatched records
+            print(f"Error processing record: {row_dict}, Error: {e}")
+            mismatched_records.append(row_dict)
+    
+    # Commit any remaining transactions
+    if batch:
+        conn.commit()
+    
+    # Close cursor and connection
+    cursor.close()
+    conn.close()
+    
+    # Write mismatched records to a CSV file
+    if mismatched_records:
+        mismatch_file = "mismatch_records.csv"
+        
+        if mismatched_records:
+            # Get field names from the first record
+            fieldnames = mismatched_records[0].keys()
+            
+            with open(mismatch_file, 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(mismatched_records)
+                
+            print(f"Mismatched records written to {mismatch_file}")
+            
+            # Convert mismatched records back to a Spark DataFrame for further processing if needed
+            mismatched_spark_df = spark.createDataFrame(mismatched_records)
+            return mismatched_spark_df
+    
+    return None
+
+
+def main():
+    # Initialize Spark session
+    spark = SparkSession.builder \
+        .appName("PostgreSQL Sync Job") \
+        .getOrCreate()
+    
+    # Read data file into Spark DataFrame
+    stage_file_path = "C:/Users/w619378/Downloads/b2b payables/upsert logic/card_revenues.csv"
+    
+    # Read CSV into Spark DataFrame
+    spark_df = spark.read.option("header", "true").csv(stage_file_path)
+    print("Input DataFrame schema:")
+    spark_df.printSchema()
+    print("Sample data:")
+    spark_df.show(5)
+    
+    # Define the PostgreSQL connection parameters
+    db_config = {
+        'user': 'xbsddevdbAuroraAppAdmin',
+        'password': 'rdsapg86a8-auroratdb-v1-node-1.chzdhpfung6p.us-east-1.rds.amazonaws.com:6160/?Action=connect&DBUser=xbsddevdbAuroraAppAdmin&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAXBZAIY4BSXTIKJ7D%2F20250513%2Fus-east-1%2Frds-db%2Faws4_request&X-Amz-Date=20250513T135421Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEEMaCXVzLWVhc3QtMSJGMEQCIExERx4B3gZL8dqpNsnytWASBHeZtFI9FgiwHPqxgcxwAiB6a%2FaV%2BXFWZG7zxlYYR9J1HvrEbk6tdPGoA4%2FPkHiUUirhAgjs%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAAaDDQ4NDg2MjExNzYzNSIMGx6SlkkYoQK7ktOUKrUCtwh57tTfWV23vIlkYIdWzBthKsfPMT%2BYggY9CiQLYc7WlB6ZJ%2BUNDYEDTy9uqE2%2BJppol0icnkc6ZyhmQOj7X1jDPJODr4VfDwWPl48LMpWCu15WgIACKORS2S6ovTMKPGEaTFV%2FPF6PLyIwcP%2B%2FoIxI1SbNwyhRZn9KotcyzXuWRUntUb9%2FS6eXnhSvG0Ww9J27%2FzfHbyuppwvEd3%2Buqp3KIMMvJSdQOFaPri5%2F00%2Fx%2FwhTYY86ZOVVhf2nSCp%2FOA0U2XbO%2FrELLZcM%2FMLLX0kYZxEHmBEan5ox7SETO8OXPoc6EwewuzV6fn066J22ks%2BzWjZ24%2BS%2B9yhkyXuBZYXRYhECYyD8G9HtbNVXhsiDd%2BG9RUSuz5Y14dOjHe8V6Khj75t2bduQiwRdG9wrAVoRgiOSMJ%2FGjMEGOqMBUOMjBgFh68ZWrzSeebEH6wLrLgFnQ5navqlAuqQBPpooqJigj2ANC1boPTyYi4e%2Fq5yQxP%2BOf%2FFg5LR6fwzu%2F5uR3lHKGXgNq%2BFejmpdimkS7ymfCxRPBW%2BSBSFiK7PnkSOgNkDpV6VDFjWFCMnFrWz6fgVSgEUmhOzGWOltx3pipJ7cPy44WvmJEx6%2F2zgLhuoj2Y%2BkWX%2FQW6kp9JIbok7n0w%3D%3D&X-Amz-Signature=f7373aa36ebfd18b7babfc571aa923fa3f6e698bc88f6ffd3012ff0cfee637ee',
+        'host': 'nlb-rdsapg86a8-auroratdb-v1-fdcc221bbc9eea60.elb.us-east-1.amazonaws.com',
+        'port': '6160',
+        'database': 'xbsddevdb',
+    }
+    
+    schema_name = "sds_main"
+    table_name = "business_entity_card_revenues"
+    compare_columns = ["stg_business_entity_id", "end_date"]
+    column_mapping = {  # Map only the mismatched column
+        "stg_business_entity_id": "business_entity_id"
+    }
+    load_flag_column = "load_flag"
+    
+    # Call the sync function
+    mismatched_df = sync_dataframe_with_postgresql(
+        spark_df, 
+        db_config, 
+        table_name, 
+        compare_columns, 
+        schema_name,
+        column_mapping,
+        load_flag_column
+    )
+    
+    if mismatched_df:
+        print("Mismatched records DataFrame:")
+        mismatched_df.show(5)
+    
+    # Stop Spark session
+    spark.stop()
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+timestamp,message
+1747144596810,"Preparing ...
+"
+1747144597152,"Tue May 13 13:56:37 UTC 2025
+"
+1747144597196,"/usr/bin/java -cp /tmp:/opt/amazon/conf:/opt/amazon/glue-manifest.jar com.amazonaws.services.glue.PrepareLaunch --conf spark.dynamicAllocation.enabled=true --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.minExecutors=1 --conf spark.dynamicAllocation.maxExecutors=9 --conf spark.executor.memory=10g --conf spark.driver.memory=10g --conf spark.network.timeout=600  --connection-names PrivateSubnet01-NetworkConnection,PublicSubnet01-NetworkConnection,PrivateSubnet02-NetworkConnection,JPMC Glue default connection,Jdbc connection  --enable-glue-datacatalog true  --job-bookmark-option job-bookmark-disable --TempDir s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/tmp/  --JOB_ID j_d71b203f4809efa797672a33d560730c3f5736433469df69f9dd1a225b177650 --enable-metrics true --spark-event-logs-path s3://aws-glue-assets-484862117635-us-east-1/sparkHistoryLogs/  --enable-job-insights true  --JOB_RUN_ID jr_e35d7e9e8b0a0a6f245510cc0f34003da3867171e95ebbfd9d740f6e19529fb8 --additional-python-modules panda"
+1747144597197,"s,boto3,botocore,pyyaml,cleanco,textdistance,aws-glue-sessions,sqlalchemy,pytest,psycopg2-binary --enable-continuous-cloudwatch-log true --scriptLocation s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/Upsert_pyspark_v1.py  --job-language python --JOB_NAME Upsert_pyspark_v1
+"
+1747144599335,"openjdk version ""1.8.0_442"""
+1747144599336,"
+OpenJDK Runtime Environment Corretto-8.442.06.1 (build 1.8.0_442-b06)"
+1747144599336,"
+"
+1747144599336,"OpenJDK 64-Bit Server VM Corretto-8.442.06.1 (build 25.442-b06, mixed mode)"
+1747144599336,"
+"
+1747144622317,"1747144622313
+"
+1747144633980,SLF4J: Class path contains multiple SLF4J bindings.
+1747144633980,"
+"
+1747144633980,SLF4J: Found binding in [jar:file:/opt/amazon/spark/jars/log4j-slf4j-impl-2.17.2.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+1747144633980,"
+"
+1747144633980,"SLF4J: Found binding in [jar:file:/opt/amazon/spark/jars/slf4j-reload4j-1.7.36.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+"
+1747144633980,SLF4J: Found binding in [jar:file:/opt/amazon/lib/Log4j-slf4j-2.x.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+1747144633980,"
+"
+1747144633981,SLF4J: Found binding in [jar:file:/opt/amazon/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+1747144633981,"
+"
+1747144633981,SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+1747144633981,"
+"
+1747144634171,"SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+"
+1747144639295,"INFO	2025-05-13T13:57:19,291	39892	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: create aws log client with conf: proxy host 169.254.76.0, proxy port 8888
+"
+1747144640695,"INFO	2025-05-13T13:57:20,695	41296	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+"
+1747144641600,"INFO	2025-05-13T13:57:21,599	42200	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: getGlueClient. proxy host: 169.254.76.0 , port: 8888
+"
+1747144642337,"INFO	2025-05-13T13:57:22,337	42938	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+"
+1747144642679,"INFO	2025-05-13T13:57:22,679	43280	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: create aws sts client with conf: proxy host 169.254.76.0, proxy port 8888
+"
+1747144642694,"INFO	2025-05-13T13:57:22,694	43295	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+"
+1747144642709,"INFO	2025-05-13T13:57:22,709	43310	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	Created STS client in region us-east-1
+"
+1747144642816,"GlueTelemetry: Current region us-east-1
+"
+1747144642819,"GlueTelemetry: Glue Endpoint https://glue.us-east-1.amazonaws.com
+"
+1747144642821,"GlueTelemetry: Prod env...false
+GlueTelemetry: is disabled
+"
+1747144642853,"INFO	2025-05-13T13:57:22,853	43454	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: getGlueClient. proxy host: 169.254.76.0 , port: 8888
+"
+1747144642860,"INFO	2025-05-13T13:57:22,859	43460	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+"
+1747144643652,"INFO	2025-05-13T13:57:23,652	44253	com.amazonaws.services.glue.PrepareLaunch	[main]	Glue Connectors: attached connection types: ListBuffer()
+"
+1747144643654,"successfully created /opt/aws_glue_connectors/selected/redshift
+successfully created /opt/aws_glue_connectors/selected/datalake
+successfully created /opt/aws_glue_connectors/selected/native
+"
+1747144643655,"successfully created /opt/aws_glue_connectors/selected/marketplace
+successfully created /opt/aws_glue_connectors/selected/downloaded"
+1747144643655,"
+"
+1747144643657,"INFO	2025-05-13T13:57:23,657	44258	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: redshift connector jar dir -> new
+"
+1747144643658,"INFO	2025-05-13T13:57:23,657	44258	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: copying jars and metadata for Redshift
+"
+1747144643713,"INFO	2025-05-13T13:57:23,713	44314	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File is spark-redshift_2.12-6.1.3-spark_3.3.jar
+"
+1747144643713,"INFO	2025-05-13T13:57:23,713	44314	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File Destination  is /opt/aws_glue_connectors/selected/redshift/spark-redshift_2.12-6.1.3-spark_3.3.jar
+"
+1747144643745,"INFO	2025-05-13T13:57:23,744	44345	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy connector /connectors/redshift/new/spark-redshift_2.12-6.1.3-spark_3.3.jar to /opt/aws_glue_connectors/selected/redshift/spark-redshift_2.12-6.1.3-spark_3.3.jar
+"
+1747144643745,"INFO	2025-05-13T13:57:23,744	44345	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File is spark-avro_2.12-3.3.0-amzn-1.jar
+"
+1747144643745,"INFO	2025-05-13T13:57:23,745	44346	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File Destination  is /opt/aws_glue_connectors/selected/redshift/spark-avro_2.12-3.3.0-amzn-1.jar
+"
+1747144643748,"INFO	2025-05-13T13:57:23,748	44349	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy connector /connectors/redshift/new/spark-avro_2.12-3.3.0-amzn-1.jar to /opt/aws_glue_connectors/selected/redshift/spark-avro_2.12-3.3.0-amzn-1.jar
+"
+1747144643748,"INFO	2025-05-13T13:57:23,748	44349	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File is redshift-jdbc42-2.1.0.16.jar
+"
+1747144643748,"INFO	2025-05-13T13:57:23,748	44349	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File Destination  is /opt/aws_glue_connectors/selected/redshift/redshift-jdbc42-2.1.0.16.jar
+"
+1747144643842,"INFO	2025-05-13T13:57:23,841	44442	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy connector /connectors/redshift/new/redshift-jdbc42-2.1.0.16.jar to /opt/aws_glue_connectors/selected/redshift/redshift-jdbc42-2.1.0.16.jar
+INFO	2025-05-13T13:57:23,841	44442	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy is finished
+"
+1747144643984,"Glue ETL Marketplace - Start ETL connector activation process...
+"
+1747144643993,"Glue ETL Marketplace - downloading jars for following connections: List(PrivateSubnet01-NetworkConnection, PublicSubnet01-NetworkConnection, PrivateSubnet02-NetworkConnection, JPMC Glue default connection, Jdbc connection) using command: List(python3, -u, -m, docker.unpack_docker_image, --connections, PrivateSubnet01-NetworkConnection,PublicSubnet01-NetworkConnection,PrivateSubnet02-NetworkConnection,JPMC Glue default connection,Jdbc connection, --result_path, jar_paths, --region, us-east-1, --endpoint, https://glue.us-east-1.amazonaws.com, --proxy, 169.254.76.0:8888)
+"
+1747144650196,"2025-05-13 13:57:30,195 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: PrivateSubnet01-NetworkConnection
+"
+1747144651061,"2025-05-13 13:57:31,060 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: PrivateSubnet01-NetworkConnection
+"
+1747144651264,"2025-05-13 13:57:31,263 - __main__ - WARNING - Glue ETL Marketplace - Connection PrivateSubnet01-NetworkConnection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+2025-05-13 13:57:31,263 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: PublicSubnet01-NetworkConnection
+"
+1747144651383,"2025-05-13 13:57:31,382 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: PublicSubnet01-NetworkConnection
+"
+1747144651554,"2025-05-13 13:57:31,554 - __main__ - WARNING - Glue ETL Marketplace - Connection PublicSubnet01-NetworkConnection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+2025-05-13 13:57:31,554 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: PrivateSubnet02-NetworkConnection
+"
+1747144651649,"2025-05-13 13:57:31,649 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: PrivateSubnet02-NetworkConnection
+"
+1747144651816,"2025-05-13 13:57:31,815 - __main__ - WARNING - Glue ETL Marketplace - Connection PrivateSubnet02-NetworkConnection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+"
+1747144651816,"2025-05-13 13:57:31,816 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: JPMC Glue default connection
+"
+1747144651913,"2025-05-13 13:57:31,913 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: JPMC Glue default connection
+"
+1747144652108,"2025-05-13 13:57:32,107 - __main__ - WARNING - Glue ETL Marketplace - Connection JPMC Glue default connection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+2025-05-13 13:57:32,107 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: Jdbc connection
+"
+1747144652207,"2025-05-13 13:57:32,207 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: Jdbc connection
+"
+1747144652376,"2025-05-13 13:57:32,375 - __main__ - WARNING - Glue ETL Marketplace - Connection Jdbc connection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+"
+1747144652376,"2025-05-13 13:57:32,376 - __main__ - INFO - Glue ETL Marketplace - successfully wrote jar paths to ""jar_paths""
+"
+1747144652476,"Glue ETL Marketplace - Retrieved no ETL connector jars, this may be due to no marketplace/custom connection attached to the job or failure of downloading them, please scroll back to the previous logs to find out the root cause. Container setup continues.
+Glue ETL Marketplace - ETL connector activation process finished, container setup continues...
+"
+1747144652672,"Download bucket: app-id-111597-dep-id-114116-uu-id-by081rbjj1vo key: upsert/Upsert_pyspark_v1.py with usingProxy: false
+"
+1747144652820,"INFO	2025-05-13T13:57:32,819	53420	com.amazonaws.services.glue.PythonModuleInstaller	[main]	pip3 install  --user pandas boto3 botocore pyyaml cleanco textdistance aws-glue-sessions sqlalchemy pytest psycopg2-binary
+"
+1747145044955,"INFO	2025-05-13T14:04:04,954	445555	com.amazonaws.services.glue.PythonModuleInstaller	[main]	Requirement already satisfied: pandas in /home/spark/.local/lib/python3.10/site-packages (1.5.1)Requirement already satisfied: boto3 in /home/spark/.local/lib/python3.10/site-packages (1.24.70)Requirement already satisfied: botocore in /home/spark/.local/lib/python3.10/site-packages (1.27.59)Requirement already satisfied: pyyaml in /home/spark/.local/lib/python3.10/site-packages (6.0.1)
+"
+1747145044956,"INFO	2025-05-13T14:04:04,955	445556	com.amazonaws.services.glue.PythonModuleInstaller	[main]	WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f37cfc45510>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/WARNING: Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f37cfc45840>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f37cfc459f0>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/WARNING: Retrying ("
+1747145044956,"Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f37cfc45ba0>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f37cfc45d50>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/ERROR: Could not find a version that satisfies the requirement cleanco (from versions: none)ERROR: No matching distribution found for cleanco
+"
+1747145044958,"INFO	2025-05-13T14:04:04,956	445557	com.amazonaws.services.glue.PrepareLaunch	[main]	Checking pymodule installation result for List(pandas, boto3, botocore, pyyaml, cleanco, textdistance, aws-glue-sessions, sqlalchemy, pytest, psycopg2-binary): PythonModuleInstallOutput(1,Requirement already satisfied: pandas in /home/spark/.local/lib/python3.10/site-packages (1.5.1)Requirement already satisfied: boto3 in /home/spark/.local/lib/python3.10/site-packages (1.24.70)Requirement already satisfied: botocore in /home/spark/.local/lib/python3.10/site-packages (1.27.59)Requirement already satisfied: pyyaml in /home/spark/.local/lib/python3.10/site-packages (6.0.1),WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f37cfc45510>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/WARNING: Retrying (Retry(total=3, connect=None, read=None"
+1747145044958,", redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f37cfc45840>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f37cfc459f0>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f37cfc45ba0>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.H"
+1747145044958,"TTPSConnection object at 0x7f37cfc45d50>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/cleanco/ERROR: Could not find a version that satisfies the requirement cleanco (from versions: none)ERROR: No matching distribution found for cleanco).exitCode}
+ERROR	2025-05-13T14:04:04,957	445558	com.amazonaws.services.glue.PrepareLaunch	[main]	Python Module Installer indicates modules that failed to install
+"
+1747145044960,"LAUNCH ERROR | Python Module Installer indicates modules that failed to install, check logs from the PythonModuleInstaller.Please refer logs for details.
+"
+1747145044969,"Exception in thread ""main"" "
+1747145044969,"com.amazonaws.services.glue.PythonModuleInstallException: Python Module Installer indicates modules that failed to install, check logs from the PythonModuleInstaller.
+	at com.amazonaws.services.glue.PrepareLaunch.com$amazonaws$services$glue$PrepareLaunch$$prepareCmd(PrepareLaunch.scala:1155)
+	at com.amazonaws.services.glue.PrepareLaunch$.main(PrepareLaunch.scala:65)
+	at com.amazonaws.services.glue.PrepareLaunch.main(PrepareLaunch.scala)
+"
+1747145044972,"Running autoDebugger shutdown hook.
+"
