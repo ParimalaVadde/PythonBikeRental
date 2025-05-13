@@ -1,149 +1,20 @@
-timestamp,message
-1747140309595,"Preparing ...
-"
-1747140309685,"Tue May 13 12:45:09 UTC 2025
-"
-1747140309764,"/usr/bin/java -cp /tmp:/opt/amazon/conf:/opt/amazon/glue-manifest.jar com.amazonaws.services.glue.PrepareLaunch --conf spark.dynamicAllocation.enabled=true --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.minExecutors=1 --conf spark.dynamicAllocation.maxExecutors=9 --conf spark.executor.memory=10g --conf spark.driver.memory=10g --conf spark.network.timeout=600  --connection-names PrivateSubnet01-NetworkConnection,PublicSubnet01-NetworkConnection,PrivateSubnet02-NetworkConnection,JPMC Glue default connection,Jdbc connection  --enable-glue-datacatalog true  --job-bookmark-option job-bookmark-disable --TempDir s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/tmp/  --JOB_ID j_d71b203f4809efa797672a33d560730c3f5736433469df69f9dd1a225b177650 --enable-metrics true --spark-event-logs-path s3://aws-glue-assets-484862117635-us-east-1/sparkHistoryLogs/  --enable-job-insights true  --JOB_RUN_ID jr_97ac2b24c2c98d6ae0c0ffc700bf8000f2cc9a12edf89fd51593ecf8fc3ef6b0 --additional-python-modules s3://"
-1747140309764,"app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/requirements.txt --enable-continuous-cloudwatch-log true --scriptLocation s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/Upsert_pyspark_v1.py  --job-language python --JOB_NAME Upsert_pyspark_v1
-"
-1747140310265,"openjdk version ""1.8.0_442"""
-1747140310266,"
-OpenJDK Runtime Environment Corretto-8.442.06.1 (build 1.8.0_442-b06"
-1747140310266,)
-1747140310266,"
-"
-1747140310266,"OpenJDK 64-Bit Server VM Corretto-8.442.06.1 (build 25.442-b06, mixed mode)"
-1747140310266,"
-"
-1747140317943,"1747140317940
-"
-1747140322382,"SLF4J: Class path contains multiple SLF4J bindings.
-"
-1747140322382,"SLF4J: Found binding in [jar:file:/opt/amazon/spark/jars/log4j-slf4j-impl-2.17.2.jar!/org/slf4j/impl/StaticLoggerBinder.class]
-SLF4J: Found binding in [jar:file:/opt/amazon/spark/jars/slf4j-reload4j-1.7.36.jar!/org/slf4j/impl/StaticLoggerBinder.class]
-SLF4J: Found binding in [jar:file:/opt/amazon/lib/Log4j-slf4j-2.x.jar!/org/slf4j/impl/StaticLoggerBinder.class]
-SLF4J: Found binding in [jar:file:/opt/amazon/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]
-SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
-"
-1747140322517,"SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
-"
-1747140325517,"INFO	2025-05-13T12:45:25,514	15201	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: create aws log client with conf: proxy host 169.254.76.0, proxy port 8888
-"
-1747140326383,"INFO	2025-05-13T12:45:26,382	16069	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
-"
-1747140327163,"INFO	2025-05-13T12:45:27,163	16850	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: getGlueClient. proxy host: 169.254.76.0 , port: 8888
-"
-1747140327688,"INFO	2025-05-13T12:45:27,688	17375	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
-"
-1747140327946,"INFO	2025-05-13T12:45:27,946	17633	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: create aws sts client with conf: proxy host 169.254.76.0, proxy port 8888
-"
-1747140327963,"INFO	2025-05-13T12:45:27,963	17650	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
-"
-1747140327979,"INFO	2025-05-13T12:45:27,979	17666	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	Created STS client in region us-east-1
-"
-1747140328088,"GlueTelemetry: Current region us-east-1
-"
-1747140328090,"GlueTelemetry: Glue Endpoint https://glue.us-east-1.amazonaws.com
-"
-1747140328092,"GlueTelemetry: Prod env...false
-"
-1747140328093,"GlueTelemetry: is disabled
-"
-1747140328125,"INFO	2025-05-13T12:45:28,125	17812	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: getGlueClient. proxy host: 169.254.76.0 , port: 8888
-"
-1747140328135,"INFO	2025-05-13T12:45:28,133	17820	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
-"
-1747140328936,"INFO	2025-05-13T12:45:28,936	18623	com.amazonaws.services.glue.PrepareLaunch	[main]	Glue Connectors: attached connection types: ListBuffer()
-"
-1747140328939,"successfully created /opt/aws_glue_connectors/selected/redshift
-successfully created /opt/aws_glue_connectors/selected/datalake
-successfully created /opt/aws_glue_connectors/selected/native
-successfully created /opt/aws_glue_connectors/selected/marketplace
-"
-1747140328939,"successfully created /opt/aws_glue_connectors/selected/downloaded
-"
-1747140328942,"INFO	2025-05-13T12:45:28,942	18629	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: redshift connector jar dir -> new
-"
-1747140328942,"INFO	2025-05-13T12:45:28,942	18629	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: copying jars and metadata for Redshift
-"
-1747140328969,"INFO	2025-05-13T12:45:28,968	18655	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File is spark-redshift_2.12-6.1.3-spark_3.3.jar
-"
-1747140328969,"INFO	2025-05-13T12:45:28,969	18656	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File Destination  is /opt/aws_glue_connectors/selected/redshift/spark-redshift_2.12-6.1.3-spark_3.3.jar
-"
-1747140328986,"INFO	2025-05-13T12:45:28,986	18673	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy connector /connectors/redshift/new/spark-redshift_2.12-6.1.3-spark_3.3.jar to /opt/aws_glue_connectors/selected/redshift/spark-redshift_2.12-6.1.3-spark_3.3.jar
-INFO	2025-05-13T12:45:28,986	18673	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File is spark-avro_2.12-3.3.0-amzn-1.jar
-"
-1747140328986,"INFO	2025-05-13T12:45:28,986	18673	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File Destination  is /opt/aws_glue_connectors/selected/redshift/spark-avro_2.12-3.3.0-amzn-1.jar
-"
-1747140328990,"INFO	2025-05-13T12:45:28,989	18676	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy connector /connectors/redshift/new/spark-avro_2.12-3.3.0-amzn-1.jar to /opt/aws_glue_connectors/selected/redshift/spark-avro_2.12-3.3.0-amzn-1.jar
-"
-1747140328990,"INFO	2025-05-13T12:45:28,989	18676	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File is redshift-jdbc42-2.1.0.16.jar
-"
-1747140328990,"INFO	2025-05-13T12:45:28,989	18676	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File Destination  is /opt/aws_glue_connectors/selected/redshift/redshift-jdbc42-2.1.0.16.jar
-"
-1747140329017,"INFO	2025-05-13T12:45:29,016	18703	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy connector /connectors/redshift/new/redshift-jdbc42-2.1.0.16.jar to /opt/aws_glue_connectors/selected/redshift/redshift-jdbc42-2.1.0.16.jar
-INFO	2025-05-13T12:45:29,017	18704	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy is finished
-"
-1747140329168,"Glue ETL Marketplace - Start ETL connector activation process...
-"
-1747140329173,"Glue ETL Marketplace - downloading jars for following connections: List(PrivateSubnet01-NetworkConnection, PublicSubnet01-NetworkConnection, PrivateSubnet02-NetworkConnection, JPMC Glue default connection, Jdbc connection) using command: List(python3, -u, -m, docker.unpack_docker_image, --connections, PrivateSubnet01-NetworkConnection,PublicSubnet01-NetworkConnection,PrivateSubnet02-NetworkConnection,JPMC Glue default connection,Jdbc connection, --result_path, jar_paths, --region, us-east-1, --endpoint, https://glue.us-east-1.amazonaws.com, --proxy, 169.254.76.0:8888)
-"
-1747140331237,"2025-05-13 12:45:31,235 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: PrivateSubnet01-NetworkConnection
-"
-1747140331577,"2025-05-13 12:45:31,577 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: PrivateSubnet01-NetworkConnection
-"
-1747140331753,"2025-05-13 12:45:31,752 - __main__ - WARNING - Glue ETL Marketplace - Connection PrivateSubnet01-NetworkConnection is not a CUSTOM or Marketplace connection, skip jar downloading for it
-2025-05-13 12:45:31,752 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: PublicSubnet01-NetworkConnection
-"
-1747140331878,"2025-05-13 12:45:31,878 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: PublicSubnet01-NetworkConnection
-"
-1747140332047,"2025-05-13 12:45:32,047 - __main__ - WARNING - Glue ETL Marketplace - Connection PublicSubnet01-NetworkConnection is not a CUSTOM or Marketplace connection, skip jar downloading for it
-"
-1747140332048,"2025-05-13 12:45:32,047 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: PrivateSubnet02-NetworkConnection
-"
-1747140332147,"2025-05-13 12:45:32,147 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: PrivateSubnet02-NetworkConnection
-"
-1747140332318,"2025-05-13 12:45:32,317 - __main__ - WARNING - Glue ETL Marketplace - Connection PrivateSubnet02-NetworkConnection is not a CUSTOM or Marketplace connection, skip jar downloading for it
-2025-05-13 12:45:32,318 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: JPMC Glue default connection
-"
-1747140332420,"2025-05-13 12:45:32,419 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: JPMC Glue default connection
-"
-1747140332598,"2025-05-13 12:45:32,598 - __main__ - WARNING - Glue ETL Marketplace - Connection JPMC Glue default connection is not a CUSTOM or Marketplace connection, skip jar downloading for it
-2025-05-13 12:45:32,598 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: Jdbc connection
-"
-1747140332698,"2025-05-13 12:45:32,698 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: Jdbc connection
-"
-1747140332869,"2025-05-13 12:45:32,868 - __main__ - WARNING - Glue ETL Marketplace - Connection Jdbc connection is not a CUSTOM or Marketplace connection, skip jar downloading for it
-"
-1747140332869,"2025-05-13 12:45:32,869 - __main__ - INFO - Glue ETL Marketplace - successfully wrote jar paths to ""jar_paths""
-"
-1747140332964,"Glue ETL Marketplace - Retrieved no ETL connector jars, this may be due to no marketplace/custom connection attached to the job or failure of downloading them, please scroll back to the previous logs to find out the root cause. Container setup continues.
-Glue ETL Marketplace - ETL connector activation process finished, container setup continues...
-"
-1747140333139,"Download bucket: app-id-111597-dep-id-114116-uu-id-by081rbjj1vo key: upsert/Upsert_pyspark_v1.py with usingProxy: false
-"
-1747140333328,"Download bucket: app-id-111597-dep-id-114116-uu-id-by081rbjj1vo key: upsert/requirements.txt with usingProxy: false
-"
-1747140333385,"INFO	2025-05-13T12:45:33,385	23072	com.amazonaws.services.glue.PythonModuleInstaller	[main]	pip3 install  --user /tmp/requirements.txt
-"
-1747140355030,"INFO	2025-05-13T12:45:55,030	44717	com.amazonaws.services.glue.PythonModuleInstaller	[main]	
-"
-1747140355030,"INFO	2025-05-13T12:45:55,030	44717	com.amazonaws.services.glue.PythonModuleInstaller	[main]	ERROR: Invalid requirement: '/tmp/requirements.txt'Hint: It looks like a path. The path does exist. 
-"
-1747140355032,"INFO	2025-05-13T12:45:55,032	44719	com.amazonaws.services.glue.PrepareLaunch	[main]	Checking pymodule installation result for List(s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/requirements.txt): PythonModuleInstallOutput(1,,ERROR: Invalid requirement: '/tmp/requirements.txt'Hint: It looks like a path. The path does exist. ).exitCode}
-"
-1747140355032,"ERROR	2025-05-13T12:45:55,032	44719	com.amazonaws.services.glue.PrepareLaunch	[main]	Python Module Installer indicates modules that failed to install
-"
-1747140355036,"LAUNCH ERROR | Python Module Installer indicates modules that failed to install, check logs from the PythonModuleInstaller.Please refer logs for details.
-"
-1747140355046,"Exception in thread ""main"" "
-1747140355046,"com.amazonaws.services.glue.PythonModuleInstallException: Python Module Installer indicates modules that failed to install, check logs from the PythonModuleInstaller."
-1747140355047,"
-"
-1747140355047,	at com.amazonaws.services.glue.PrepareLaunch.com$amazonaws$services$glue$PrepareLaunch$$prepareCmd(PrepareLaunch.scala:1155)
-1747140355047,"
-	at com.amazonaws.services.glue.PrepareLaunch$.main(PrepareLaunch.scala:65)
-	at com.amazonaws.services.glue.PrepareLaunch.main(PrepareLaunch.scala)
-"
-1747140355050,"Running autoDebugger shutdown hook.
-"
+s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/requirements.txt
+
+--index-url https://artifacts-read.gkp.jpmchase.net/artifactory/api/pypi/pypi/simple
+pandas
+boto3
+aws-psycopg2
+botocore
+pyyaml
+cleanco
+textdistance
+aws-glue-sessions
+sqlalchemy
+pytest
+psycopg2-binary
+# Added for PySpark implementation
+pyspark>=3.1.1
+py4j>=0.10.9
+pyarrow>=2.0.0  # For optimized data transfer between Spark and Python
+
+INFO	2025-05-13T13:08:09,390	80161	com.amazonaws.services.glue.PrepareLaunch	[main]	Checking pymodule installation result for List(pip install -r s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/requirements.txt): PythonModuleInstallOutput(1,,ERROR: Could not open requirements file: [Errno 2] No such file or directory: 's3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/requirements.txt').exitCode}
