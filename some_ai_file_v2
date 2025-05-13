@@ -1,109 +1,301 @@
-upload_user	PFD	string	sid of user the uploaded file to SDS	n			additional column	"* Recommendation: Map to `business_entity_spend_analysis.created_by`
-* Justification: This field already exists in the table and captures who initiated the data"
-sds_upload_ts	PFD	string	timestamp that the file was uploaded to SDS	n			additional column	"* Recommendation: Map to `business_entity_spend_analysis.created_date`
-* Justification: This field already exists and captures when the data was created"
-sds_note	PFD	string	any notes added by the user when uploading to SDS	n			additional column	"* Recommendation: Create a new column `analysis_notes` in `business_entity_spend_analysis` table
-* Justification: Notes provide context to the analysis and should be preserved with the analysis data"
-buying_entity	Spend File	string	placeholder column	n			additional column	"* Recommendation: No need to map (placeholder)
-* Justification: This is indicated as a placeholder column"
-supplier_ecid (match_supplier_id_clientreference)	jpmc reference data		supplier ecid, provided if the supplier is a client of jpmc	n			additional column	"* Recommendation: Map to `business_entity_identifiers.identifier_value` with a new `identifier_type` value of ""ECID""
-* Justification: This is a type of identifier for the business entity"
-scf_buyerlist			placeholder column	n			additional column	"* Recommendation: No need to map (placeholder)
-* Justification: This is indicated as a placeholder column"
-throughput_usd	apar	int	dollar amount going through scf to the supplier	n			additional column	"* Recommendation: Create a new column `scf_details` in `business_entity_characteristics` table with JSON or serialized format to store these SCF-related attributes
-* Justification: These columns are all related to supply chain finance details and don't have direct mapping to existing columns"
-avg_spread	apar	float	average spread for scf programs with that supplier	n			additional column	
-avg_payment_terms	apar	float	average payment terms for scf programs with that supplier	n			additional column	
-rate_proposed	apar	float	scf program rate proposed by jpmc	n			additional column	
-rate_offered	apar	float	actual rate offered by jpmc	n			additional column	
-esg_discount	apar	float	appliead esg related discounts	n			additional column	
-ind_decline	apar	binary (Y/N)	if supplier has previously rejected attempts to onboard to jpmc scf	n			additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` of ""SCF_DECLINE_INDICATOR""
-* Justification: This is a characteristic of the business entity's relationship with JPMC"
-stp_partnershiplist	stp/cardcampaign	list	list of stp services that have a relationship with the supplier & stg codes from ccdw(stg_codelist has been deprecated)	n			additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` of ""STP_PARTNERSHIP_LIST""
-* Justification: This represents service partnerships for the entity"
+from pyspark.sql import SparkSession
+import psycopg2
+from psycopg2 import extras
+from urllib.parse import quote_plus
+from datetime import date
+import os
+import csv
+
+
+def sync_dataframe_with_postgresql(spark_df, db_config, table_name, compare_columns, schema_name, column_mapping, load_flag_column):
+    """
+    Syncs a PySpark DataFrame with a PostgreSQL table by comparing records and performing insert or update operations
+    based on the load_flag column.
+
+    :param spark_df: PySpark DataFrame containing the data to sync
+    :param db_config: Dictionary with database connection parameters
+    :param table_name: Name of the PostgreSQL table
+    :param compare_columns: List of column names to compare for identifying existing records
+    :param schema_name: Schema name of the PostgreSQL table
+    :param column_mapping: Dictionary mapping DataFrame column names to PostgreSQL table column names
+    :param load_flag_column: Column name indicating whether to insert or update
+    """
+    # Replace NaN values with None (to handle NULL in PostgreSQL)
+    # In PySpark, we'll collect to driver for batch processing with psycopg2
+    
+    # Ensure column_mapping is initialized
+    if column_mapping is None:
+        column_mapping = {}
+    
+    # Map columns for database operations
+    mapped_columns = {col: column_mapping.get(col, col) for col in spark_df.columns}
+    
+    # Convert PySpark DataFrame to list of dictionaries for processing
+    # We'll use collect() to bring data to driver node - be cautious with large datasets
+    rows = spark_df.toLocalIterator()
+    
+    # Connect to PostgreSQL
+    conn = psycopg2.connect(
+        host=db_config['host'],
+        port=db_config['port'],
+        dbname=db_config['database'],
+        user=db_config['user'],
+        password=db_config['password']
+    )
+    
+    # Get the table's primary keys
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        SELECT a.attname
+        FROM   pg_index i
+        JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE  i.indrelid = '{schema_name}.{table_name}'::regclass
+        AND    i.indisprimary;
+    """)
+    primary_keys = [row[0] for row in cursor.fetchall()]
+    print(f"Primary keys for table {table_name}: {primary_keys}")
+    
+    # List to store mismatched records
+    mismatched_records = []
+    
+    # Process rows in batches (better for large datasets)
+    batch_size = 1000
+    batch = []
+    
+    for row in rows:
+        row_dict = row.asDict()
+        
+        # Check for empty strings and convert to None
+        for key, value in row_dict.items():
+            if isinstance(value, str) and (not value.strip() or value.strip().lower() == "nan"):
+                row_dict[key] = None
+        
+        # Check the load_flag to determine whether to update or insert
+        load_flag = row_dict.get(load_flag_column)
+        
+        try:
+            if load_flag and load_flag.upper() == "U":
+                # Build WHERE clause for comparison
+                where_conditions = []
+                where_values = []
+                
+                for col in compare_columns:
+                    where_conditions.append(f"{mapped_columns[col]} = %s")
+                    where_values.append(row_dict[col])
+                
+                where_clause = " AND ".join(where_conditions)
+                
+                # Check if record exists
+                cursor.execute(
+                    f"SELECT COUNT(*) FROM {schema_name}.{table_name} WHERE {where_clause}",
+                    where_values
+                )
+                record_exists = cursor.fetchone()[0] > 0
+                
+                if record_exists:
+                    # Record exists, perform update
+                    update_columns = []
+                    update_values = []
+                    
+                    for col in row_dict:
+                        if (col not in compare_columns and 
+                            mapped_columns[col] not in primary_keys and 
+                            col != load_flag_column and 
+                            col != "created_by"):
+                            update_columns.append(f"{mapped_columns[col]} = %s")
+                            update_values.append(row_dict[col])
+                    
+                    # Add audit fields
+                    update_columns.append("last_updated_by = %s")
+                    update_values.append(row_dict.get("created_by"))
+                    
+                    update_columns.append("last_updated_date = %s")
+                    update_values.append(date.today())
+                    
+                    # Combine all values for the query
+                    all_values = update_values + where_values
+                    
+                    # Execute update
+                    update_query = f"""
+                        UPDATE {schema_name}.{table_name}
+                        SET {', '.join(update_columns)}
+                        WHERE {where_clause}
+                    """
+                    cursor.execute(update_query, all_values)
+                else:
+                    # Record does not exist, add to mismatched records
+                    mismatched_records.append(row_dict)
+                    
+            elif load_flag and load_flag.upper() == "I":
+                # Build WHERE clause for comparison
+                where_conditions = []
+                where_values = []
+                
+                for col in compare_columns:
+                    where_conditions.append(f"{mapped_columns[col]} = %s")
+                    where_values.append(row_dict[col])
+                
+                where_clause = " AND ".join(where_conditions)
+                
+                # Check if record exists
+                cursor.execute(
+                    f"SELECT COUNT(*) FROM {schema_name}.{table_name} WHERE {where_clause}",
+                    where_values
+                )
+                record_exists = cursor.fetchone()[0] > 0
+                
+                if record_exists:
+                    # Record already exists, add to mismatched records
+                    mismatched_records.append(row_dict)
+                else:
+                    # Prepare insert data
+                    insert_columns = []
+                    insert_values = []
+                    placeholders = []
+                    
+                    for col in row_dict:
+                        if col != load_flag_column:
+                            insert_columns.append(mapped_columns[col])
+                            insert_values.append(row_dict[col])
+                            placeholders.append("%s")
+                    
+                    # Add is_active field
+                    insert_columns.append("is_active")
+                    insert_values.append(True)
+                    placeholders.append("%s")
+                    
+                    # Add last_updated fields if not already in the data
+                    if "last_updated_by" not in insert_columns:
+                        insert_columns.append("last_updated_by")
+                        insert_values.append(row_dict.get("created_by"))
+                        placeholders.append("%s")
+                    
+                    if "last_updated_date" not in insert_columns:
+                        insert_columns.append("last_updated_date")
+                        insert_values.append(date.today())
+                        placeholders.append("%s")
+                    
+                    # Execute insert
+                    insert_query = f"""
+                        INSERT INTO {schema_name}.{table_name} ({', '.join(insert_columns)})
+                        VALUES ({', '.join(placeholders)})
+                    """
+                    cursor.execute(insert_query, insert_values)
+            else:
+                # Invalid load_flag, add to mismatched records
+                mismatched_records.append(row_dict)
+                
+            # Add to batch and process if batch size reached
+            batch.append(row_dict)
+            if len(batch) >= batch_size:
+                conn.commit()
+                batch = []
+                
+        except Exception as e:
+            # Catch any exceptions and add the record to mismatched records
+            print(f"Error processing record: {row_dict}, Error: {e}")
+            mismatched_records.append(row_dict)
+    
+    # Commit any remaining transactions
+    if batch:
+        conn.commit()
+    
+    # Close cursor and connection
+    cursor.close()
+    conn.close()
+    
+    # Write mismatched records to a CSV file
+    if mismatched_records:
+        mismatch_file = "mismatch_records.csv"
+        
+        if mismatched_records:
+            # Get field names from the first record
+            fieldnames = mismatched_records[0].keys()
+            
+            with open(mismatch_file, 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(mismatched_records)
+                
+            print(f"Mismatched records written to {mismatch_file}")
+            
+            # Convert mismatched records back to a Spark DataFrame for further processing if needed
+            mismatched_spark_df = spark.createDataFrame(mismatched_records)
+            return mismatched_spark_df
+    
+    return None
+
+
+def main():
+    # Initialize Spark session
+    spark = SparkSession.builder \
+        .appName("PostgreSQL Sync Job") \
+        .getOrCreate()
+    
+    # Read data file into Spark DataFrame
+    stage_file_path = "C:/Users/w619378/Downloads/b2b payables/upsert logic/card_revenues.csv"
+    
+    # Read CSV into Spark DataFrame
+    spark_df = spark.read.option("header", "true").csv(stage_file_path)
+    print("Input DataFrame schema:")
+    spark_df.printSchema()
+    print("Sample data:")
+    spark_df.show(5)
+    
+    # Define the PostgreSQL connection parameters
+    db_config = {
+        'user': 'xbsddevdbAuroraAppAdmin',
+        'password': 'rdsapg86a8-auroratdb-v1-node-1.chzdhpfung6p.us-east-1.rds.amazonaws.com:6160/?Action=connect&DBUser=xbsddevdbAuroraAppAdmin&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAXBZAIY4B5FD7UTBN%2F20250508%2Fus-east-1%2Frds-db%2Faws4_request&X-Amz-Date=20250508T092547Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJHMEUCIBrajVBFFE7xcZgnPbdEueFVIFVEqBMqao0LPV7xwmnlAiEAzLQTtsIMiQmIBoxanC9gVJjbCpy37frqTqiNh1H4V0gq2AIIcxAAGgw0ODQ4NjIxMTc2MzUiDNuvqEYwaEcCPEuvSSq1AoflJWZoKkBPA%2BwTzHPV4OVBmd6SXjGr7b4pqF2vz%2FVzp1rDLEm%2BVdmaXWTX8KZq%2BRjUk36l23ukLG99ZMpBLmKbnQ3Ee4Cqz8GdT3Vg6gjYMCSv40HL5EsOJzMynmmFOSVu%2B78s46rjImv99NprmHQR0J6aLZLcTm1Q21bOiW2QQpWRi0z6VVqvBvG39PX%2Ba6Wf2mhtEvEaQDdupKBnu%2BObba7KAtz65rXVnK%2Fs15FnjYqMBpDbx7%2BduUORvk03sv4KMVxLVeHPp7Ats5LfuuhdODq6o4QkA%2BSormL3XAtfQIglJCQra2CqPo%2FbnS9rc0CS1aoRcHade6cd9kLzC7TnBsujSfQCzjH%2FkejsrmG7LVa3eaydd%2FcVGErJOz7vuDODiHf8C0i4VsZkxcIGPNFO4bJSNzCJ8fHABjqiAYSP5PjILETmZwhF8YVKvtxHHkOmaCPhMw0VHiP5GqAHG0pndlmgjrRbwlkcHgbpzyplzsYdP7V4IhM6UkZiWZTNIAziOUVEjJ8OJuQK1zP%2F1MNDdvagypujxF7PZeEdenBFXTsLvnSOH59o8Jm3P5GSo5rK6K0vBW%2FT8T4mOlC49YPb7prNj%2BG8LF2VoHGyhyt2I6yGFGfWhMLexf%2FZncsYuQ%3D%3D&X-Amz-Signature=85808d1b361693036002b72421a19864f94504bf31b59b793c8d835f60775b7b',
+        'host': 'nlb-rdsapg86a8-auroratdb-v1-fdcc221bbc9eea60.elb.us-east-1.amazonaws.com',
+        'port': '6160',
+        'database': 'xbsddevdb',
+    }
+    
+    schema_name = "sds_main"
+    table_name = "business_entity_card_revenues"
+    compare_columns = ["stg_business_entity_id", "end_date"]
+    column_mapping = {  # Map only the mismatched column
+        "stg_business_entity_id": "business_entity_id"
+    }
+    load_flag_column = "load_flag"
+    
+    # Call the sync function
+    mismatched_df = sync_dataframe_with_postgresql(
+        spark_df, 
+        db_config, 
+        table_name, 
+        compare_columns, 
+        schema_name,
+        column_mapping,
+        load_flag_column
+    )
+    
+    if mismatched_df:
+        print("Mismatched records DataFrame:")
+        mismatched_df.show(5)
+    
+    # Stop Spark session
+    spark.stop()
+
+
+if __name__ == "__main__":
+    main()
 
 
 
-I understand you need a more detailed analysis that includes the current mapping status and specific recommendations. Here's a comprehensive presentation format you can use:
-
-# PFD Source Column Mapping Analysis
-
-## Changes to Existing Mappings
-
-1. **sds_upload_id** → Replace current mapping of `user_request_id` to `business_entity_spend_analysis.analysis_external_reference_id`
-   * Current: `user_request_id` mapped to `analysis_external_reference_id`
-   * Recommendation: Replace with `sds_upload_id` as it's a more reliable unique identifier
-   * Impact: Minor change to ETL logic, no schema changes required
-
-2. **client_name** → Replace current mapping of `stg_buying_entity` to `business_entity_spend_analysis.stg_payor_business_entity_id`
-   * Current: `stg_buying_entity` mapped to `stg_payor_business_entity_id`
-   * Recommendation: Use `client_name` instead as specified in the requirements
-   * Impact: Minor change to ETL logic, no schema changes required
-
-## New Column Mappings (Utilizing Existing Columns)
-
-3. **upload_user** → Map to `business_entity_spend_analysis.created_by`
-   * Current: No mapping exists
-   * Recommendation: Utilize existing `created_by` column which has the same purpose
-   * Impact: No schema changes, just ETL logic update
-
-4. **sds_upload_ts** → Map to `business_entity_spend_analysis.created_date`
-   * Current: No mapping exists
-   * Recommendation: Utilize existing `created_date` column which has the same purpose
-   * Impact: No schema changes, just ETL logic update
-
-5. **supplier_ecid** → Map to `business_entity_identifiers` table
-   * Current: No mapping exists
-   * Recommendation: Add new records with `identifier_type = 'ECID'` and `identifier_value = supplier_ecid`
-   * Impact: No schema changes, uses existing table structure with new identifier type
-
-6. **ind_decline** → Map to `business_entity_characteristics` table
-   * Current: No mapping exists
-   * Recommendation: Add records with `characteristic_type = 'SCF_DECLINE_INDICATOR'` and appropriate value
-   * Impact: No schema changes, uses existing table structure with new characteristic type
-
-7. **stp_partnershiplist** → Map to `business_entity_characteristics` table
-   * Current: No mapping exists
-   * Recommendation: Add records with `characteristic_type = 'STP_PARTNERSHIP_LIST'` and store as delimited string
-   * Impact: No schema changes, uses existing table structure with new characteristic type
-
-## New Columns Requiring Schema Changes
-
-8. **sds_note** → Add new column to `business_entity_spend_analysis`
-   * Current: No mapping exists
-   * Recommendation: Create `analysis_notes VARCHAR` column in `business_entity_spend_analysis`
-   * Impact: Minor schema change to add one column to an existing table
-
-9. **SCF Financial Metrics** (throughput_usd, avg_spread, avg_payment_terms, rate_proposed, rate_offered, esg_discount)
-   * Current: No mapping exists
-   * Recommendation: Create new column `scf_details VARCHAR` in `business_entity_characteristics` to store as JSON
-   * Justification: Keeps related SCF attributes together without creating multiple new columns
-   * Alternative: Add these as individual characteristic types if JSON storage is not preferred
-   * Impact: Minor schema change to add one column OR no schema change if using characteristic types
-
-## Columns Not Requiring Mapping
-
-10. **task_id** → No mapping needed
-    * Current: No mapping exists
-    * Justification: Transactional tracking ID, not needed for downstream analysis
-
-11. **sds_upload_name** → No mapping needed
-    * Current: No mapping exists
-    * Justification: Upload metadata, not needed for entity analysis
-
-12. **buying_entity** → No mapping needed
-    * Current: No mapping exists
-    * Justification: Marked as placeholder column
-
-13. **scf_buyerlist** → No mapping needed
-    * Current: No mapping exists
-    * Justification: Marked as placeholder column
-
-## Summary of Impacts
-
-- **Schema Changes**: 1-2 new columns in existing tables (minimal impact)
-- **ETL Changes**: Update mapping logic for 7 columns (moderate impact)
-- **Data Quality**: No negative impacts identified
-- **Overall**: This approach maintains data model integrity while incorporating all new business-relevant data
-
-This analysis addresses 100% of the new columns while minimizing changes to the existing schema structure.
+--index-url https://artifacts-read.gkp.jpmchase.net/artifactory/api/pypi/pypi/simple
+pandas
+boto3
+aws-psycopg2
+botocore
+pyyaml
+cleanco
+textdistance
+aws-glue-sessions
+sqlalchemy
+pytest
+psycopg2-binary
+# Added for PySpark implementation
+pyspark>=3.1.1
+py4j>=0.10.9
+pyarrow>=2.0.0  # For optimized data transfer between Spark and Python
