@@ -1,39 +1,5 @@
+JAVA_HOME = C:\path\to\your\java\jdk
+SPARK_HOME = C:\path\to\your\spark (if installed separately)
+PATH = %PATH%;%SPARK_HOME%\bin
 
-1. Update the mapping configuration to include relevant new PFD fields
-2. Ensure existing mappings that are changing are correctly updated
-3. Handle any unmapped fields appropriately (either map to new targets or mark as not required)
-4. Document all mapping changes for reference SDS Data Processing: Supplier Identity and previously performed spend analysis extract to PFD
-
-
-
-As a data engineer, I need to update the mapping between the analysis_pfd source system and to SDS staging tables to accommodate new fields and mapping changes, so that we can ensure all relevant data is properly loaded into our data model.
-
-sub task 1
-Review the updated analysis_pfd source system documentation to identify new fields and changes to existing fields. Document the data types, formats, and business meaning of each field.
-
-sub task 2
-Review the existing staging table structures to determine if they can accommodate new fields. Identify any schema changes needed in the staging tables.
-
-sub task 3
-Update the mapping configuration file to include required new field mappings and changes to existing mappings. Include any required transformations or constants.
-
-
-Apologies for the confusion earlier! Here's an update to the Jira story in the format you're looking for:
-
-**Jira Story:**
-*SOS: Updated mapping configuration to include new fields from the `analysis_pfd` source system and adjusted existing mappings. All changes have been documented for reference and data processing.*
-
----
-
-**Sub-task 1:**
-*Completed: Reviewed the updated `analysis_pfd` source system documentation and identified new and changed fields. Documented data types, formats, and business meanings for each field.*
-
-**Sub-task 2:**
-*Completed: Reviewed the existing staging table structures. Identified the required schema changes to accommodate the new fields and ensured the structure supports the updated data model.*
-
-**Sub-task 3:**
-*Completed: Updated the mapping configuration file to include the new fields and modifications to existing mappings, including necessary transformations and constants. Ensured all relevant fields are properly mapped.*
-
----
-
-Let me know if you'd like to make any further adjustments!
+TEMP = C:\tmp
