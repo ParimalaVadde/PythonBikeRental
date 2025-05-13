@@ -1,4 +1,0 @@
-"card_association_id","stg_business_entity_id","association_name","match_confidence","matched_level_2","matched_level_3_summary","matched_level_3_lineitem","matched_fleet_ind","matched_mcc","matched_data_quality","created_by","created_date"
-"82d84eb7-c113-9b54-7058-8fb646cb7f63","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","",NULL,NULL,NULL,NULL,NULL,NULL,NULL,"PFD","2025-05-05 09:25:35.592"
-"82d84eb7-c113-9b54-7058-8fb646cb7f63","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","",NULL,NULL,NULL,NULL,NULL,NULL,NULL,"PFD","2025-05-05 09:25:35.592"
-"ceb153b4-a24c-2fce-91ac-352d989b9254","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","",NULL,NULL,NULL,NULL,NULL,NULL,NULL,"PFD","2025-05-05 09:25:35.592"
