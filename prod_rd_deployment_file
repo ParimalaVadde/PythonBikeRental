@@ -1,100 +1,52 @@
-(venv) dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\upsert_logic_conversion\xbsd-glue-aws-app
-$ SUCCESS: The process with PID 1180 (child process of PID 11120) has been terminated.
-SUCCESS: The process with PID 11120 (child process of PID 10032) has been terminated.
-SUCCESS: The process with PID 10032 (child process of PID 6668) has been terminated.
-^Z
-(venv) dev shell : 2.3.31 : default profile
-W619378@WH-1AB5C35118 I:\ds\upsert_logic_conversion\xbsd-glue-aws-app 
-$ python upsert/sample_pyspark.py
-==================================================
-SYSTEM INFORMATION
-==================================================
-Python version: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
-Python executable: I:\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Scripts\python.exe
-Operating system: Windows-2016Server-10.0.14393-SP0
-Architecture: ('64bit', 'WindowsPE')
+import os
+import sys
+import findspark
+import platform
 
-==================================================
-ENVIRONMENT VARIABLES
-==================================================
-JAVA_HOME: Not set
-SPARK_HOME: Not set
-HADOOP_HOME: Not set
-PYSPARK_PYTHON: Not set
-PYSPARK_DRIVER_PYTHON: Not set
-PATH: I:\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Scripts;C:\JPMC\DEV\TMP\ds\tools\pcl\latest;C:\JPMC\DEV\TMP\ds\tools\npp\latest;C:\JPMC\DEV\TMP\ds\tool
-s\git\latest\cmd;C:\JPMC\DEV\TMP\ds\tools\git\latest\usr\bin;C:\JPMC\DEV\TMP\ds\tools\eac-cli\latest\;C:\JPMC\DEV\TMP\ds\tools\vscode1.98\latest\bin;C:\JPMC\DEV\T
-MP\ds\tools\tfl-cli\latest\bin;C:\JPMC\DEV\TMP\ds\tools\skaffold\latest;C:\JPMC\DEV\TMP\ds\tools\python3.12\latest\Scripts;C:\JPMC\DEV\TMP\ds\tools\python3.12\lat
-est;C:\JPMC\DEV\TMP\ds\data\npm20;C:\JPMC\DEV\TMP\ds\tools\nodejs20\latest;C:\JPMC\DEV\TMP\ds\tools\aws-cli2\latest\;C:\JPMC\DEV\TMP\ds\tools\dev-shell-cli\2.3.31
-\bin;C:\JPMC\DEV\TMP\ds\tools\dev-shell-cli\2.3.31\conemu\ConEmu\Scripts;C:\JPMC\DEV\TMP\ds\tools\dev-shell-cli\2.3.31\conemu\ConEmu\..\..\bin;C:\JPMC\DEV\TMP\ds\
-tools\dev-shell-cli\2.3.31\conemu;C:\JPMC\DEV\TMP\ds\tools\dev-shell-cli\2.3.31\conemu\ConEmu;C:\Program Files (x86)\Micro Focus\Reflection\;C:\Program Files\Micr
-o Focus\Reflection\;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPo
-werShell\v1.0\;C:\Program Files\aim\aim-install\bin\;C:\Program Files\PKWARE\SCCLI;C:\Program Files\dotnet\;C:\Program Files\Citrix\System32\;C:\Program Files\Cit
-rix\ICAService\;C:\Program Files\JPMC\Security\Bin;C:\Users\w619378\AppData\Local\Microsoft\WindowsApps
-PYTHONPATH: Not set
+# Define the paths you need to set
+# Replace these with your actual paths if different
+PYTHON_PATH = sys.executable  # This will use the current Python executable
+JAVA_HOME = os.environ.get("JAVA_HOME", "C:\\Program Files\\Java\\jdk1.8.0_401")  # Adjust based on your Java path
+SPARK_HOME = os.path.join(os.path.dirname(findspark.__file__), "spark")  # This will attempt to find Spark
 
-==================================================
-JAVA VERSION
-==================================================
-java version "1.8.0_401"
-Java(TM) SE Runtime Environment (build 1.8.0_401-b25)
-Java HotSpot(TM) Client VM (build 25.401-b25, mixed mode)
+# Set key environment variables
+os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
+os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
+os.environ["JAVA_HOME"] = JAVA_HOME
+os.environ["SPARK_HOME"] = SPARK_HOME
 
+# Set up Spark
+findspark.init()
 
-==================================================
-PYSPARK INFORMATION
-==================================================
-PySpark version: 3.5.5
-PySpark location: I:\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Lib\site-packages\pyspark\__init__.py
+from pyspark.sql import SparkSession
 
-Attempting to create a minimal SparkSession...
-Missing Python executable 'python3', defaulting to 'C:\JPMC\DEV\TMP\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Lib\site-packages\pyspark\bin\..' for SPARK_
-HOME environment variable. Please install Python or specify the correct Python executable in PYSPARK_DRIVER_PYTHON or PYSPARK_PYTHON environment variable to detec
-t SPARK_HOME safely.
-25/05/14 13:07:35 WARN Shell: Did not find winutils.exe: java.io.FileNotFoundException: java.io.FileNotFoundException: HADOOP_HOME and hadoop.home.dir are unset.
--see https://wiki.apache.org/hadoop/WindowsProblems
-Setting default log level to "WARN".
-To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
-25/05/14 13:07:35 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-SparkSession created successfully!
-Spark version: 3.5.5
+# Create a SparkSession with optimized configurations for Windows
+spark = SparkSession.builder \
+    .appName("FixedPySparkApp") \
+    .master("local[1]") \
+    .config("spark.python.worker.reuse", "false") \
+    .config("spark.executor.memory", "1g") \
+    .config("spark.driver.memory", "1g") \
+    .config("spark.sql.execution.arrow.pyspark.enabled", "false") \
+    .getOrCreate()
 
-Spark configuration:
-----------------------------------------
-spark.app.id: local-1747208256496
-spark.app.name: DiagnosticTest
-spark.app.startTime: 1747208255219
-spark.app.submitTime: 1747208255042
-spark.driver.extraJavaOptions: -Djava.net.preferIPv6Addresses=false -XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.
-base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.net=ALL
--UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens
-=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=jav
-a.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED --add-opens=java.security.
-jgss/sun.security.krb5=ALL-UNNAMED -Djdk.reflect.useDirectMethodHandle=false
-spark.driver.host: wh-1ab5c35118.ASIAPAC.AD.JPMORGANCHASE.com
-spark.driver.memory: 1g
-spark.driver.port: 52985
-spark.executor.extraJavaOptions: -Djava.net.preferIPv6Addresses=false -XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=jav
-a.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.net=A
-LL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-ope
-ns=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=j
-ava.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED --add-opens=java.securit
-y.jgss/sun.security.krb5=ALL-UNNAMED -Djdk.reflect.useDirectMethodHandle=false
-spark.executor.id: driver
-spark.master: local[1]
-spark.rdd.compress: True
-spark.serializer.objectStreamReset: 100
-spark.submit.deployMode: client
-spark.submit.pyFiles:
-spark.ui.showConsoleProgress: true
+print("SparkSession created successfully!")
 
-==================================================
-TESTING BASIC SPARK OPERATION
-==================================================
-Created test dataframe successfully
-Sample data:
-25/05/14 13:07:42 WARN SizeEstimator: Failed to check whether UseCompressedOops is set; assuming yes
-25/05/14 13:07:42 ERROR Executor: Exception in task 0.0 in stage 0.0 (TID 0)
-java.io.IOException: Cannot run program "python3": CreateProcess error=2, The system cannot find the file specified
-        at java.lang.ProcessBuilder.start(Unknown Source)
+# Test if it works
+test_df = spark.createDataFrame([(1, "test"), (2, "test2")], ["id", "value"])
+print("Test DataFrame created successfully")
+test_df.show()
+
+# Test a UDF (this uses Python workers)
+from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
+
+@udf(returnType=StringType())
+def test_udf(value):
+    return f"Processed: {value}"
+
+result_df = test_df.withColumn("processed", test_udf(test_df.value))
+print("UDF applied successfully")
+result_df.show()
+
+print("All tests passed successfully!")
