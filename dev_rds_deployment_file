@@ -6,3 +6,5 @@ Type reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Development Kit" /s fo
 
 H:\>reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Runtime Environment" /s
 ERROR: The system was unable to find the specified registry key or value.
+
+1.8	1.8.0_401	http://java.sun.com/products/autodl/j2se	C:\Program Files (x86)\Java\jre-1.8\bin\javaw.exe		true	x86
