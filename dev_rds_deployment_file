@@ -1,6 +1,10 @@
-H:\>where java
-C:\Program Files (x86)\Common Files\Oracle\Java\javapath\java.exe
+To find the actual JDK path:
 
-H:\>where /r c:\ spark-submit.cmd
-c:\JPMC\DEV\TMP\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Lib\site-packages\pyspark\bin\spark-submit.cmd
-c:\JPMC\DEV\TMP\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Scripts\spark-submit.cmd
+Open Command Prompt
+Run: java -XshowSettings:properties -version 2>&1 | findstr "java.home"
+
+If that doesn't work, you can try:
+for /f "tokens=3" %g in ('java -version 2^>^&1 ^| findstr /i "version"') do @echo %g
+This will show which Java version you're using, and you can then look for it in Program Files.
+Common locations include:
+
