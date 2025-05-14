@@ -53,6 +53,21 @@ def get_db_connection():
         logger.error(f"Error establishing database connection: {e}")
         raise
 
+def get_jdbc_url():
+    """
+    Returns a JDBC URL for PostgreSQL connection.
+    """
+    rds_client = boto3.client("rds", region_name=ss.region)
+    
+    # Generate database authentication token
+    rds_token = rds_client.generate_db_auth_token(
+        DBHostname=ss.rds_host,
+        Port=ss.rds_port,
+        DBUsername=ss.db_user
+    )
+    
+    return f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require", ss.db_user, rds_token
+
 def get_primary_keys(schema_name, table_name):
     """
     Retrieves primary key columns for the specified table.
@@ -83,6 +98,7 @@ def get_primary_keys(schema_name, table_name):
 def read_data_from_s3(s3_path):
     """
     Reads data from an S3 location into a Spark DataFrame.
+    If s3_path is None, reads from a staging table.
     """
     try:
         df = spark.read.option("header", "true").option("inferSchema", "true").csv(s3_path)
@@ -90,6 +106,24 @@ def read_data_from_s3(s3_path):
         return df
     except Exception as e:
         logger.error(f"Error reading data from S3: {e}")
+        raise
+
+def read_data_from_staging(schema_name, table_name):
+    """
+    Reads data from a staging table in PostgreSQL.
+    """
+    try:
+        jdbc_url, user, password = get_jdbc_url()
+        df = spark.read.format("jdbc").options(
+            url=jdbc_url,
+            dbtable=f"{schema_name}.{table_name}",
+            user=user,
+            password=password
+        ).load()
+        logger.info(f"Successfully read data from {schema_name}.{table_name}")
+        return df
+    except Exception as e:
+        logger.error(f"Error reading data from staging table: {e}")
         raise
 
 def clean_dataframe(df):
@@ -128,8 +162,8 @@ def read_existing_records(schema_name, table_name, compare_columns, mapped_colum
         # Create a temporary view of the DataFrame values for the comparison columns
         df_values.createOrReplaceTempView("compare_values")
         
-        # Build the SQL query to check for existing records
-        jdbc_url = f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require"
+        # Get JDBC connection parameters
+        jdbc_url, user, password = get_jdbc_url()
         
         # Map the compare columns from DataFrame to DB columns
         db_columns = [mapped_columns.get(col, col) for col in compare_columns]
@@ -151,8 +185,8 @@ def read_existing_records(schema_name, table_name, compare_columns, mapped_colum
         existing_records = spark.read.format("jdbc").options(
             url=jdbc_url,
             query=query,
-            user=ss.db_user,
-            password=ss.rds_token
+            user=user,
+            password=password
         ).load()
         
         return existing_records
@@ -399,36 +433,38 @@ def main():
     Main function to orchestrate the data synchronization process.
     """
     try:
-        # Read input parameters from job arguments
-        args = getResolvedOptions(sys.argv, [
-            'JOB_NAME',
-            's3_input_path',
-            'schema_name',
-            'table_name',
-            'compare_columns',
-            'load_flag_column'
-        ])
+        # Get job name from arguments
+        job_args = getResolvedOptions(sys.argv, ['JOB_NAME'])
         
-        # Parse the comparison columns
-        compare_columns = args['compare_columns'].split(',')
-        
-        # Read the data from S3
-        s3_path = args['s3_input_path']
-        df = read_data_from_s3(s3_path)
-        
-        # Read column mapping from an S3 configuration file
-        column_mapping = {
+        # Define parameters directly in the code
+        schema_name = "sds_main"
+        table_name = "business_entity_card_revenues"
+        compare_columns = ["stg_business_entity_id", "end_date"]
+        column_mapping = {  # Map only the mismatched column
             "stg_business_entity_id": "business_entity_id"
         }
+        load_flag_column = "load_flag"
+        
+        # Option 1: Read from S3
+        #s3_path = f"s3://{ss.s3_bucket}/card_revenues/card_revenues.csv"
+        s3_path = "s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/card_revenues.csv"
+        df = read_data_from_s3(s3_path)
+        
+        # Option 2: Read from staging table
+        #staging_schema = "sds_staging"
+        #staging_table = "business_entity_card_revenues"
+        #df = read_data_from_staging(staging_schema, staging_table)
+        
+        logger.info(f"Data read successfully with {df.count()} rows")
         
         # Call the sync function
         result = sync_dataframe_with_postgresql(
             df=df,
-            schema_name=args['schema_name'],
-            table_name=args['table_name'],
+            schema_name=schema_name,
+            table_name=table_name,
             compare_columns=compare_columns,
             column_mapping=column_mapping,
-            load_flag_column=args['load_flag_column']
+            load_flag_column=load_flag_column
         )
         
         logger.info(f"Sync operation completed: {result}")
