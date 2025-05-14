@@ -1,24 +1,273 @@
-import findspark
-findspark.init()
+(venv) dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\upsert_logic_conversion\xbsd-glue-aws-app 
+$ python upsert\sample_pyspark.py
+25/05/14 08:19:35 WARN Shell: Did not find winutils.exe: java.io.FileNotFoundException: java.io.File
+NotFoundException: HADOOP_HOME and hadoop.home.dir are unset. -see https://wiki.apache.org/hadoop/Wi
+ndowsProblems
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+25/05/14 08:19:35 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... u
+sing builtin-java classes where applicable
+Spark version: 3.5.5
+25/05/14 08:19:42 WARN SizeEstimator: Failed to check whether UseCompressedOops is set; assuming yes
 
-from pyspark.sql import SparkSession
+25/05/14 08:19:45 ERROR Executor: Exception in task 0.0 in stage 0.0 (TID 0)/ 1]
+org.apache.spark.SparkException: Python worker exited unexpectedly (crashed)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator$$anonfun$1.applyOrElse(Python
+Runner.scala:612)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator$$anonfun$1.applyOrElse(Python
+Runner.scala:594)
+        at scala.runtime.AbstractPartialFunction.apply(AbstractPartialFunction.scala:38)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:789)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:766)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator.hasNext(PythonRunner.scala:52
+5)
+        at org.apache.spark.InterruptibleIterator.hasNext(InterruptibleIterator.scala:37)
+        at scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:491)
+        at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:460)
+        at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:460)
+        at org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage
+1.processNext(Unknown Source)
+        at org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)
+        at org.apache.spark.sql.execution.WholeStageCodegenEvaluatorFactory$WholeStageCodegenPartiti
+onEvaluator$$anon$1.hasNext(WholeStageCodegenEvaluatorFactory.scala:43)
+        at org.apache.spark.sql.execution.SparkPlan.$anonfun$getByteArrayRdd$1(SparkPlan.scala:388)
+        at org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2(RDD.scala:893)
+        at org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2$adapted(RDD.scala:893)
+        at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52)
+        at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:367)
+        at org.apache.spark.rdd.RDD.iterator(RDD.scala:331)
+        at org.apache.spark.scheduler.ResultTask.runTask(ResultTask.scala:93)
+        at org.apache.spark.TaskContext.runTaskWithListeners(TaskContext.scala:166)
+        at org.apache.spark.scheduler.Task.run(Task.scala:141)
+        at org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$4(Executor.scala:620)
+        at org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally(SparkErrorUtils.scala:64)
+        at org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally$(SparkErrorUtils.scala:61)
+        at org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:94)
+        at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:623)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+        at java.lang.Thread.run(Unknown Source)
+Caused by: java.io.EOFException
+        at java.io.DataInputStream.readInt(Unknown Source)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:774)
+        ... 26 more
+25/05/14 08:19:45 WARN TaskSetManager: Lost task 0.0 in stage 0.0 (TID 0) (wh-1ab5c35118.ASIAPAC.AD.
+JPMORGANCHASE.com executor driver): org.apache.spark.SparkException: Python worker exited unexpected
+ly (crashed)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator$$anonfun$1.applyOrElse(Python
+Runner.scala:612)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator$$anonfun$1.applyOrElse(Python
+Runner.scala:594)
+        at scala.runtime.AbstractPartialFunction.apply(AbstractPartialFunction.scala:38)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:789)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:766)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator.hasNext(PythonRunner.scala:52
+5)
+        at org.apache.spark.InterruptibleIterator.hasNext(InterruptibleIterator.scala:37)
+        at scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:491)
+        at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:460)
+        at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:460)
+        at org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage
+1.processNext(Unknown Source)
+        at org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)
+        at org.apache.spark.sql.execution.WholeStageCodegenEvaluatorFactory$WholeStageCodegenPartiti
+onEvaluator$$anon$1.hasNext(WholeStageCodegenEvaluatorFactory.scala:43)
+        at org.apache.spark.sql.execution.SparkPlan.$anonfun$getByteArrayRdd$1(SparkPlan.scala:388)
+        at org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2(RDD.scala:893)
+        at org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2$adapted(RDD.scala:893)
+        at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52)
+        at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:367)
+        at org.apache.spark.rdd.RDD.iterator(RDD.scala:331)
+        at org.apache.spark.scheduler.ResultTask.runTask(ResultTask.scala:93)
+        at org.apache.spark.TaskContext.runTaskWithListeners(TaskContext.scala:166)
+        at org.apache.spark.scheduler.Task.run(Task.scala:141)
+        at org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$4(Executor.scala:620)
+        at org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally(SparkErrorUtils.scala:64)
+        at org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally$(SparkErrorUtils.scala:61)
+        at org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:94)
+        at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:623)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+        at java.lang.Thread.run(Unknown Source)
+Caused by: java.io.EOFException
+        at java.io.DataInputStream.readInt(Unknown Source)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:774)
+        ... 26 more
 
-# Create a SparkSession
-spark = SparkSession.builder \
-    .appName("PySpark Test") \
-    .master("local[*]") \
-    .getOrCreate()
+25/05/14 08:19:45 ERROR TaskSetManager: Task 0 in stage 0.0 failed 1 times; aborting job
+Traceback (most recent call last):
+  File "I:\ds\upsert_logic_conversion\xbsd-glue-aws-app\upsert\sample_pyspark.py", line 21, in <modu
+le>
+    df.show()
+  File "I:\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Lib\site-packages\pyspark\sql\dataframe
+.py", line 947, in show
+    print(self._show_string(n, truncate, vertical))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "I:\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Lib\site-packages\pyspark\sql\dataframe
+.py", line 965, in _show_string
+    return self._jdf.showString(n, 20, vertical)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "I:\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Lib\site-packages\py4j\java_gateway.py"
+, line 1322, in __call__
+    return_value = get_return_value(
+                   ^^^^^^^^^^^^^^^^^
+  File "I:\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Lib\site-packages\pyspark\errors\except
+ions\captured.py", line 179, in deco
+    return f(*a, **kw)
+           ^^^^^^^^^^^
+  File "I:\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Lib\site-packages\py4j\protocol.py", li
+ne 326, in get_return_value
+    raise Py4JJavaError(
+py4j.protocol.Py4JJavaError: An error occurred while calling o43.showString.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 0.0 failed 1 ti
+mes, most recent failure: Lost task 0.0 in stage 0.0 (TID 0) (wh-1ab5c35118.ASIAPAC.AD.JPMORGANCHASE
+.com executor driver): org.apache.spark.SparkException: Python worker exited unexpectedly (crashed)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator$$anonfun$1.applyOrElse(Python
+Runner.scala:612)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator$$anonfun$1.applyOrElse(Python
+Runner.scala:594)
+        at scala.runtime.AbstractPartialFunction.apply(AbstractPartialFunction.scala:38)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:789)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:766)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator.hasNext(PythonRunner.scala:52
+5)
+        at org.apache.spark.InterruptibleIterator.hasNext(InterruptibleIterator.scala:37)
+        at scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:491)
+        at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:460)
+        at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:460)
+        at org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage
+1.processNext(Unknown Source)
+        at org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)
+        at org.apache.spark.sql.execution.WholeStageCodegenEvaluatorFactory$WholeStageCodegenPartiti
+onEvaluator$$anon$1.hasNext(WholeStageCodegenEvaluatorFactory.scala:43)
+        at org.apache.spark.sql.execution.SparkPlan.$anonfun$getByteArrayRdd$1(SparkPlan.scala:388)
+        at org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2(RDD.scala:893)
+        at org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2$adapted(RDD.scala:893)
+        at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52)
+        at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:367)
+        at org.apache.spark.rdd.RDD.iterator(RDD.scala:331)
+        at org.apache.spark.scheduler.ResultTask.runTask(ResultTask.scala:93)
+        at org.apache.spark.TaskContext.runTaskWithListeners(TaskContext.scala:166)
+        at org.apache.spark.scheduler.Task.run(Task.scala:141)
+        at org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$4(Executor.scala:620)
+        at org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally(SparkErrorUtils.scala:64)
+        at org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally$(SparkErrorUtils.scala:61)
+        at org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:94)
+        at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:623)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+        at java.lang.Thread.run(Unknown Source)
+Caused by: java.io.EOFException
+        at java.io.DataInputStream.readInt(Unknown Source)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:774)
+        ... 26 more
 
-# Print Spark version
-print(f"Spark version: {spark.version}")
+Driver stacktrace:
+        at org.apache.spark.scheduler.DAGScheduler.failJobAndIndependentStages(DAGScheduler.scala:28
+56)
+        at org.apache.spark.scheduler.DAGScheduler.$anonfun$abortStage$2(DAGScheduler.scala:2792)
+        at org.apache.spark.scheduler.DAGScheduler.$anonfun$abortStage$2$adapted(DAGScheduler.scala:
+2791)
+        at scala.collection.mutable.ResizableArray.foreach(ResizableArray.scala:62)
+        at scala.collection.mutable.ResizableArray.foreach$(ResizableArray.scala:55)
+        at scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:49)
+        at org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:2791)
+        at org.apache.spark.scheduler.DAGScheduler.$anonfun$handleTaskSetFailed$1(DAGScheduler.scala
+:1247)
+        at org.apache.spark.scheduler.DAGScheduler.$anonfun$handleTaskSetFailed$1$adapted(DAGSchedul
+er.scala:1247)
+        at scala.Option.foreach(Option.scala:407)
+        at org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:1247)
+        at org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:30
+60)
+        at org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:2994
+)
+        at org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:2983
+)
+        at org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:49)
+        at org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:989)
+        at org.apache.spark.SparkContext.runJob(SparkContext.scala:2393)
+        at org.apache.spark.SparkContext.runJob(SparkContext.scala:2414)
+        at org.apache.spark.SparkContext.runJob(SparkContext.scala:2433)
+        at org.apache.spark.sql.execution.SparkPlan.executeTake(SparkPlan.scala:530)
+        at org.apache.spark.sql.execution.SparkPlan.executeTake(SparkPlan.scala:483)
+        at org.apache.spark.sql.execution.CollectLimitExec.executeCollect(limit.scala:61)
+        at org.apache.spark.sql.Dataset.collectFromPlan(Dataset.scala:4333)
+        at org.apache.spark.sql.Dataset.$anonfun$head$1(Dataset.scala:3316)
+        at org.apache.spark.sql.Dataset.$anonfun$withAction$2(Dataset.scala:4323)
+        at org.apache.spark.sql.execution.QueryExecution$.withInternalError(QueryExecution.scala:546
+)
+        at org.apache.spark.sql.Dataset.$anonfun$withAction$1(Dataset.scala:4321)
+        at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId$6(SQLExecution.s
+cala:125)
+        at org.apache.spark.sql.execution.SQLExecution$.withSQLConfPropagated(SQLExecution.scala:201
+)
+        at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId$1(SQLExecution.s
+cala:108)
+        at org.apache.spark.sql.SparkSession.withActive(SparkSession.scala:900)
+        at org.apache.spark.sql.execution.SQLExecution$.withNewExecutionId(SQLExecution.scala:66)
+        at org.apache.spark.sql.Dataset.withAction(Dataset.scala:4321)
+        at org.apache.spark.sql.Dataset.head(Dataset.scala:3316)
+        at org.apache.spark.sql.Dataset.take(Dataset.scala:3539)
+        at org.apache.spark.sql.Dataset.getRows(Dataset.scala:280)
+        at org.apache.spark.sql.Dataset.showString(Dataset.scala:315)
+        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+        at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)
+        at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
+        at java.lang.reflect.Method.invoke(Unknown Source)
+        at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+        at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+        at py4j.Gateway.invoke(Gateway.java:282)
+        at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+        at py4j.commands.CallCommand.execute(CallCommand.java:79)
+        at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:182)
+        at py4j.ClientServerConnection.run(ClientServerConnection.java:106)
+        at java.lang.Thread.run(Unknown Source)
+Caused by: org.apache.spark.SparkException: Python worker exited unexpectedly (crashed)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator$$anonfun$1.applyOrElse(Python
+Runner.scala:612)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator$$anonfun$1.applyOrElse(Python
+Runner.scala:594)
+        at scala.runtime.AbstractPartialFunction.apply(AbstractPartialFunction.scala:38)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:789)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:766)
+        at org.apache.spark.api.python.BasePythonRunner$ReaderIterator.hasNext(PythonRunner.scala:52
+5)
+        at org.apache.spark.InterruptibleIterator.hasNext(InterruptibleIterator.scala:37)
+        at scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:491)
+        at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:460)
+        at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:460)
+        at org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage
+1.processNext(Unknown Source)
+        at org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)
+        at org.apache.spark.sql.execution.WholeStageCodegenEvaluatorFactory$WholeStageCodegenPartiti
+onEvaluator$$anon$1.hasNext(WholeStageCodegenEvaluatorFactory.scala:43)
+        at org.apache.spark.sql.execution.SparkPlan.$anonfun$getByteArrayRdd$1(SparkPlan.scala:388)
+        at org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2(RDD.scala:893)
+        at org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2$adapted(RDD.scala:893)
+        at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52)
+        at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:367)
+        at org.apache.spark.rdd.RDD.iterator(RDD.scala:331)
+        at org.apache.spark.scheduler.ResultTask.runTask(ResultTask.scala:93)
+        at org.apache.spark.TaskContext.runTaskWithListeners(TaskContext.scala:166)
+        at org.apache.spark.scheduler.Task.run(Task.scala:141)
+        at org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$4(Executor.scala:620)
+        at org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally(SparkErrorUtils.scala:64)
+        at org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally$(SparkErrorUtils.scala:61)
+        at org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:94)
+        at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:623)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+        ... 1 more
+Caused by: java.io.EOFException
+        at java.io.DataInputStream.readInt(Unknown Source)
+        at org.apache.spark.api.python.PythonRunner$$anon$3.read(PythonRunner.scala:774)
+        ... 26 more
 
-# Create a simple DataFrame
-data = [("Java", 8000), ("Python", 10000), ("Scala", 9000)]
-columns = ["Language", "Users"]
-df = spark.createDataFrame(data, columns)
 
-# Show the DataFrame
-df.show()
-
-# Stop the SparkSession
-spark.stop()
+(venv) dev shell : 2.3.31 : default profile
+W619378@WH-1AB5C35118 I:\ds\upsert_logic_conversion\xbsd-glue-aws-app 
+$ SUCCESS: The process with PID 22888 (child process of PID 15812) has been terminated.
+SUCCESS: The process with PID 15812 (child process of PID 17928) has been terminated.
+SUCCESS: The process with PID 17928 (child process of PID 16932) has been terminated.
