@@ -141,18 +141,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-	
-	
-	
---index-url https://artifacts-read.gkp.jpmchase.net/artifactory/api/pypi/pypi/simple
-pandas
-boto3
-aws-psycopg2
-botocore
-pyyaml
-cleanco
-textdistance
-aws-glue-sessions
-sqlalchemy
-pytest
-psycopg2-binary
