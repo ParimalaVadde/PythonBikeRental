@@ -1,51 +1,24 @@
-Check Registry for Java location:
-%USERPROFILE%\AppData\Local\Temp
-Open Command Prompt
-Type reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Runtime Environment" /s for JRE
-Type reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Development Kit" /s for JDK
+import findspark
+findspark.init()
 
-H:\>reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Runtime Environment" /s
-ERROR: The system was unable to find the specified registry key or value.
+from pyspark.sql import SparkSession
 
-1.8	1.8.0_401	http://java.sun.com/products/autodl/j2se	C:\Program Files (x86)\Java\jre-1.8\bin\javaw.exe		true	x86
+# Create a SparkSession
+spark = SparkSession.builder \
+    .appName("PySpark Test") \
+    .master("local[*]") \
+    .getOrCreate()
 
+# Print Spark version
+print(f"Spark version: {spark.version}")
 
-Great! Now we have the correct path to your Java installation. Based on this information from the Java Control Panel:
+# Create a simple DataFrame
+data = [("Java", 8000), ("Python", 10000), ("Scala", 9000)]
+columns = ["Language", "Users"]
+df = spark.createDataFrame(data, columns)
 
-```
-1.8	1.8.0_401	http://java.sun.com/products/autodl/j2se	C:\Program Files (x86)\Java\jre-1.8\bin\javaw.exe
-```
+# Show the DataFrame
+df.show()
 
-The correct path for your JAVA_HOME environment variable should be:
-
-```
-JAVA_HOME=C:\Program Files (x86)\Java\jre-1.8
-```
-
-This confirms you have JRE 1.8 (Java 8) installed, which should be compatible with PySpark. Now let's set up all your environment variables:
-
-1. **JAVA_HOME**: `C:\Program Files (x86)\Java\jre-1.8`
-
-2. **SPARK_HOME**: `c:\JPMC\DEV\TMP\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Lib\site-packages\pyspark`
-
-3. **PATH**: Add `%SPARK_HOME%\bin` to your existing PATH
-
-4. **TEMP**: `C:\tmp` (create this directory if it doesn't exist)
-
-5. **PYSPARK_PYTHON**: `c:\JPMC\DEV\TMP\ds\upsert_logic_conversion\xbsd-glue-aws-app\venv\Scripts\python.exe`
-
-Follow these steps to set the environment variables:
-
-1. Press Windows key + X and select "System"
-2. Click on "Advanced system settings" 
-3. Click on the "Environment Variables" button
-4. In the "System variables" section, click "New" to add each variable
-5. For PATH, select it and click "Edit", then add the new path at the end
-
-After setting these variables, restart any open command prompts, terminals, or VS Code for the changes to take effect.
-
-Would you like me to provide a simple test script to verify your PySpark setup is working correctly?
-
-
-3. **PATH**: Add `%SPARK_HOME%\bin` to your existing PATH
-%USERPROFILE%\AppData\Local\Microsoft\WindowsApps;%SPARK_HOME%\bin;
+# Stop the SparkSession
+spark.stop()
