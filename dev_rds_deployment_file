@@ -3,3 +3,6 @@ Check Registry for Java location:
 Open Command Prompt
 Type reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Runtime Environment" /s for JRE
 Type reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Development Kit" /s for JDK
+
+H:\>reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Runtime Environment" /s
+ERROR: The system was unable to find the specified registry key or value.
