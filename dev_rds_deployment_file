@@ -1,10 +1,5 @@
-To find the actual JDK path:
+H:\>java -XshowSettings:properties -version 2>&1 | findstr "java.home"
+    java.home = C:\Program Files (x86)\Java\jre-1.8
 
-Open Command Prompt
-Run: java -XshowSettings:properties -version 2>&1 | findstr "java.home"
-
-If that doesn't work, you can try:
-for /f "tokens=3" %g in ('java -version 2^>^&1 ^| findstr /i "version"') do @echo %g
-This will show which Java version you're using, and you can then look for it in Program Files.
-Common locations include:
-
+H:\>for /f "tokens=3" %g in ('java -version 2^>^&1 ^| findstr /i "version"') do @echo %g
+"1.8.0_401"
