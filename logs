@@ -1,0 +1,167 @@
+timestamp,message
+1747216908820,"Preparing ...
+"
+1747216908823,"Wed May 14 10:01:48 UTC 2025
+"
+1747216908827,"/usr/bin/java -cp /tmp:/opt/amazon/conf:/opt/amazon/glue-manifest.jar com.amazonaws.services.glue.PrepareLaunch --conf spark.dynamicAllocation.enabled=true --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.minExecutors=1 --conf spark.dynamicAllocation.maxExecutors=9 --conf spark.executor.memory=10g --conf spark.driver.memory=10g --conf spark.network.timeout=600  --connection-names PrivateSubnet01-NetworkConnection,PublicSubnet01-NetworkConnection,PrivateSubnet02-NetworkConnection,JPMC Glue default connection,Jdbc connection  --enable-glue-datacatalog true  --job-bookmark-option job-bookmark-disable --TempDir s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/tmp/ --script-location s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/bootstrap.sh  --JOB_ID j_d71b203f4809efa797672a33d560730c3f5736433469df69f9dd1a225b177650 --enable-metrics true --extra-py-files s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/postgress_connect.py,s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1"
+1747216908827,"vo/payload.py --spark-event-logs-path s3://aws-glue-assets-484862117635-us-east-1/sparkHistoryLogs/  --enable-job-insights true  --JOB_RUN_ID jr_542a88acb4a612d7676204376f0eeb08be26ada315354c1e94222d793d1be987 --additional-python-modules boto3,psycopg2-binary --enable-continuous-cloudwatch-log true --scriptLocation s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/Upsert_pyspark_v1.py  --job-language python --extra-files s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/pk_mapping_file.csv,s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/postgress_connect.py --JOB_NAME Upsert_pyspark_v1
+"
+1747216908866,"openjdk version ""1.8.0_442"""
+1747216908866,"
+"
+1747216908866,OpenJDK Runtime Environment Corretto-8.442.06.1
+1747216908866, (build 1.8.0_442-b06
+1747216908866,)
+1747216908867,"
+"
+1747216908867,"OpenJDK 64-Bit Server VM Corretto-8.442.06.1 (build 25.442-b06, mixed mode)"
+1747216908867,"
+"
+1747216909562,"1747216909560
+"
+1747216910123,"SLF4J: Class path contains multiple SLF4J bindings.
+"
+1747216910123,SLF4J: Found binding in [jar:file:/opt/amazon/spark/jars/log4j-slf4j-impl-2.17.2.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+1747216910124,"
+"
+1747216910124,SLF4J: Found binding in [jar:file:/opt/amazon/spark/jars/slf4j-reload4j-1.7.36.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+1747216910124,"
+"
+1747216910124,SLF4J: Found binding in [jar:file:/opt/amazon/lib/Log4j-slf4j-2.x.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+1747216910124,"
+"
+1747216910124,"SLF4J: Found binding in [jar:file:/opt/amazon/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+"
+1747216910124,"SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+"
+1747216910211,"SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+"
+1747216910710,"INFO	2025-05-14T10:01:50,707	1808	com.amazonaws.services.glue.PrepareLaunch	[main]	Get job script: Upsert_pyspark_v1.py.
+"
+1747216911786,"INFO	2025-05-14T10:01:51,786	2887	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: create aws log client with conf: proxy host 169.254.76.0, proxy port 8888
+"
+1747216912255,"INFO	2025-05-14T10:01:52,255	3356	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+"
+1747216912843,"INFO	2025-05-14T10:01:52,843	3944	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: getGlueClient. proxy host: 169.254.76.0 , port: 8888
+"
+1747216913322,"INFO	2025-05-14T10:01:53,321	4422	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+"
+1747216913563,"INFO	2025-05-14T10:01:53,563	4664	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: create aws sts client with conf: proxy host 169.254.76.0, proxy port 8888
+"
+1747216913586,"INFO	2025-05-14T10:01:53,585	4686	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+"
+1747216913602,"INFO	2025-05-14T10:01:53,602	4703	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	Created STS client in region us-east-1
+"
+1747216913714,"GlueTelemetry: Current region us-east-1
+GlueTelemetry: Glue Endpoint https://glue.us-east-1.amazonaws.com
+"
+1747216913715,GlueTelemetry: Prod env...false
+1747216913716,"
+GlueTelemetry: is disabled
+"
+1747216913753,"INFO	2025-05-14T10:01:53,752	4853	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	AWSClientUtils: getGlueClient. proxy host: 169.254.76.0 , port: 8888
+"
+1747216913760,"INFO	2025-05-14T10:01:53,759	4860	com.amazonaws.http.AmazonHttpClient	[main]	Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+"
+1747216914568,"INFO	2025-05-14T10:01:54,568	5669	com.amazonaws.services.glue.PrepareLaunch	[main]	Glue Connectors: attached connection types: ListBuffer()
+"
+1747216914570,"successfully created /opt/aws_glue_connectors/selected/redshift
+successfully created /opt/aws_glue_connectors/selected/datalake
+successfully created /opt/aws_glue_connectors/selected/native
+"
+1747216914570,"successfully created /opt/aws_glue_connectors/selected/marketplace
+successfully created /opt/aws_glue_connectors/selected/downloaded
+"
+1747216914573,"INFO	2025-05-14T10:01:54,572	5673	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: redshift connector jar dir -> new
+"
+1747216914573,"INFO	2025-05-14T10:01:54,573	5674	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: copying jars and metadata for Redshift
+"
+1747216914586,"INFO	2025-05-14T10:01:54,586	5687	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File is spark-redshift_2.12-6.1.3-spark_3.3.jar
+"
+1747216914586,"INFO	2025-05-14T10:01:54,586	5687	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File Destination  is /opt/aws_glue_connectors/selected/redshift/spark-redshift_2.12-6.1.3-spark_3.3.jar
+"
+1747216914592,"INFO	2025-05-14T10:01:54,592	5693	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy connector /connectors/redshift/new/spark-redshift_2.12-6.1.3-spark_3.3.jar to /opt/aws_glue_connectors/selected/redshift/spark-redshift_2.12-6.1.3-spark_3.3.jar
+"
+1747216914592,"INFO	2025-05-14T10:01:54,592	5693	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File is spark-avro_2.12-3.3.0-amzn-1.jar
+"
+1747216914592,"INFO	2025-05-14T10:01:54,592	5693	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File Destination  is /opt/aws_glue_connectors/selected/redshift/spark-avro_2.12-3.3.0-amzn-1.jar
+"
+1747216914594,"INFO	2025-05-14T10:01:54,594	5695	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy connector /connectors/redshift/new/spark-avro_2.12-3.3.0-amzn-1.jar to /opt/aws_glue_connectors/selected/redshift/spark-avro_2.12-3.3.0-amzn-1.jar
+"
+1747216914595,"INFO	2025-05-14T10:01:54,594	5695	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File is redshift-jdbc42-2.1.0.16.jar
+"
+1747216914595,"INFO	2025-05-14T10:01:54,594	5695	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	 File Destination  is /opt/aws_glue_connectors/selected/redshift/redshift-jdbc42-2.1.0.16.jar
+"
+1747216914605,"INFO	2025-05-14T10:01:54,605	5706	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy connector /connectors/redshift/new/redshift-jdbc42-2.1.0.16.jar to /opt/aws_glue_connectors/selected/redshift/redshift-jdbc42-2.1.0.16.jar
+"
+1747216914605,"INFO	2025-05-14T10:01:54,605	5706	com.amazonaws.services.glue.connectors.NativeConnectorService$	[main]	Glue connectors: Copy is finished
+"
+1747216914736,"Glue ETL Marketplace - Start ETL connector activation process...
+"
+1747216914740,"Glue ETL Marketplace - downloading jars for following connections: List(PrivateSubnet01-NetworkConnection, PublicSubnet01-NetworkConnection, PrivateSubnet02-NetworkConnection, JPMC Glue default connection, Jdbc connection) using command: List(python3, -u, -m, docker.unpack_docker_image, --connections, PrivateSubnet01-NetworkConnection,PublicSubnet01-NetworkConnection,PrivateSubnet02-NetworkConnection,JPMC Glue default connection,Jdbc connection, --result_path, jar_paths, --region, us-east-1, --endpoint, https://glue.us-east-1.amazonaws.com, --proxy, 169.254.76.0:8888)
+"
+1747216920916,"2025-05-14 10:02:00,915 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: PrivateSubnet01-NetworkConnection
+"
+1747216921986,"2025-05-14 10:02:01,986 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: PrivateSubnet01-NetworkConnection
+"
+1747216922238,"2025-05-14 10:02:02,237 - __main__ - WARNING - Glue ETL Marketplace - Connection PrivateSubnet01-NetworkConnection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+2025-05-14 10:02:02,237 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: PublicSubnet01-NetworkConnection
+"
+1747216922351,"2025-05-14 10:02:02,351 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: PublicSubnet01-NetworkConnection
+"
+1747216922524,"2025-05-14 10:02:02,524 - __main__ - WARNING - Glue ETL Marketplace - Connection PublicSubnet01-NetworkConnection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+2025-05-14 10:02:02,524 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: PrivateSubnet02-NetworkConnection
+"
+1747216922620,"2025-05-14 10:02:02,620 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: PrivateSubnet02-NetworkConnection
+"
+1747216922795,"2025-05-14 10:02:02,794 - __main__ - WARNING - Glue ETL Marketplace - Connection PrivateSubnet02-NetworkConnection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+2025-05-14 10:02:02,795 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: JPMC Glue default connection
+"
+1747216922889,"2025-05-14 10:02:02,889 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: JPMC Glue default connection
+"
+1747216923076,"2025-05-14 10:02:03,075 - __main__ - WARNING - Glue ETL Marketplace - Connection JPMC Glue default connection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+2025-05-14 10:02:03,075 - __main__ - INFO - Glue ETL Marketplace - Start downloading connector jars for connection: Jdbc connection
+"
+1747216923170,"2025-05-14 10:02:03,169 - __main__ - INFO - Glue ETL Marketplace - using region: us-east-1, proxy: 169.254.76.0:8888 and glue endpoint: https://glue.us-east-1.amazonaws.com to get connection: Jdbc connection
+"
+1747216923329,"2025-05-14 10:02:03,329 - __main__ - WARNING - Glue ETL Marketplace - Connection Jdbc connection is not a CUSTOM or Marketplace connection, skip jar downloading for it
+"
+1747216923330,"2025-05-14 10:02:03,329 - __main__ - INFO - Glue ETL Marketplace - successfully wrote jar paths to ""jar_paths""
+"
+1747216923411,"Glue ETL Marketplace - Retrieved no ETL connector jars, this may be due to no marketplace/custom connection attached to the job or failure of downloading them, please scroll back to the previous logs to find out the root cause. Container setup continues.
+Glue ETL Marketplace - ETL connector activation process finished, container setup continues...
+"
+1747216923414,"Download bucket: app-id-111597-dep-id-114116-uu-id-by081rbjj1vo key: pk_mapping_file.csv with usingProxy: false
+"
+1747216923776,"Download bucket: app-id-111597-dep-id-114116-uu-id-by081rbjj1vo key: postgress_connect.py with usingProxy: false
+"
+1747216923892,"Download bucket: app-id-111597-dep-id-114116-uu-id-by081rbjj1vo key: postgress_connect.py with usingProxy: false
+"
+1747216923943,"Download bucket: app-id-111597-dep-id-114116-uu-id-by081rbjj1vo key: payload.py with usingProxy: false
+"
+1747216924017,"Download bucket: app-id-111597-dep-id-114116-uu-id-by081rbjj1vo key: upsert/Upsert_pyspark_v1.py with usingProxy: false
+"
+1747216924059,"INFO	2025-05-14T10:02:04,059	15160	com.amazonaws.services.glue.PythonModuleInstaller	[main]	pip3 install  --user boto3 psycopg2-binary
+"
+1747217315937,"INFO	2025-05-14T10:08:35,936	407037	com.amazonaws.services.glue.PythonModuleInstaller	[main]	Requirement already satisfied: boto3 in /home/spark/.local/lib/python3.10/site-packages (1.24.70)
+"
+1747217315938,"INFO	2025-05-14T10:08:35,937	407038	com.amazonaws.services.glue.PythonModuleInstaller	[main]	WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18cf3e80>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-binary/WARNING: Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18b1c1f0>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-binary/WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18b1c3a0>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-bi"
+1747217315938,"nary/WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18b1c550>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-binary/WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18b1c700>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-binary/ERROR: Could not find a version that satisfies the requirement psycopg2-binary (from versions: none)ERROR: No matching distribution found for psycopg2-binary
+"
+1747217315939,"INFO	2025-05-14T10:08:35,939	407040	com.amazonaws.services.glue.PrepareLaunch	[main]	Checking pymodule installation result for List(boto3, psycopg2-binary): PythonModuleInstallOutput(1,Requirement already satisfied: boto3 in /home/spark/.local/lib/python3.10/site-packages (1.24.70),WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18cf3e80>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-binary/WARNING: Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18b1c1f0>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-binary/WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'N"
+1747217315939,"ewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18b1c3a0>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-binary/WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18b1c550>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-binary/WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x7f1e18b1c700>: Failed to establish a new connection: [Errno 101] Network is unreachable')': /simple/psycopg2-binary/ERROR: Could not find a version that satisfies the requirement psycopg2-binary (from versions: none)ERROR: No matching distribution found for psycopg2-binary).exitCode}
+"
+1747217315939,"ERROR	2025-05-14T10:08:35,939	407040	com.amazonaws.services.glue.PrepareLaunch	[main]	Python Module Installer indicates modules that failed to install
+"
+1747217315942,"LAUNCH ERROR | Python Module Installer indicates modules that failed to install, check logs from the PythonModuleInstaller.Please refer logs for details.
+"
+1747217315951,"Exception in thread ""main"" "
+1747217315951,"com.amazonaws.services.glue.PythonModuleInstallException: Python Module Installer indicates modules that failed to install, check logs from the PythonModuleInstaller.
+"
+1747217315952,"	at com.amazonaws.services.glue.PrepareLaunch.com$amazonaws$services$glue$PrepareLaunch$$prepareCmd(PrepareLaunch.scala:1200)
+	at com.amazonaws.services.glue.PrepareLaunch$.main(PrepareLaunch.scala:67)"
+1747217315952,"
+	at com.amazonaws.services.glue.PrepareLaunch.main(PrepareLaunch.scala)
+"
+1747217315953,"Running autoDebugger shutdown hook.
+"
