@@ -1,5 +1,5 @@
-H:\>java -XshowSettings:properties -version 2>&1 | findstr "java.home"
-    java.home = C:\Program Files (x86)\Java\jre-1.8
+Check Registry for Java location:
 
-H:\>for /f "tokens=3" %g in ('java -version 2^>^&1 ^| findstr /i "version"') do @echo %g
-"1.8.0_401"
+Open Command Prompt
+Type reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Runtime Environment" /s for JRE
+Type reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Development Kit" /s for JDK
