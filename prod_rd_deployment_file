@@ -1,52 +1,306 @@
-import os
 import sys
-import findspark
-import platform
+import logging
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+import payload as ss
+from pyspark.sql import functions as F
+import boto3
+import psycopg2
+from pyspark.sql.functions import col, length, levenshtein, when
 
-# Define the paths you need to set
-# Replace these with your actual paths if different
-PYTHON_PATH = sys.executable  # This will use the current Python executable
-JAVA_HOME = os.environ.get("JAVA_HOME", "C:\\Program Files\\Java\\jdk1.8.0_401")  # Adjust based on your Java path
-SPARK_HOME = os.path.join(os.path.dirname(findspark.__file__), "spark")  # This will attempt to find Spark
+# Initialize Spark and Glue contexts
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
 
-# Set key environment variables
-os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
-os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
-os.environ["JAVA_HOME"] = JAVA_HOME
-os.environ["SPARK_HOME"] = SPARK_HOME
+# Initialize logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-# Set up Spark
-findspark.init()
+s3 = boto3.client("s3")
+#s3.download_file(s3_bucket,ssl_cert_s3_path,local_ssl_cert_path)
 
-from pyspark.sql import SparkSession
+rds_client = boto3.client ("rds",region_name=ss.region)
 
-# Create a SparkSession with optimized configurations for Windows
-spark = SparkSession.builder \
-    .appName("FixedPySparkApp") \
-    .master("local[1]") \
-    .config("spark.python.worker.reuse", "false") \
-    .config("spark.executor.memory", "1g") \
-    .config("spark.driver.memory", "1g") \
-    .config("spark.sql.execution.arrow.pyspark.enabled", "false") \
-    .getOrCreate()
+rds_token = rds_client.generate_db_auth_token(
+    DBHostname = ss.rds_host,
+    Port = ss.rds_port,# Replace with your RDS port
+    DBUsername=ss.db_user  # Replace with your DB username
+)
 
-print("SparkSession created successfully!")
+# PostgreSQL connection details
+pg_connection_options = {
+    "host": ss.rds_host,  # Replace with your RDS host
+    "port": ss.rds_port,  # Replace with your RDS port
+    "dbname": ss.db_name,  # Replace with your DB name
+    "user": ss.db_user,  # Replace with your DB username
+    "password": rds_token
+}
+    
 
-# Test if it works
-test_df = spark.createDataFrame([(1, "test"), (2, "test2")], ["id", "value"])
-print("Test DataFrame created successfully")
-test_df.show()
+def read_pk_mapping_file(spark, table_name: str):
+    """
+    Reads primary keys and identifiers for each table.
+    """
+    try:
+        # Replace with S3 path or Glue Catalog table
+        pk_mapping_path = "s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/pk_mapping_file.csv"
+        pk_mapping_df = spark.read.csv(pk_mapping_path, header=True, inferSchema=True)
+        logger.info(f"Primary Key Mapping File: {pk_mapping_df.show()}")
 
-# Test a UDF (this uses Python workers)
-from pyspark.sql.functions import udf
-from pyspark.sql.types import StringType
+        filter_pk = pk_mapping_df.filter(F.col("table_name") == table_name)
+        primary_key = filter_pk.select("primary_key_column_name").first()[0]
+        business_entity_id = filter_pk.select("business_entity_id_column_name").first()[0]
+        type_of_identifier = filter_pk.select("type_column_name").first()[0]
 
-@udf(returnType=StringType())
-def test_udf(value):
-    return f"Processed: {value}"
+        logger.info(f"Primary Key: {primary_key}, Business Entity ID: {business_entity_id}, Type of Identifier: {type_of_identifier}")
+        
+        return primary_key, business_entity_id, type_of_identifier
+    except Exception as e:
+        logger.error(f"Error in reading Primary Key Mapping File: {e}")
+        return None, None, None
+    
+def read_staging_tables(schema_name: str):
+    connection = psycopg2.connect(**pg_connection_options)
+    cursor = connection.cursor()
 
-result_df = test_df.withColumn("processed", test_udf(test_df.value))
-print("UDF applied successfully")
-result_df.show()
+        # Query to fetch table names from the schema
+    cursor.execute(f"""
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = '{schema_name}'
+    """)
+    tables = cursor.fetchall()
 
-print("All tests passed successfully!")
+    dict_df = {}
+    for (table,) in tables:
+      full_table_name = f"{schema_name}.{table}"
+      df = spark.read.format("jdbc").options(
+                url=f"jdbc:postgresql://{pg_connection_options['host']}:{pg_connection_options['port']}/{pg_connection_options['dbname']}?sslmode=require",
+                dbtable=full_table_name,
+                user=pg_connection_options["user"],
+                password=pg_connection_options["password"]
+            ).load()
+      dict_df[table] = df
+    return dict_df
+
+def read_df(schema_name : str):
+    df_dict = read_staging_tables(schema_name)
+    be_details_df = df_dict['business_entity_details']
+    bei_df = df_dict['business_entity_identifiers']
+    pa_df = df_dict['physical_address']
+    return be_details_df,bei_df,pa_df
+
+def read_main_df(schema_name):
+    df_dict = read_staging_tables(schema_name)
+    be_details_df = df_dict['business_entity_details']
+    bei_df = df_dict['business_entity_identifiers']
+    pa_df = df_dict['physical_address']
+    return be_details_df,bei_df,pa_df
+
+def read_staging_df(be_details_df, bei_df, pa_df):
+    """
+    Process staging data by joining and filtering.
+    """
+    # Join the dataframes on the common column
+    merge_df = be_details_df.join(bei_df, be_details_df.stg_business_entity_id_stg == bei_df.related_identifier, "left") \
+                            .join(pa_df, be_details_df.stg_business_entity_id_stg == pa_df.related_identifier, "left")
+
+    # Filter for identifier_type == 'Tax_Id'
+    merge_df = merge_df.filter(col("identifier_type") == 'Tax_Id')
+
+    # Fill null values with empty strings
+    merge_df = merge_df.fillna('')
+
+    # Create an address column by concatenating address fields
+    merge_df = merge_df.withColumn(
+        "address",
+        F.concat_ws(":", col("street_line_1"), col("street_line_2"), col("street_line_3"),
+                    col("city"), col("state_province"), col("country"))
+    )
+
+    # Select and rename columns for staging_df
+    staging_df = merge_df.select(
+        col("business_entity_details_id_stg"),
+        col("stg_business_entity_id_stg"),
+        col("business_entity_name_stg"),
+        col("identifier_value").alias("tax_id"),
+        col("postal_code"),
+        col("address")
+    )
+
+    return staging_df
+
+
+def main_df(be_details_df, bei_df, pa_df):
+    """
+    Process main data by joining and filtering.
+    """
+    # Join the dataframes on the common column
+    merge_df = be_details_df.join(bei_df, be_details_df.business_entity_id == bei_df.related_identifier, "left") \
+                            .join(pa_df, be_details_df.business_entity_id == pa_df.related_identifier, "left")
+
+    # Filter for identifier_type == 'Tax_Id'
+    merge_df = merge_df.filter(col("identifier_type") == 'Tax_Id')
+
+    # Fill null values with empty strings
+    merge_df = merge_df.fillna('')
+
+    # Create an address column by concatenating address fields
+    merge_df = merge_df.withColumn(
+        "address",
+        F.concat_ws(":", col("street_line_1"), col("street_line_2"), col("street_line_3"),
+                    col("city"), col("state_province"), col("country"))
+    )
+
+    # Select and rename columns for main_df
+    main_df = merge_df.select(
+        col("business_entity_details_id"),
+        col("business_entity_id"),
+        col("business_entity_name"),
+        col("identifier_value").alias("tax_id"),
+        col("postal_code"),
+        col("address")
+    )
+
+    return main_df
+
+
+def match_percentage(staging_df, main_df):
+    """
+    Calculate match percentages and deduplication flags.
+    """
+    # Add suffix to staging columns
+    staging_df = staging_df.select([col(c).alias(f"{c}_stg") for c in staging_df.columns])
+
+    # Join staging and main dataframes
+    merge_df = staging_df.join(main_df, staging_df.tax_id_stg == main_df.tax_id, "left")
+
+    # Calculate match scores
+    merge_df = merge_df.withColumn(
+        "be_name_match_score",
+        when(
+            (col("business_entity_name_stg_stg").isNotNull()) & (col("business_entity_name").isNotNull()),
+            (1 - (levenshtein(col("business_entity_name_stg_stg"), col("business_entity_name")) / length(col("business_entity_name_stg_stg")))).cast("double")
+        ).otherwise(0.0)
+    ).withColumn(
+        "tax_id_match_score",
+        when((col("tax_id_stg") == col("tax_id")) & col("tax_id_stg").isNotNull(), 1.0).otherwise(0.0)
+    ).withColumn(
+        "address_match_score",
+        when(
+            (col("postal_code_stg") == col("postal_code")) &
+            (col("address_stg") == col("address")) &
+            col("postal_code_stg").isNotNull(), 1.0
+        ).otherwise(0.0)
+    )
+
+    # Calculate duplicate flag
+    merge_df = merge_df.withColumn(
+        "dupe_flag",
+        when((col("be_name_match_score") >= 0.8) & (col("tax_id_match_score") == 1.0), 1).otherwise(0)
+    )
+
+    return merge_df
+
+def identify_duplicates(staging_df, main_df, primary_key: str):
+    """
+    Identifies and removes duplicate records in a Glue job using Spark DataFrames.
+    """
+    try:
+        # Append '_stg' to the primary key for staging DataFrame
+        stg_primary_key = f"{primary_key}_stg"
+
+        # Perform an inner join to find duplicates based on the primary key
+        merge_df = staging_df.join(main_df, staging_df[stg_primary_key] == main_df[primary_key], "inner")
+        logger.info("Primary key comparison completed.")
+
+        # Extract non-duplicate primary key values using Spark DataFrame operations
+        non_dupe_be_ids = merge_df.select(F.col(stg_primary_key)).distinct()
+
+        # # Filter out duplicates from the staging DataFrame
+        # ignore_df = staging_df.join(non_dupe_be_ids, staging_df[stg_primary_key] == non_dupe_be_ids[stg_primary_key], "inner")
+        # logger.info(f"Ignored duplicates: {ignore_df.count()} records.")
+
+        # Keep only non-duplicate records in the staging DataFrame
+        staging_df = staging_df.join(non_dupe_be_ids, staging_df[stg_primary_key] == non_dupe_be_ids[stg_primary_key], "left_anti")
+        logger.info("Removed identical records based on primary key value comparison.")
+
+        return staging_df
+    except Exception as e:
+        logger.error(f"Error in identifying duplicates: {e}")
+        return None
+    
+def de_duplication():
+    """
+    Perform de-duplication using Spark DataFrames.
+    """
+    try:
+        # Initialize logging
+        logging.basicConfig(filename='func.log', level=logging.INFO)
+        logger = logging.getLogger(__name__)
+
+        # Read primary key mapping
+        primary_key, business_entity_id, type = read_pk_mapping_file(spark, table_name='business_entity_details')
+
+        # Load staging and main DataFrames
+        staging_df, bei_df_staging, pa_df_staging = read_df('sds_staging')
+        main_df, bei_df_main, pa_df_main = read_main_df('sds_main')
+
+        logger.info("Loaded staging and main DataFrames.")
+        staging_df = staging_df.select([F.col(c).alias(f"{c}_stg") for c in staging_df.columns])  # Add '_stg' suffix to staging columns
+
+        # Identify duplicates
+        staging_df = identify_duplicates(staging_df, main_df, primary_key)
+        logger.info("Identified duplicates and filtered staging DataFrame.")
+
+        if staging_df.count() > 0:
+            logger.info('Identifying records which have delta from staging - New BE/Updated BE')
+
+            # Identifying records which have delta from staging - New BE/Updated BE
+            stg_business_entity_id = f"{business_entity_id}_stg"
+            split_be_id = business_entity_id.split("_", 1)
+            main_business_entity_id = split_be_id[1]
+
+            # Perform a left join to find delta
+            delta = staging_df.join(main_df, staging_df[stg_business_entity_id] == main_df[main_business_entity_id], "left")
+            logger.info("Delta computation completed.")
+
+            # Separate updated and inserted records
+            update_df = delta.filter(F.col(main_business_entity_id).isNotNull())
+            logger.info(f"Updated Business Entities: {update_df.count()} records.")
+
+            insert_df = delta.filter(F.col(main_business_entity_id).isNull())
+            logger.info(f"Inserted Business Entities: {insert_df.count()} records.")
+
+            # Process staging and main DataFrames for matching
+            staging_match_df = read_staging_df(insert_df, bei_df_staging, pa_df_staging)
+            main_match_df = main_df(main_df, bei_df_main, pa_df_main)
+
+            # Match percentage and identify duplicates
+            combined_df_dup_flag = match_percentage(staging_match_df, main_match_df)
+            logger.info("Matching percentage computation completed.")
+
+            # Extract insert and update IDs
+            insert_ids = combined_df_dup_flag.filter(F.col('dupe_flag') == 0).select('stg_business_entity_id_stg_stg').distinct().rdd.flatMap(lambda x: x).collect()
+            update_ids = combined_df_dup_flag.filter(F.col('dupe_flag') == 1).select('stg_business_entity_id_stg_stg').distinct().rdd.flatMap(lambda x: x).collect()
+
+            logger.info(f"Insert IDs: {insert_ids}")
+            logger.info(f"Update IDs: {update_ids}")
+
+            return insert_ids, update_ids
+        else:
+            logger.info("No delta observed.")
+            return None, None
+    except Exception as e:
+        logger.error(f"Error in de-duplication process: {e}")
+        return None, None
+        
+
+de_duplication()
