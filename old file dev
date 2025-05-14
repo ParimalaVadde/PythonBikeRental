@@ -1,6 +1,2 @@
-ob parameters Info
-Key
---additional-python-modules
-
-Value - optional
-psycopg2-binary
+--additional-python-modules=psycopg2-binary==2.9.3
+--pip-install-options="--no-build-isolation"
