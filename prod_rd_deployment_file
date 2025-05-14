@@ -1,39 +1,97 @@
-import os
 import sys
-import findspark
+import os
+import platform
+import subprocess
+from pprint import pprint
 
-# Ensure the current Python interpreter is used
-os.environ['PYSPARK_PYTHON'] = sys.executable
-os.environ['PYSPARK_DRIVER_PYTHON'] = sys.executable
+# 1. Basic system information
+print("="*50)
+print("SYSTEM INFORMATION")
+print("="*50)
+print(f"Python version: {sys.version}")
+print(f"Python executable: {sys.executable}")
+print(f"Operating system: {platform.platform()}")
+print(f"Architecture: {platform.architecture()}")
 
-# Initialize PySpark
-findspark.init()
+# 2. Check environment variables
+print("\n"+"="*50)
+print("ENVIRONMENT VARIABLES")
+print("="*50)
+relevant_vars = [
+    'JAVA_HOME', 'SPARK_HOME', 'HADOOP_HOME', 'PYSPARK_PYTHON', 
+    'PYSPARK_DRIVER_PYTHON', 'PATH', 'PYTHONPATH'
+]
+for var in relevant_vars:
+    print(f"{var}: {os.environ.get(var, 'Not set')}")
 
-from pyspark.sql import SparkSession
+# 3. Check Java version
+print("\n"+"="*50)
+print("JAVA VERSION")
+print("="*50)
+try:
+    java_version = subprocess.check_output(['java', '-version'], stderr=subprocess.STDOUT).decode()
+    print(java_version)
+except Exception as e:
+    print(f"Error checking Java version: {e}")
 
-# Create a minimal SparkSession
-print("Creating minimal Spark session...")
-spark = SparkSession.builder \
-    .appName("Minimal PySpark Test") \
-    .master("local[1]") \
-    .config("spark.driver.memory", "1g") \
-    .config("spark.executor.memory", "1g") \
-    .getOrCreate()
+# 4. Try to import PySpark and get version information
+print("\n"+"="*50)
+print("PYSPARK INFORMATION")
+print("="*50)
+try:
+    import pyspark
+    print(f"PySpark version: {pyspark.__version__}")
+    print(f"PySpark location: {pyspark.__file__}")
+    
+    # Try to initialize SparkSession
+    print("\nAttempting to create a minimal SparkSession...")
+    from pyspark.sql import SparkSession
+    spark = SparkSession.builder \
+        .appName("DiagnosticTest") \
+        .master("local[1]") \
+        .config("spark.driver.memory", "1g") \
+        .getOrCreate()
+    
+    print("SparkSession created successfully!")
+    print(f"Spark version: {spark.version}")
+    print("\nSpark configuration:")
+    print("-"*40)
+    for conf in sorted(spark.sparkContext.getConf().getAll()):
+        print(f"{conf[0]}: {conf[1]}")
+    
+    # Test a simple operation
+    print("\n"+"="*50)
+    print("TESTING BASIC SPARK OPERATION")
+    print("="*50)
+    test_df = spark.createDataFrame([(1, "test"), (2, "test2")], ["id", "value"])
+    print("Created test dataframe successfully")
+    print("Sample data:")
+    test_df.show()
+    
+    # Try a simple transformation that would use Python worker
+    print("\nTesting Python UDF (uses Python worker):")
+    from pyspark.sql.functions import udf
+    from pyspark.sql.types import StringType
+    
+    @udf(returnType=StringType())
+    def test_udf(value):
+        return f"Processed: {value}"
+    
+    try:
+        result_df = test_df.withColumn("processed", test_udf(test_df.value))
+        print("UDF applied successfully")
+        result_df.show()
+    except Exception as e:
+        print(f"Error during UDF execution: {e}")
+    
+    # Clean up
+    spark.stop()
+    
+except ImportError as e:
+    print(f"Error importing PySpark: {e}")
+except Exception as e:
+    print(f"Error initializing or using SparkSession: {e}")
 
-# Print Spark version
-print(f"Successfully created Spark session. Spark version: {spark.version}")
-
-# Create a very simple DataFrame with just one row
-print("Creating minimal DataFrame...")
-data = [("Test", 1)]
-columns = ["Value", "Number"]
-df = spark.createDataFrame(data, columns)
-
-# Show the DataFrame - simplest operation
-print("DataFrame content:")
-df.show()
-
-# Stop the SparkSession
-print("Stopping Spark session...")
-spark.stop()
-print("Spark session stopped. Script completed successfully!")
+print("\n"+"="*50)
+print("DIAGNOSIS COMPLETE")
+print("="*50)
