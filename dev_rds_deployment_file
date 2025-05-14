@@ -45,3 +45,7 @@ Follow these steps to set the environment variables:
 After setting these variables, restart any open command prompts, terminals, or VS Code for the changes to take effect.
 
 Would you like me to provide a simple test script to verify your PySpark setup is working correctly?
+
+
+3. **PATH**: Add `%SPARK_HOME%\bin` to your existing PATH
+%USERPROFILE%\AppData\Local\Microsoft\WindowsApps;%SPARK_HOME%\bin;
