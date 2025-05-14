@@ -1,5 +1,5 @@
 Check Registry for Java location:
-
+%USERPROFILE%\AppData\Local\Temp
 Open Command Prompt
 Type reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Runtime Environment" /s for JRE
 Type reg query "HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft\Java Development Kit" /s for JDK
