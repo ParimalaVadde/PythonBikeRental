@@ -45,4 +45,193 @@ added below condition for insert
                 else:
                     insert_data = {			
 					
-				
+
+
+***********************************
+
+import pandas as pd
+from sqlalchemy import create_engine, Table, MetaData, and_, func
+from sqlalchemy.orm import sessionmaker
+from urllib.parse import quote_plus
+from datetime import date
+
+def sync_dataframe_with_postgresql(df, connection_string, table_name, compare_columns, schema_name, column_mapping, load_flag_column):
+    """
+    Syncs a DataFrame with a PostgreSQL table by comparing records and performing insert or update operations
+    based on the load_flag column.
+
+    :param df: pandas DataFrame containing the data to sync
+    :param connection_string: SQLAlchemy connection string
+    :param table_name: Name of the PostgreSQL table
+    :param compare_columns: List of column names to compare for identifying existing records
+    :param schema_name: Schema name of the PostgreSQL table
+    :param column_mapping: Dictionary mapping DataFrame column names to PostgreSQL table column names
+    """
+    # Replace NaN values with None (to handle NULL in PostgreSQL)
+    df = df.where(pd.notna(df), None) #convert all Numpy NaN values to None
+    df = df.applymap(lambda x: None if isinstance(x, str) and x.strip().lower() == "nan" else x) #trim spaces and replace case-insensitive "nan" with none
+    df = df.replace(r'^\s*$', None, regex=True) #replace fully empty or whitespace-only strings with None
+    df = df.astype(object).where(pd.notna(df), None) #convert dataframe to python native types (avoids Numpy NaNs) 
+
+    # Create SQLAlchemy engine and session
+    engine = create_engine(connection_string)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    # Reflect the table structure
+    metadata = MetaData()
+    table = Table(table_name, metadata, schema=schema_name, autoload_with=engine)
+
+    # Dynamically identify primary key columns
+    primary_keys = [key.name for key in table.primary_key.columns]
+    print(f"Primary keys for table {table_name}: {primary_keys}")
+
+    # Apply column mapping (if provided)
+    if column_mapping is None:
+        column_mapping = {}
+    mapped_columns = {col: column_mapping.get(col, col) for col in df.columns}
+
+    
+    #added 45 to 59
+    # Filter DataFrame to include only columns that exist in the PostgreSQL table
+    table_columns = [col.name for col in table.columns]  # Get all column names from the PostgreSQL table
+    # print("Table Columns:", table_columns)  # Debugging: Print table columns
+
+    # Ensure mapped columns exist in table_columns
+    valid_columns = [
+        col for col in df.columns
+        if col == load_flag_column or  # Always include the load_flag_column
+        col in compare_columns or      # Always include columns used for comparison
+        (mapped_columns.get(col) and mapped_columns[col] in table_columns)  # Include mapped columns that exist in the table
+    ]
+    # print("Valid Columns:", valid_columns)  # Debugging: Print valid columns
+
+    # Filter the DataFrame to include only valid columns
+    df = df[valid_columns]
+
+
+
+    # List to store mismatched records
+    mismatched_records = []
+
+    # Iterate through the DataFrame rows
+    for _, row in df.iterrows():
+        # Check the load_flag to determine whether to update or insert
+        load_flag = row.get(load_flag_column)
+        print("load_flag:", load_flag)  # Debugging: Print load_flag value
+        try:
+            if load_flag and load_flag.upper() == "U":
+                print("inside update")
+                # Perform update
+                # filter_condition = and_(
+                #     *[table.c[mapped_columns[col]] == row[col] for col in compare_columns]
+                # )
+                #added filter condition
+                filter_condition = and_(
+                        *[
+                            func.lower(table.c[mapped_columns[col]]) == func.lower(row[col]) if isinstance(row[col], str) else table.c[mapped_columns[col]] == row[col]
+                            for col in compare_columns
+                        ]
+                    )
+
+                existing_record = session.query(table).filter(filter_condition).first()
+                print("existing_record:", existing_record)  # Debugging: Print existing record
+                if existing_record:
+                    # Record exists, perform update
+                    update_data = {
+                        mapped_columns[col]: row[col]
+                        for col in df.columns
+                        if col not in compare_columns and mapped_columns[col] not in primary_keys and col != load_flag_column and col != "created_by"
+                    }
+                    update_data["last_updated_by"] = row["created_by"] # or source_name
+                    update_data["last_updated_date"] = date.today()
+
+                    print("update data:", update_data)
+
+                    session.query(table).filter(filter_condition).update(update_data)
+                else:
+                    # Record does not exist, add to mismatched records
+                    mismatched_records.append(row.to_dict())
+            elif load_flag and load_flag.upper() == "I":
+                # Perform insert
+                # filter_condition = and_(
+                #     *[table.c[mapped_columns[col]] == row[col] for col in compare_columns]
+                # )
+                
+                #added filter condition
+                filter_condition = and_(
+                    *[
+                        func.lower(table.c[mapped_columns[col]]) == func.lower(row[col]) if isinstance(row[col], str) else table.c[mapped_columns[col]] == row[col]
+                        for col in compare_columns
+                    ]
+                )
+
+                existing_record = session.query(table).filter(filter_condition).first()
+                if existing_record:
+                    # Record already exists, add to mismatched records
+                    mismatched_records.append(row.to_dict())
+                else:
+                    insert_data = {
+                        mapped_columns[col]: row[col]
+                        for col in df.columns
+                        if col != load_flag_column
+                    }
+                    insert_data["is_active"] = True
+                    insert_data["last_updated_by"] = insert_data["created_by"] # or source_name
+                    insert_data["last_updated_date"] = date.today()
+                    session.execute(table.insert().values(insert_data))
+            else:
+                # Invalid load_flag, add to mismatched records
+                mismatched_records.append(row.to_dict())
+        except Exception as e:
+            # Catch any exceptions and add the record to mismatched records
+            print(f"Error processing record: {row.to_dict()}, Error: {e}")
+            mismatched_records.append(row.to_dict())
+
+    # Commit changes and close the session
+    session.commit()
+    session.close()
+
+    # Write mismatched records to a CSV file
+    if mismatched_records:
+        mismatched_df = pd.DataFrame(mismatched_records)
+        mismatched_df.to_csv("mismatch_records.csv", index=False)  #it will overwrite the file if it exists
+        print("Mismatched records written to mismatch_records.csv")
+
+def main():
+ 
+    # Define the PostgreSQL connection parameters
+    db_config = {
+        'user': 'xbsddevdbAuroraAppAdmin',
+        'password': 'rdsapg86a8-auroratdb-v1-node-1.chzdhpfung6p.us-east-1.rds.amazonaws.com:6160/?Action=connect&DBUser=xbsddevdbAuroraAppAdmin&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAXBZAIY4BSSQ4HTCS%2F20250508%2Fus-east-1%2Frds-db%2Faws4_request&X-Amz-Date=20250508T151627Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEND%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJIMEYCIQDED%2FvsOKajCxlEMBj%2FKTBds%2Byynm6RZVhjmfCyiin6BAIhAIzWrTZCNWHVDMxxEL9geu5u3bgd%2Bc9zLtmGKp4PiW9%2BKtgCCHgQABoMNDg0ODYyMTE3NjM1Igxf%2FtML%2FYU9M57od1AqtQIBuE%2FjNGCrXmqLmhZRPBsOtgO6xZHNjacPYROCQf%2F0Yf%2FzCzf%2Bj75hu9e8kMYQ65qO%2Fxo%2BF2aDqevpnvTe9t5%2BEKoysCUpDEfhFeRsgMMS20uwUo0bJ3q14IgEQ2u7wQIvAczh8iomIlsZi%2Fr%2Bjm2wL9ZZI%2BuIcdvw%2ByY28EKmYz%2F8jB75ylhLXkQZ539uvhObXhQNup2yR%2FKL%2ByM2zcGxQh1f%2F8THPYg3RVbH7v4CBJTLAAHUAiRRqL8P3sK5s4UN1lrylamFRmEeeUixHtlEF6SXfKImLMgOpbSrJ6sr3fXS3oxK9jt17%2BCMLHhNrp6VxHtCU%2Fl03EwLTDN%2FZ8NNLIrFolpevqiMs5WJpdwAexhSAR%2BYrWmX8zeWXteWbA%2FgNjJBbsHCy0AiewGEdIa9sKo1pPMwwZXzwAY6oQHFyNQ9uCfuD4sOXRsNnTQVcEA5QE7paNLMS3YAQSdNtDenBa%2BRsldedxiEuJZj4psRGtfDZ0pdTwxPLuCYjJfFpt1I6ae6LrmWnymWrinn2TQ3sPous97jLDQp1zsN2MJ%2BObEd9vaPbOlf8RZ4bBq8DZY4KVmcBA3VI6biRv6EizBbuybBAe6L1nbaRO9x0cAYF1uAA57Sdn%2FnIa0%2BWkpb0Q%3D%3D&X-Amz-Signature=e0da1a23a8e7146c2a1f48996f5d343b12ab92cf5ab73b29829225c2b89df4d4',
+        'host': 'nlb-rdsapg86a8-auroratdb-v1-fdcc221bbc9eea60.elb.us-east-1.amazonaws.com',
+        'port': '6160',
+        'database': 'xbsddevdb',
+        # 'ca_cert_path': 'us-east-1-bundle.pem',  # Path to the CA certificate
+    }
+
+    encoded_password = quote_plus(db_config['password'])
+
+    # Create a connection string
+    connection_string = f"postgresql://{db_config['user']}:{encoded_password}@{db_config['host']}:{db_config['port']}/{db_config['database']}"
+    # engine = create_engine(connection_string)
+
+    business_entity_card_revenues = r"c:/Users/N808824/Downloads/trust_matrix_df/physical_address_staging_df_updated.csv"
+    df = pd.read_csv(business_entity_card_revenues)
+    print(df)
+    
+
+    schema_name = "sds_main"
+    table_name = "physical_address"
+    compare_columns = ["related_identifier","physical_address_type"]
+
+    column_mapping = {  # Map only the mismatched column
+        "stg_business_entity_id": "business_entity_id"
+    }
+    load_flag_column = "record_status"
+
+    # Call the upsert function
+    sync_dataframe_with_postgresql(df, connection_string, table_name, compare_columns, schema_name,column_mapping,load_flag_column)
+    print("data load completed.")
+if __name__ == "__main__":
+    main()
