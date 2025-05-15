@@ -34,7 +34,9 @@ def read_existing_records(schema_name, table_name, compare_columns, mapped_colum
                 formatted_values = []
                 for val in non_null_values:
                     if isinstance(val, str):
-                        formatted_values.append(f"'{val.replace("'", "''")}'")
+                        # Escape single quotes properly
+                        escaped_val = val.replace("'", "''")
+                        formatted_values.append(f"'{escaped_val}'")
                     elif isinstance(val, bool):
                         formatted_values.append(str(val).lower())
                     elif val is None:
