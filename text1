@@ -1,47 +1,45 @@
+Let me provide a more streamlined description for the JIRA issue that's clearer and more focused:
+
 # JIRA Title
-SDS Processing: Implement New PFD Fields & Fix Staging Data Load Issues
+SDS Processing: Integrate New PFD Fields & Fix Staging Load Issues
 
 # Description
-This task involves implementing end-to-end changes to integrate newly identified PFD fields into the data pipeline and resolving several known issues in the staging Glue job. The work includes mapping corrections, data format standardization, and relationship handling to ensure data quality and consistency in the SDS staging environment.
+Enhance the SDS data pipeline to process additional PFD fields while addressing existing issues in staging data load. This includes updating field mappings, standardizing data formats, and resolving entity relationship inconsistencies to improve data quality and completeness.
 
 # Sub-Tasks
 
-## Sub-Task 1: Integrate New PFD Fields into Data Pipeline
+## Sub-Task 1: Integrate New PFD Fields
 **Description:**  
-Implement the mapping and processing logic for newly identified PFD fields in the data pipeline. This includes updating mapping configurations to correctly handle client_name as buyer field and adding SCF-related attributes with appropriate prefixes.
+Update mapping configurations to include newly identified PFD fields in the SDS staging environment, focusing on SCF attributes and client relationship data.
 
 **Acceptance Criteria:**
-- Updated mapping configuration to correctly process client_name field as buyer identifier
-- New SCF fields (throughput_usd, avg_spread, avg_payment_terms, rate_proposed, rate_offered, esg_discount) mapped to payment_profile_attribute with "scf_" prefix
-- Field ind_decline renamed to scf_ind_decline in target data
-- Verified stp_partnershiplist mapping to product_segmentation_applicable
-- All new fields successfully flowing through the pipeline with sample data validation
+- Updated mapping for client_name as buyer identifier
+- Added SCF attributes with proper prefixes (throughput_usd, avg_spread, avg_payment_terms, etc.)
+- Verified correct processing of ind_decline and stp_partnershiplist
+- Documented new field mappings
 
-## Sub-Task 2: Fix Data Format Issues in Staging Glue Job
+## Sub-Task 2: Standardize Data Formats
 **Description:**  
-Address data format standardization issues in the staging Glue job to ensure consistent data processing.
+Implement consistent data format handling for multi-value fields in the staging Glue job.
 
 **Acceptance Criteria:**
-- Modified registered_agents processing to maintain semicolon-separated format in characteristics table
-- Updated product segmentation data handling to maintain semicolon-separated format in receivables_attribute table
-- Verified data format consistency in QA environment
-- Added unit tests covering format standardization logic
+- Ensured semicolon-separated format for registered_agents
+- Maintained semicolon-separated format for product segmentation
+- Validated format consistency in test environment
 
-## Sub-Task 3: Resolve Entity Relationship Issues in Staging
+## Sub-Task 3: Fix Entity Relationship Handling
 **Description:**  
-Fix structural issues related to entity relationships, identifiers, and contacts in the staging data load process.
+Address structural issues in entity relationships and identifier processing.
 
 **Acceptance Criteria:**
-- Eliminated duplicate records for entity and relationships in identifiers table
-- Updated contact_id reference handling in relationship table
-- Implemented correct date format handling for start and end dates in spend_analysis
-- Added logic to create new contacts when vendor_contact_name is present in relationships
-- Validation report confirming all relationship integrity issues have been resolved
+- Eliminated duplicate identifier records
+- Corrected contact_id references in relationship table
+- Fixed date format handling in spend_analysis
+- Implemented proper contact creation logic for vendor_contact_name
 
 # Overall Acceptance Criteria
-- All new PFD fields correctly integrated into the data pipeline
-- All identified staging data load issues resolved
-- End-to-end testing completed with sample data
+- All new PFD fields correctly integrated
+- Data format issues resolved
+- Entity relationship problems fixed
+- Successful end-to-end test with sample data
 - No regression in existing functionality
-- Documentation updated with new field mappings and processing logic
-- Code review completed and all feedback addressed
