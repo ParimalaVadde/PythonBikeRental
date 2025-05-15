@@ -1,3 +1,6 @@
+-- modified
+
+
 import sys
 import logging
 from datetime import date
@@ -95,6 +98,32 @@ def get_primary_keys(schema_name, table_name):
         logger.error(f"Error retrieving primary keys: {e}")
         raise
 
+def get_table_columns(schema_name, table_name):
+    """
+    Retrieves all column names from the specified table.
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = %s AND table_name = %s;
+        """
+        
+        cursor.execute(query, (schema_name, table_name))
+        table_columns = [row[0] for row in cursor.fetchall()]
+        
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"Columns for {schema_name}.{table_name}: {table_columns}")
+        return table_columns
+    except Exception as e:
+        logger.error(f"Error retrieving table columns: {e}")
+        raise
+
 def read_data_from_s3(s3_path):
     """
     Reads data from an S3 location into a Spark DataFrame.
@@ -106,24 +135,6 @@ def read_data_from_s3(s3_path):
         return df
     except Exception as e:
         logger.error(f"Error reading data from S3: {e}")
-        raise
-
-def read_data_from_staging(schema_name, table_name):
-    """
-    Reads data from a staging table in PostgreSQL.
-    """
-    try:
-        jdbc_url, user, password = get_jdbc_url()
-        df = spark.read.format("jdbc").options(
-            url=jdbc_url,
-            dbtable=f"{schema_name}.{table_name}",
-            user=user,
-            password=password
-        ).load()
-        logger.info(f"Successfully read data from {schema_name}.{table_name}")
-        return df
-    except Exception as e:
-        logger.error(f"Error reading data from staging table: {e}")
         raise
 
 def clean_dataframe(df):
@@ -154,32 +165,92 @@ def clean_dataframe(df):
     logger.info("DataFrame cleaning completed")
     return df
 
+def filter_valid_columns(df, table_columns, column_mapping, compare_columns, load_flag_column):
+    """
+    Filters DataFrame to include only columns that exist in the target PostgreSQL table.
+    """
+    # Create reverse mapping
+    reverse_mapping = {v: k for k, v in column_mapping.items()}
+    
+    # Get mapped column names
+    mapped_columns = {col: column_mapping.get(col, col) for col in df.columns}
+    
+    # Identify valid columns
+    valid_columns = []
+    for col in df.columns:
+        if (col == load_flag_column or  # Always include the load_flag_column
+            col in compare_columns or    # Always include columns used for comparison
+            (mapped_columns.get(col) and mapped_columns[col] in table_columns)):  # Include mapped columns that exist in the table
+            valid_columns.append(col)
+    
+    logger.info(f"Valid columns: {valid_columns}")
+    
+    # Select only valid columns
+    filtered_df = df.select(*valid_columns)
+    
+    return filtered_df
+
 def read_existing_records(schema_name, table_name, compare_columns, mapped_columns, df_values):
     """
     Reads existing records from PostgreSQL based on comparison columns.
+    Uses IN clause with values from the DataFrame instead of a JOIN.
     """
     try:
-        # Create a temporary view of the DataFrame values for the comparison columns
-        df_values.createOrReplaceTempView("compare_values")
-        
         # Get JDBC connection parameters
         jdbc_url, user, password = get_jdbc_url()
         
         # Map the compare columns from DataFrame to DB columns
         db_columns = [mapped_columns.get(col, col) for col in compare_columns]
+        logger.info(f"db_columns {db_columns}")
         
-        # Construct SQL query conditions for the JOIN
-        join_conditions = []
+        # Collect distinct values for each comparison column
+        value_lists = {}
+        for col in compare_columns:
+            # Convert Spark DataFrame column to a list of values
+            values = [row[col] for row in df_values.select(col).distinct().collect()]
+            value_lists[col] = values
+            logger.info(f"Collected {len(values)} distinct values for column {col}")
+        
+        # Build WHERE conditions for each comparison column
+        where_conditions = []
         for i, col in enumerate(compare_columns):
             db_col = mapped_columns.get(col, col)
-            join_conditions.append(f"t.{db_col} = cv.{col}")
+            values = value_lists[col]
+            
+            # Handle NULL values separately
+            non_null_values = [val for val in values if val is not None]
+            has_nulls = len(non_null_values) < len(values)
+            
+            if non_null_values:
+                # Format values appropriately based on their type
+                formatted_values = []
+                for val in non_null_values:
+                    if isinstance(val, str):
+                        # Escape single quotes properly
+                        escaped_val = val.replace("'", "''")
+                        # Use LOWER function for case-insensitive comparison
+                        formatted_values.append(f"LOWER('{escaped_val}')")
+                    elif isinstance(val, bool):
+                        formatted_values.append(str(val).lower())
+                    elif val is None:
+                        continue  # Skip nulls here, handled separately
+                    else:
+                        formatted_values.append(str(val))
+                
+                # Use LOWER function for case-insensitive comparison for string columns
+                in_clause = f"LOWER({db_col}) IN ({', '.join(formatted_values)})"
+                if has_nulls:
+                    where_conditions.append(f"({in_clause} OR {db_col} IS NULL)")
+                else:
+                    where_conditions.append(in_clause)
+            elif has_nulls:
+                where_conditions.append(f"{db_col} IS NULL")
         
         # Construct the full SQL query
-        query = f"""
-        SELECT t.* 
-        FROM {schema_name}.{table_name} t
-        JOIN compare_values cv ON {' AND '.join(join_conditions)}
-        """
+        where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+        query = f"SELECT * FROM {schema_name}.{table_name} WHERE {where_clause}"
+        
+        logger.info(f"Executing query: {query}")
         
         # Execute the query
         existing_records = spark.read.format("jdbc").options(
@@ -189,6 +260,7 @@ def read_existing_records(schema_name, table_name, compare_columns, mapped_colum
             password=password
         ).load()
         
+        logger.info(f"Retrieved {existing_records.count()} existing records")
         return existing_records
     except Exception as e:
         logger.error(f"Error reading existing records: {e}")
@@ -202,9 +274,17 @@ def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns,
     try:
         # Clean the DataFrame
         df = clean_dataframe(df)
+        logger.info("cleaned data")
+        
+        # Get table columns to filter valid columns
+        table_columns = get_table_columns(schema_name, table_name)
+        
+        # Filter DataFrame to include only valid columns
+        df = filter_valid_columns(df, table_columns, column_mapping, compare_columns, load_flag_column)
         
         # Get primary keys
         primary_keys = get_primary_keys(schema_name, table_name)
+        logger.info(f"displaying primary_keys : {primary_keys}")
         
         # Apply column mapping
         if column_mapping is None:
@@ -212,21 +292,26 @@ def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns,
         
         # Create reverse mapping (from DB to DataFrame columns)
         reverse_mapping = {v: k for k, v in column_mapping.items()}
+        logger.info(f"displaying reverse mapping: {reverse_mapping}")
         
         # Prepare the connection
         conn = get_db_connection()
+        logger.info(f"db connection: {conn}")
         
         # Process updates (load_flag = 'U')
         update_records = df.filter(F.upper(F.col(load_flag_column)) == "U")
+        logger.info(f"update_records: {update_records}")
         
         # Process inserts (load_flag = 'I')
         insert_records = df.filter(F.upper(F.col(load_flag_column)) == "I")
+        logger.info(f"insert_records: {insert_records}")
         
         # Collect mismatched records
         mismatched_records = df.filter(
             (F.col(load_flag_column).isNull()) | 
             ((F.upper(F.col(load_flag_column)) != "U") & (F.upper(F.col(load_flag_column)) != "I"))
         )
+        logger.info(f"mismatched_records: {mismatched_records}")
         
         # Handle updates
         if update_records.count() > 0:
@@ -234,6 +319,8 @@ def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns,
             
             # Extract the comparison values
             compare_values = update_records.select(*compare_columns)
+            logger.info(f"compare_values : {compare_values}")
+            logger.info(f"parameters: {schema_name,table_name,compare_columns,column_mapping,compare_values}")
             
             # Check for existing records
             existing_records = read_existing_records(
@@ -248,9 +335,18 @@ def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns,
             update_conditions = []
             for col in compare_columns:
                 db_col = column_mapping.get(col, col)
-                df_col = reverse_mapping.get(db_col, db_col)
-                update_conditions.append(f"ur.{col} = er.{db_col}")
+                
+                # Use case-insensitive comparison for string columns
+                update_conditions.append(f"""
+                    CASE 
+                        WHEN ur.{col} IS NULL AND er.{db_col} IS NULL THEN true
+                        WHEN ur.{col} IS NULL OR er.{db_col} IS NULL THEN false
+                        WHEN typeof(ur.{col}) = 'string' THEN lower(ur.{col}) = lower(er.{db_col})
+                        ELSE ur.{col} = er.{db_col}
+                    END
+                """)
             
+            logger.info(f"update_conditions: {update_conditions}")
             records_to_update = spark.sql(f"""
                 SELECT ur.* 
                 FROM update_records ur
@@ -281,10 +377,16 @@ def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns,
                     update_data = {}
                     where_clause = []
                     
-                    # Build WHERE clause
+                    # Build WHERE clause with case-insensitive comparison for string values
                     for col in compare_columns:
                         db_col = column_mapping.get(col, col)
-                        where_clause.append(f"{db_col} = %s")
+                        val = row[col]
+                        
+                        if isinstance(val, str):
+                            # Case-insensitive comparison for string values
+                            where_clause.append(f"LOWER({db_col}) = LOWER(%s)")
+                        else:
+                            where_clause.append(f"{db_col} = %s")
                         
                     # Build SET clause
                     set_values = []
@@ -340,8 +442,16 @@ def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns,
             insert_conditions = []
             for col in compare_columns:
                 db_col = column_mapping.get(col, col)
-                df_col = reverse_mapping.get(db_col, db_col)
-                insert_conditions.append(f"ir.{col} = er.{db_col}")
+                
+                # Use case-insensitive comparison for string columns
+                insert_conditions.append(f"""
+                    CASE 
+                        WHEN ir.{col} IS NULL AND er.{db_col} IS NULL THEN true
+                        WHEN ir.{col} IS NULL OR er.{db_col} IS NULL THEN false
+                        WHEN typeof(ir.{col}) = 'string' THEN lower(ir.{col}) = lower(er.{db_col})
+                        ELSE ir.{col} = er.{db_col}
+                    END
+                """)
             
             records_to_insert = spark.sql(f"""
                 SELECT ir.* 
@@ -411,7 +521,9 @@ def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns,
         # Handle mismatched records
         if mismatched_records.count() > 0:
             logger.info(f"Found {mismatched_records.count()} mismatched records")
-            mismatched_path = f"s3://{ss.s3_bucket}/mismatch_records/"
+            logger.info(f"s3 bucket name : {ss.s3_bucket}")
+            mismatched_path = "s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/mismatched_records/"
+            #mismatched_path = f"s3://{ss.s3_bucket}/mismatch_records/"
             mismatched_records.write.mode("overwrite").csv(mismatched_path, header=True)
             logger.info(f"Mismatched records written to {mismatched_path}")
         
@@ -449,11 +561,6 @@ def main():
         #s3_path = f"s3://{ss.s3_bucket}/card_revenues/card_revenues.csv"
         s3_path = "s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/card_revenues.csv"
         df = read_data_from_s3(s3_path)
-        
-        # Option 2: Read from staging table
-        #staging_schema = "sds_staging"
-        #staging_table = "business_entity_card_revenues"
-        #df = read_data_from_staging(staging_schema, staging_table)
         
         logger.info(f"Data read successfully with {df.count()} rows")
         
