@@ -1,214 +1,71 @@
-apiVersion: deployment/v1
-kind: Deployment
-metadata:
-  name: auroratdb
-  sealID: "111597"
-  model:
-    name: xbsddbts
-    version: v5
-spec:
-  modulepack:
-    name: default
-    version: 0.9.2
-  environment:
-    awsAccountID: "484862117635"
-    awsRegion: us-east-1
-    tfeOrganization: 111597-114116-DEV
-  components:
-    - type: KMS
-      name: rdstestkms
-      action: apply
-      properties:
-        key_alias: rdsdevkms
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: LightSwitch
-      name: lswitch
-      action: apply
-      properties:
-        lightswitch_enabled: true
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: S3
-      name: bucket
-      action: apply
-      properties:
-        core_backups_retention: 35DAYS
-        enable_bucket_versioning: Enabled
-        lifecycle_rules:
-          - expiration:
-              - expired_object_delete_marker: true
-            filter:
-              prefix: ""
-            id: default
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: RDSAuroraPostgres
-      name: xbsdtestdb
-      action: apply
-      connectsTo:
-        - type: KMS
-          name: rdstestkms
-        - type: LightSwitch
-          name: lswitch
-      dependsOn:
-        - type: PrivateVPCEndpoints
-          name: vpce
-      properties:
-        aurora_cluster_postgres_db_parameter_group_family: aurora-postgresql15
-        aurora_instance_postgres_db_parameter_group_family: aurora-postgresql15
-        ca_cert_identifier: rds-ca-rsa2048-g1
-        custom_db_names:
-          - custom
-        database_name: xbsddevdb
-        db_backup_retention_days: 35
-        core_backups_retention: 35DAYS
-        backup_plan_name: core-backups-35
-        backup_vault_name: core-immutable
-        db_instance_type: db.r6g.large
-        deletion_protection: true
-        enable_immutable_backups: true
-        enable_nlb_connectivity: true
-        engine_version: "15.3"
-        healthcheck_enabled: true
-        identifier_prefix: xbsddevdb
-        is_serverless: true
-        lightswitch_config:
-          enabled: true
-          start_action:
-            schedule: cron(00 7 ? * MON-FRI *)
-          stop_action:
-            schedule: cron(00 20 ? * MON-FRI *)
-        max_capacity: 8
-        min_capacity: 1
-        monitoring_interval: "5"
-        performance_insights_enabled: true
-        performance_insights_retention_period: 7
-        preferred_backup_window: 21:00-22:00
-        preferred_maintenance_window: Sun:22:00-Sun:23:00
-        rds_proxy: true
-        replica_count: 1
-        serverless_db_type: db.serverless
-        skip_final_snapshot: false
-        subnets:
-          - PrivateSubnet01
-          - PrivateSubnet02
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-    - type: CloudWatch
-      name: dbcwalms
-      action: apply
-      properties:
-        alarms:
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Aurora Replica Lag Maximum alarm"
-            alarm_name: "Aurora Postgres: Aurora Replica Lag Maximum"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: AuroraReplicaLagMaximum
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Connection Attempts alarm"
-            alarm_name: "Aurora Postgres: Connection Attempts"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: ConnectionAttempts
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 90
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Deadlocks alarm"
-            alarm_name: "Aurora Postgres: Deadlocks"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: Deadlocks
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 5
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Read IOPS alarm"
-            alarm_name: "Aurora Postgres: Read IOPS"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: ReadIOPS
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Read Throughput alarm"
-            alarm_name: "Aurora Postgres: Read Throughput"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: ReadThroughput
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Write IOPS alarm"
-            alarm_name: "Aurora Postgres: Write IOPS"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: WriteIOPS
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-          - actions_enabled: true
-            alarm_description: "Aurora Postgres: Write Throughput alarm"
-            alarm_name: "Aurora Postgres: Write Throughput"
-            comparison_operator: GreaterThanThreshold
-            datapoints_to_alarm: 3
-            evaluation_periods: 3
-            insufficient_data_actions: []
-            metric_name: WriteThroughput
-            namespace: AWS/RDS
-            period: 300
-            statistic: Average
-            threshold: 1000000
-            treat_missing_data: notBreaching
-        tags:
-          CIB-CMEE-ARCHETYPE-NAME: CIB-CMEE-DATA-ARCHETYPE
-          CIB-CMEE-ARCHETYPE-VERSION: 0.1.0-PREVIEW
-      
-    - type: PrivateVPCEndpoints
-      name: vpce
-      action: skip
-      properties: 
-        tags:
-          name: privatevpc
-    - type: RDSProxy
-      name: proxy
-      action: apply
-      connectsTo:
-        - type: RDSAuroraPostgres
-          name: xbsdtestdb
-      properties: null
+def read_existing_records(schema_name, table_name, compare_columns, mapped_columns, df_values):
+    """
+    Reads existing records from PostgreSQL based on comparison columns.
+    Uses IN clause with values from the DataFrame instead of a JOIN.
+    """
+    try:
+        # Get JDBC connection parameters
+        jdbc_url, user, password = get_jdbc_url()
+        
+        # Map the compare columns from DataFrame to DB columns
+        db_columns = [mapped_columns.get(col, col) for col in compare_columns]
+        logger.info(f"db_columns {db_columns}")
+        
+        # Collect distinct values for each comparison column
+        value_lists = {}
+        for col in compare_columns:
+            # Convert Spark DataFrame column to a list of values
+            values = [row[col] for row in df_values.select(col).distinct().collect()]
+            value_lists[col] = values
+            logger.info(f"Collected {len(values)} distinct values for column {col}")
+        
+        # Build WHERE conditions for each comparison column
+        where_conditions = []
+        for i, col in enumerate(compare_columns):
+            db_col = mapped_columns.get(col, col)
+            values = value_lists[col]
+            
+            # Handle NULL values separately
+            non_null_values = [val for val in values if val is not None]
+            has_nulls = len(non_null_values) < len(values)
+            
+            if non_null_values:
+                # Format values appropriately based on their type
+                formatted_values = []
+                for val in non_null_values:
+                    if isinstance(val, str):
+                        formatted_values.append(f"'{val.replace("'", "''")}'")
+                    elif isinstance(val, bool):
+                        formatted_values.append(str(val).lower())
+                    elif val is None:
+                        continue  # Skip nulls here, handled separately
+                    else:
+                        formatted_values.append(str(val))
+                
+                in_clause = f"{db_col} IN ({', '.join(formatted_values)})"
+                if has_nulls:
+                    where_conditions.append(f"({in_clause} OR {db_col} IS NULL)")
+                else:
+                    where_conditions.append(in_clause)
+            elif has_nulls:
+                where_conditions.append(f"{db_col} IS NULL")
+        
+        # Construct the full SQL query
+        where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+        query = f"SELECT * FROM {schema_name}.{table_name} WHERE {where_clause}"
+        
+        logger.info(f"Executing query: {query}")
+        
+        # Execute the query
+        existing_records = spark.read.format("jdbc").options(
+            url=jdbc_url,
+            query=query,
+            user=user,
+            password=password
+        ).load()
+        
+        logger.info(f"Retrieved {existing_records.count()} existing records")
+        return existing_records
+    except Exception as e:
+        logger.error(f"Error reading existing records: {e}")
+        raise
