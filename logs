@@ -1,26 +1,10 @@
-timestamp,message
-1747291536368,"Traceback (most recent call last):
-  File ""/opt/amazon/bin/runscript.py"", line 72, in <module>
-    runpy.run_path(script, run_name='__main__')
-  File ""/usr/local/lib/python3.10/runpy.py"", line 268, in run_path
-"
-1747291536398,"    code, fname = _get_code_from_file(run_name, path_name)
-  File ""/usr/local/lib/python3.10/runpy.py"", line 242, in _get_code_from_file
-"
-1747291536399,"    code = compile(f.read(), fname, 'exec')
-  File ""/tmp/Upsert_pyspark_v1.py"", line 194
-    formatted_values.append(f""'{val.replace(""'"", ""''"")}'"")
-                                                        ^
-SyntaxError: unterminated string literal (detected at line 194)
+INFO:__main__:Found 2 mismatched records
+INFO:__main__:s3 bucket name : s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto
 
-During handling of the above exception, another exception occurred:
 
-Traceback (most recent call last):
-  File ""/opt/amazon/bin/runscript.py"", line 105, in <module>
-"
-1747291536399,"    while ""runpy.py"" in new_stack.tb_frame.f_code.co_filename:
-AttributeError: 'NoneType' object has no attribute 'tb_frame'"
-1747291536399,"
-"
-1747291541981,"Running autoDebugger shutdown hook.
-"
+ERROR:__main__:Error in sync_dataframe_with_postgresql: An error occurred while calling o457.csv.
+: com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.services.s3.model.AmazonS3Exception: Bad Request (Service: Amazon S3; Status Code: 400; Error Code: 400 Bad Request; Request ID: Z51DF8F5T0PRPD9C; S3 Extended Request ID: iTeUgiAo1tLAvKWBm0idw9f5L/s/Go17YBxIMcM7Tva6MzaOo0KcQMclEjNOsyspjPbGmJN+bxk=; Proxy: null), S3 Extended Request ID: iTeUgiAo1tLAvKWBm0idw9f5L/s/Go17YBxIMcM7Tva6MzaOo0KcQMclEjNOsyspjPbGmJN+bxk=
+	at com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1879)
+	at com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleServiceErrorResponse(AmazonHttpClient.java:1418)
+	at com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1387)
+	at com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.http.AmazonHttpClient$RequestExecuto
