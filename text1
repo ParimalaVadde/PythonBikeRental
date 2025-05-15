@@ -1,0 +1,14 @@
+[1:52 PM] Bommareddy, Mounika (CIB Tech, IND, Consultant)
+staging:
+
+	- characteristics (registered_agents has to be ; seperated)
+
+	- receivables_attribute (Prod seg ; seperated)
+
+	- identifiers (double records for entity and relationships)
+
+	-relationships (contact_id in relationship table needs to be changed)
+
+	- spend_analysis (start and end date has to be mapped)
+
+	- contacts ( vendor_contact_name has to present in relationships. So a new contact has to be created)
