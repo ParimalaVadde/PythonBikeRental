@@ -1,0 +1,230 @@
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity
+(
+    stg_business_entity_id   varchar ,
+    source_system_id       varchar,
+    source_system_name     varchar,
+    hierarchy_identifier varchar,
+    hierarchy_level      varchar,
+    hierarchy_role       varchar,
+    parent_id            varchar,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_details
+(
+	business_entity_details_id varchar ,
+    stg_business_entity_id   varchar ,
+    business_entity_name varchar,
+    company_structure         varchar,
+    market_segment_type  varchar,
+	year_incorporated varchar,
+	reported_annual_revenue  varchar,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_identifiers
+(
+    identifier_id      varchar ,
+    identifier_type    varchar,
+    identifier_value   varchar,
+	related_identifier	varchar,
+	related_identifier_source  varchar,
+    created_by         varchar,
+    created_date       timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_characteristics
+(
+    characteristics_id   varchar ,
+    stg_business_entity_id   varchar,
+    characteristic_type varchar,
+    characteristic_value varchar,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_contacts
+(
+    business_entity_contact_id varchar ,
+    stg_business_entity_id         varchar,
+	source_system_contact_id   varchar,
+    source_system_name         varchar,
+    contact_type               varchar,
+    contact_name               varchar,
+    contact_title              varchar,
+    contact_active_indicator   boolean,
+    contact_deactivated_date   timestamp,
+	decision_maker_indicator   varchar,
+	decision_maker_type   varchar,
+    created_by                 varchar,
+    created_date               timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_relationships
+(
+    business_entity_relationship_id    varchar ,
+    stg_business_entity_id                 varchar,
+    business_entity_contact_id         varchar,
+    stg_related_business_entity_id         varchar,
+    related_business_entity_contact_id varchar,
+    business_entity_role               varchar,
+    related_business_entity_role       varchar,
+    created_by                         varchar,
+    created_date                       timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_spend_analysis
+(
+    spend_analysis_id        varchar,
+    stg_payor_business_entity_id varchar,
+    stg_payee_business_entity_id varchar,
+	analysis_conducted_dt varchar,
+	analysis_external_reference_id varchar,
+	analysis_stage  varchar,
+	count_of_invoices       numeric,
+    payment_terms            varchar,
+    count_of_payments        numeric,
+    sum_of_payments          numeric,
+    period_start_date        date,
+    period_end_date          date,
+    payment_ccy              varchar,
+    chargeback_amount        numeric,
+    chargeback_percentage    numeric,
+	actual_days_payment_outstanding numeric,
+    payment_mode             varchar,
+	payment_term_days       numeric,
+	payment_terms_discount_ind   varchar,
+	payment_terms_discount_rate  numeric,
+	payment_terms_discount_days       numeric,
+	source_system_id             varchar,
+    source_system_name           varchar,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.physical_address
+(
+    physical_address_id     varchar ,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    physical_address_type     varchar,
+    street_line_1             varchar,
+    street_line_2             varchar,
+    street_line_3             varchar,
+    country                   varchar,
+    city                      varchar,
+    state_province            varchar,
+    postal_code               varchar,
+    location_name             varchar,
+    site_identifier           varchar,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.electronic_address
+(
+    electronic_address_id    varchar ,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    electronic_address_type   varchar,
+    electronic_address        varchar,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.telecommunication_address
+(
+    telecommunication_address_id  varchar ,
+    related_identifier             varchar,
+    related_identifier_source      varchar,
+    telecommunication_address_type varchar,
+    area_dialing_code              varchar,
+    phone_number                   varchar,
+    extension_number               varchar,
+    created_by                     varchar,
+    created_date                   timestamp
+);              
+CREATE TABLE IF NOT EXISTS sds_staging.restrictions
+(
+    restriction_id            varchar ,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    restriction_type          varchar,
+    restriction_indicator     boolean,
+    restriction_reason        varchar,
+	restriction_for_products varchar,
+	restriction_added_dt  date,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_receivables_attribute
+(
+    attribute_id    varchar ,
+    stg_business_entity_id       varchar,
+    receivables_attribute_type  varchar,
+    receivables_attribute_value varchar,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_association
+(
+    card_association_id    varchar ,
+    stg_business_entity_id       varchar,
+    association_name  varchar,
+    match_confidence   varchar,
+	matched_level_2   boolean,
+	matched_level_3_summary boolean,
+	matched_level_3_lineitem boolean,
+	matched_fleet_ind  varchar,
+	matched_mcc  varchar,
+	matched_data_quality  varchar,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_industry_classification
+(
+    classification_id    varchar ,
+    stg_business_entity_id       varchar,
+    classification_type  varchar,
+    classification_code   varchar,
+	classification_description  varchar,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_revenues
+(
+    revenue_id    varchar ,
+    stg_business_entity_id       varchar,
+    end_date  date,
+	card_revenue__1m__start_date date,
+	card_revenue__1m__average_monthly_amount numeric,
+    card_revenue__3m__start_date date,
+    card_revenue__3m__average_monthly_amount numeric,
+    card_revenue__12m__start_date date,
+    card_revenue__12m__average_monthly_amount numeric,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_transactions_stability
+(
+    card_transactions_stability_id    varchar ,
+    stg_business_entity_id       varchar,
+    end_date  timestamp,
+	date_accessible date,
+    card_transactions_stability__1m__start_date date,
+    card_transactions_stability__1m__days_present         varchar,
+    card_transactions_stability__1m__weeks_present        varchar,
+    card_transactions_stability__1m__months_present         varchar,
+    card_transactions_stability__1m__daily_coverage_ratio   numeric,
+    card_transactions_stability__1m__weekly_coverage_ratio   numeric,
+    card_transactions_stability__1m__monthly_coverage_ratio    numeric,
+    card_transactions_stability__3m__start_date date,
+    card_transactions_stability__3m__days_present      varchar,
+    card_transactions_stability__3m__weeks_present     varchar,
+    card_transactions_stability__3m__months_present     varchar,
+    card_transactions_stability__3m__daily_coverage_ratio    numeric,
+    card_transactions_stability__3m__weekly_coverage_ratio numeric,
+    card_transactions_stability__3m__monthly_coverage_ratio   numeric,
+    card_transactions_stability__12m__start_date date,
+    card_transactions_stability__12m__days_present      varchar,
+    card_transactions_stability__12m__weeks_present     varchar,
+    card_transactions_stability__12m__months_present     varchar,
+    card_transactions_stability__12m__daily_coverage_ratio   numeric,
+    card_transactions_stability__12m__weekly_coverage_ratio    numeric,
+    card_transactions_stability__12m__monthly_coverage_ratio    numeric,
+    created_by               varchar,
+    created_date             timestamp
+);
