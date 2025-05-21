@@ -1,21 +1,18 @@
-task_id
-sds_upload_name
-sds_upload_id
-client_name
-upload_user
-sds_upload_ts
-sds_note
-Scf Buyerlist
+Hi Mukul,
 
+I have attached the latest DDLs. There are no major changes to existing DDLs, just an addition of column analysis_task_id (User-entered task ID in UI, the sample source file shared by Robert doesn't contain this column yet) for table sds_staging.business_entity_spend_analysis.
 
-present
-supplier_ecid
-throughput_usd
-avg_spread
-avg_payment_terms
-rate_proposed
-rate_offered
-esg_discount
-ind_decline
-STP Partnerships
-Supplier Segmentation
+The sample source file shared by Robert does not have the following 8 metadata columns referenced in the data dictionary:
+task_id, sds_upload_name, sds_upload_id, client_name, upload_user, sds_upload_ts, sds_note, Scf Buyerlist
+
+Here are the new columns that appear in the new source file:
+supplier_ecid, throughput_usd, avg_spread, avg_payment_terms, rate_proposed, rate_offered, esg_discount, ind_decline, STP Partnerships, Supplier Segmentation
+ 
+As for renamed columns, I noticed:
+- "stp_partnershiplist" in the old file is now "STP Partnerships" in the new file
+- "s3_path" and "buying_entity" from the old file don't appear to be present in the new file
+- The partition_id column from the old file is also not present in the new file.
+
+Only task_id requires a DDL change. For the rest of the columns, it's an addition of identifier types in sds_staging.business_entity_identifiers table or characteristic types in sds_staging.business_entity_characteristics table. 
+
+I'm also attaching the data dictionary, old sample source file, and new source file for your reference.
