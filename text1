@@ -1,6 +1,310 @@
-CREATE TABLE IF NOT EXISTS sds_main.business_entity_spend_analysis
+Analysis of new columns, for below columns doesn't require ddl change , its more i need add few more rows for charecterstics and identifiers table, not ddl changes
+supplier_ecid (match_supplier_id_clientreference)
+throughput_usd
+avg_spread
+avg_payment_terms
+rate_proposed
+rate_offered
+esg_discount
+ind_decline
+stp_partnershiplist
+
+
+
+Columns	Data Origin	Format/Example Data	Description	Is this currently mapped in SDS	Does it need to be mapped 	Comments	column addition	Recommendation / Justification	ddl change	mapping file changes
+task_id	PFD	string	Task ID entered by user in the UI  	n	n	Take this as it’s the shrepoint id for which the analysis is being performed 	additional column	"* Recommendation: Create a new column `analysis_task_id` in `business_entity_spend_analysis` table
+* Justification: Should flow to SDS as per Andy. Useful for salesforce"	y	y
+sds_upload_name	PFD	string	name for sds upload enter by user	n	n		additional column	"* Recommendation: No need to map as specified
+* Justification: This is metadata about the upload process rather than business entity data"	n	n
+sds_upload_id	PFD	string	id unique to SDS upload	n	y	map this to business_entity_spend_analysis - analysis_external_reference_id instead of user_request_id	additional column	"* Recommendation: Map to `business_entity_spend_analysis.analysis_external_reference_id` (replacing user_request_id)
+* Justification: This provides a better unique identifier for the analysis than user_request_id"	n	y
+client_name	PFD	string	client name as entered by user	n	y	Take this as the client name 	additional column	"* Recommendation: add `client_name` in the mapping to `business_entity_details.business_entity_name`
+* Justification: This provides more accurate client identification as specified in requirements"	n	y
+upload_user	PFD	string	sid of user the uploaded file to SDS	n	n		additional column	"* Recommendation: Might not need to mapped.
+* Justification: This is metadata about the user upload  rather than business entity data"	n	n
+sds_upload_ts	PFD	string	timestamp that the file was uploaded to SDS	n	n		additional column	"* Recommendation: Might not need to mapped.
+* Justification: This is metadata about the uploaded  timestamp than business entity data"	n	n
+sds_note	PFD	string	any notes added by the user when uploading to SDS	n	n		additional column	"* Recommendation: Might not need to mapped.
+* Justification: This is metadata about the uploaded  timestamp than business entity data"	n	n
+buying_entity	Spend File	string	placeholder column	n	n		additional column	"* Recommendation: No need to map (placeholder)
+* Justification: This is indicated as a placeholder column"	n	n
+supplier_ecid (match_supplier_id_clientreference)	jpmc reference data		supplier ecid, provided if the supplier is a client of jpmc	n	y		additional column	"* Recommendation: Map to `business_entity_identifiers.identifier_value` with a new `identifier_type` value of ""ECID""
+* Justification: This is a type of identifier for the business entity"	n	y
+scf_buyerlist			placeholder column	n	n		additional column	"* Recommendation: No need to map (placeholder)
+* Justification: This is indicated as a placeholder column"	n	n
+throughput_usd	apar	int	dollar amount going through scf to the supplier	n	y		additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` for these columns
+* Justification: These columns are all related to supply chain finance details"	n	y
+avg_spread	apar	float	average spread for scf programs with that supplier	n	y		additional column		n	y
+avg_payment_terms	apar	float	average payment terms for scf programs with that supplier	n	y		additional column		n	y
+rate_proposed	apar	float	scf program rate proposed by jpmc	n	y		additional column		n	y
+rate_offered	apar	float	actual rate offered by jpmc	n	y		additional column		n	y
+esg_discount	apar	float	appliead esg related discounts	n	y		additional column		n	y
+ind_decline	apar	binary (Y/N)	if supplier has previously rejected attempts to onboard to jpmc scf	n	y		additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` of ""SCF_DECLINE_INDICATOR""
+* Justification: This is a characteristic of the business entity's relationship with JPMC"	n	y
+stp_partnershiplist	stp/cardcampaign	list	list of stp services that have a relationship with the supplier & stg codes from ccdw(stg_codelist has been deprecated)	n	y		additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` of ""STP_PARTNERSHIP_LIST""
+* Justification: This represents service partnerships for the entity"	n	y
+
+
+
+latest ddls
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity
 (
-    spend_analysis_id        varchar not null primary key,
-    payor_business_entity_id varchar,
-    payee_business_entity_id varchar,
-	analysis_task_id         varchar,            -- Task ID entered by user in the UI,yet to recieve the meta data columns from Robert in src file 
+    stg_business_entity_id   varchar ,
+    source_system_id       varchar,
+    source_system_name     varchar,
+    hierarchy_identifier varchar,
+    hierarchy_level      varchar,
+    hierarchy_role       varchar,
+    parent_id            varchar,
+    is_active            boolean,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_details
+(
+	business_entity_details_id varchar ,
+    stg_business_entity_id   varchar ,
+    business_entity_name varchar,
+    company_structure         varchar,
+    market_segment_type  varchar,
+	year_incorporated varchar,
+	reported_annual_revenue  varchar,
+    is_active            boolean,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_identifiers
+(
+    identifier_id      varchar ,
+    identifier_type    varchar,
+    identifier_value   varchar,
+	related_identifier	varchar,
+	related_identifier_source  varchar,
+    is_active            boolean,
+    created_by         varchar,
+    created_date       timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_characteristics
+(
+    characteristics_id   varchar ,
+    stg_business_entity_id   varchar,
+    characteristic_type varchar,
+    characteristic_value varchar,
+    is_active            boolean,
+    created_by           varchar,
+    created_date         timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_contacts
+(
+    business_entity_contact_id varchar ,
+    stg_business_entity_id         varchar,
+	source_system_contact_id   varchar,
+    source_system_name         varchar,
+    contact_type               varchar,
+    contact_name               varchar,
+    contact_title              varchar,
+    contact_active_indicator   boolean,
+    contact_deactivated_date   timestamp,
+	decision_maker_indicator   varchar,
+	decision_maker_type   varchar,
+    is_active            boolean,
+    created_by                 varchar,
+    created_date               timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_relationships
+(
+    business_entity_relationship_id    varchar ,
+    stg_business_entity_id                 varchar,
+    business_entity_contact_id         varchar,
+    stg_related_business_entity_id         varchar,
+    related_business_entity_contact_id varchar,
+    business_entity_role               varchar,
+    related_business_entity_role       varchar,
+    is_active            boolean,
+    created_by                         varchar,
+    created_date                       timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_spend_analysis
+(
+    spend_analysis_id        varchar,
+    stg_payor_business_entity_id varchar,
+    stg_payee_business_entity_id varchar,
+	analysis_conducted_dt varchar,
+	analysis_external_reference_id varchar,
+	analysis_task_id         varchar,    -- User-entered task ID in UI, pending metadata column from Robert
+	analysis_stage  varchar,
+	count_of_invoices       numeric,
+    payment_terms            varchar,
+    count_of_payments        numeric,
+    sum_of_payments          numeric,
+    period_start_date        date,
+    period_end_date          date,
+    payment_ccy              varchar,
+    chargeback_amount        numeric,
+    chargeback_percentage    numeric,
+	actual_days_payment_outstanding numeric,
+    payment_mode             varchar,
+	payment_term_days       numeric,
+	payment_terms_discount_ind   varchar,
+	payment_terms_discount_rate  numeric,
+	payment_terms_discount_days       numeric,
+	source_system_id             varchar,
+    source_system_name           varchar,
+    is_active            boolean,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.physical_address
+(
+    physical_address_id     varchar ,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    physical_address_type     varchar,
+    street_line_1             varchar,
+    street_line_2             varchar,
+    street_line_3             varchar,
+    country                   varchar,
+    city                      varchar,
+    state_province            varchar,
+    postal_code               varchar,
+    location_name             varchar,
+    site_identifier           varchar,
+    is_active            boolean,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.electronic_address
+(
+    electronic_address_id    varchar ,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    electronic_address_type   varchar,
+    electronic_address        varchar,
+    is_active            boolean,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.telecommunication_address
+(
+    telecommunication_address_id  varchar ,
+    related_identifier             varchar,
+    related_identifier_source      varchar,
+    telecommunication_address_type varchar,
+    area_dialing_code              varchar,
+    phone_number                   varchar,
+    extension_number               varchar,
+    is_active            boolean,
+    created_by                     varchar,
+    created_date                   timestamp
+);              
+CREATE TABLE IF NOT EXISTS sds_staging.restrictions
+(
+    restriction_id            varchar ,
+    related_identifier        varchar,
+    related_identifier_source varchar,
+    restriction_type          varchar,
+    restriction_indicator     boolean,
+    restriction_reason        varchar,
+	restriction_for_products varchar,
+	restriction_added_dt  date,
+    is_active            boolean,
+    created_by                varchar,
+    created_date              timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_receivables_attribute
+(
+    attribute_id    varchar ,
+    stg_business_entity_id       varchar,
+    receivables_attribute_type  varchar,
+    receivables_attribute_value varchar,
+    is_active            boolean,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_association
+(
+    card_association_id    varchar ,
+    stg_business_entity_id       varchar,
+    association_name  varchar,
+    match_confidence   varchar,
+	matched_level_2   boolean,
+	matched_level_3_summary boolean,
+	matched_level_3_lineitem boolean,
+	matched_fleet_ind  varchar,
+	matched_mcc  varchar,
+	matched_data_quality  varchar,
+    is_active            boolean,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_industry_classification
+(
+    classification_id    varchar ,
+    stg_business_entity_id       varchar,
+    classification_type  varchar,
+    classification_code   varchar,
+	classification_description  varchar,
+    is_active            boolean,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_revenues
+(
+    revenue_id    varchar ,
+    stg_business_entity_id       varchar,
+    end_date  date,
+	card_revenue__1m__start_date date,
+	card_revenue__1m__average_monthly_amount numeric,
+    card_revenue__3m__start_date date,
+    card_revenue__3m__average_monthly_amount numeric,
+    card_revenue__12m__start_date date,
+    card_revenue__12m__average_monthly_amount numeric,
+    is_active            boolean,
+    created_by               varchar,
+    created_date             timestamp
+);
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_transactions_stability
+(
+    card_transactions_stability_id    varchar ,
+    stg_business_entity_id       varchar,
+    end_date  date,
+	date_accessible date,
+    card_transactions_stability__1m__start_date date,
+    card_transactions_stability__1m__days_present         varchar,
+    card_transactions_stability__1m__weeks_present        varchar,
+    card_transactions_stability__1m__months_present         varchar,
+    card_transactions_stability__1m__daily_coverage_ratio   numeric,
+    card_transactions_stability__1m__weekly_coverage_ratio   numeric,
+    card_transactions_stability__1m__monthly_coverage_ratio    numeric,
+    card_transactions_stability__3m__start_date date,
+    card_transactions_stability__3m__days_present      varchar,
+    card_transactions_stability__3m__weeks_present     varchar,
+    card_transactions_stability__3m__months_present     varchar,
+    card_transactions_stability__3m__daily_coverage_ratio    numeric,
+    card_transactions_stability__3m__weekly_coverage_ratio numeric,
+    card_transactions_stability__3m__monthly_coverage_ratio   numeric,
+    card_transactions_stability__12m__start_date date,
+    card_transactions_stability__12m__days_present      varchar,
+    card_transactions_stability__12m__weeks_present     varchar,
+    card_transactions_stability__12m__months_present     varchar,
+    card_transactions_stability__12m__daily_coverage_ratio   numeric,
+    card_transactions_stability__12m__weekly_coverage_ratio    numeric,
+    card_transactions_stability__12m__monthly_coverage_ratio    numeric,
+    is_active            boolean,
+    created_by               varchar,
+    created_date             timestamp
+);
+
+
+
+
+update from robert 
+
+Sorry for the delay, we've been pushing some updates to the datasets and visualizations that have taken up my time.  Now that we have pushed those changes though, I can hand over real data that I have downloaded from the tableau.  Some of the column names are formatted slightly differently as I originally wrote in the data dictionary.  I have attached an updated data dictionary with these changes.  Please refer to the tab "Updated PFD Export to SDS" in the data dictionary.  This sample does not have the first 7 metadata columns referenced in the data dictionary.
+
+
+
+i need to drop mail to Product owner he asked latest ddls
+
+Hi Mukul
+
