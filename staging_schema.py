@@ -167,6 +167,7 @@ characteristics_columns= [
 ]
 
 
+
 business_entity_schema =  [
     "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",  # Cast to STRING
   #  "CAST(source_system_id AS STRING) AS source_system_id",              # Cast to STRING
@@ -175,6 +176,7 @@ business_entity_schema =  [
   #  "CAST(hierarchy_level AS STRING) AS hierarchy_level",                # Cast to STRING
   #  "CAST(hierarchy_role AS STRING) AS hierarchy_role",                  # Cast to STRING
   #  "CAST(parent_id AS STRING) AS parent_id",                            # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                               # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"             # Add current timestamp for created_date
     ]
@@ -190,6 +192,7 @@ association_schema = [
     "CAST(matched_fleet_ind AS STRING) AS matched_fleet_ind",              # Cast to STRING
     "CAST(matched_mcc AS STRING) AS matched_mcc",                          # Cast to STRING
     "CAST(matched_data_quality AS STRING) AS matched_data_quality",        # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                 # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"               # Add current timestamp for created_date
     ]
@@ -205,6 +208,7 @@ revenue_schema = [
     "CAST(card_revenue__3m__average_monthly_amount AS NUMERIC) AS card_revenue__3m__average_monthly_amount", # Cast to NUMERIC
     "CAST(card_revenue__12m__start_date AS DATE) AS card_revenue__12m__start_date", # Cast to DATE
     "CAST(card_revenue__12m__average_monthly_amount AS NUMERIC) AS card_revenue__12m__average_monthly_amount", # Cast to NUMERIC
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
     ]
@@ -235,6 +239,7 @@ transaction_stability_schema = [
     "CAST(card_transactions_stability__12m__daily_coverage_ratio AS NUMERIC) AS card_transactions_stability__12m__daily_coverage_ratio",  # Cast to NUMERIC
     "CAST(card_transactions_stability__12m__weekly_coverage_ratio AS NUMERIC) AS card_transactions_stability__12m__weekly_coverage_ratio",  # Cast to NUMERIC
     "CAST(card_transactions_stability__12m__monthly_coverage_ratio AS NUMERIC) AS card_transactions_stability__12m__monthly_coverage_ratio",  # Cast to NUMERIC
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                              # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                            # Add current timestamp for created_date
     ] 
@@ -244,6 +249,7 @@ characteristics_schema = [
     "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",  # Cast to STRING
     "CAST(characteristic_type AS STRING) AS characteristic_type",        # Cast to STRING
     "CAST(characteristic_value AS STRING) AS characteristic_value",      # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                               # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"             # Add current timestamp for created_date
     ]
@@ -260,6 +266,7 @@ contacts_schema = [
   #  "CAST(contact_deactivated_date AS TIMESTAMP) AS contact_deactivated_date",   # Cast to TIMESTAMP
   #  "CAST(decision_maker_indicator AS STRING) AS decision_maker_indicator",      # Cast to STRING
   #  "CAST(decision_maker_type AS STRING) AS decision_maker_type",                # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
     ]
@@ -272,6 +279,7 @@ business_entity_details_schema = [
    # "CAST(market_segment_type AS STRING) AS market_segment_type",                # Cast to STRING
     "CAST(year_incorporated AS STRING) AS year_incorporated",                    # Cast to STRING
     "CAST(reported_annual_revenue AS STRING) AS reported_annual_revenue",        # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
     ]
@@ -282,6 +290,7 @@ identifiers_schema = [
     "CAST(identifier_value AS STRING) AS identifier_value",                    # Cast to STRING
     "CAST(related_identifier AS STRING) AS related_identifier",                # Cast to STRING
     "CAST(related_identifier_source AS STRING) AS related_identifier_source",  # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                     # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                   # Add current timestamp for created_date
     ]
@@ -292,6 +301,7 @@ industry_classification_schema = [
     "CAST(classification_type AS STRING) AS classification_type",              # Cast to STRING
     "CAST(classification_code AS STRING) AS classification_code",              # Cast to STRING
     "CAST(classification_description AS STRING) AS classification_description",# Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                     # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                   # Add current timestamp for created_date
     ]
@@ -304,6 +314,7 @@ relationship_schema = [
     "CAST(related_business_entity_contact_id AS STRING ) AS related_business_entity_contact_id",    #cast to STRING
     "CAST(business_entity_role AS STRING) AS business_entity_role",                        # Cast to STRING
     "CAST(related_business_entity_role AS STRING) AS related_business_entity_role",        # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                                 # Add constant value for created_by
     "CAST(current_date() AS DATE) AS created_date"                                         # Add current date for created_date
     ]
@@ -313,6 +324,7 @@ payment_profile_attribute_schema = [
     "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",                  # Cast to STRING
     "CAST(receivables_attribute_type AS STRING) AS receivables_attribute_type",  # Cast to STRING
     "CAST(receivables_attribute_value AS STRING) AS receivables_attribute_value",# Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
     ]
@@ -341,6 +353,7 @@ spend_analysis_schema = [
     "CAST(payment_terms_discount_days AS NUMERIC) AS payment_terms_discount_days",     # Cast to NUMERIC
     #"CAST(source_system_id AS STRING) AS source_system_id",                            # Cast to STRING
     #"CAST(source_system_name AS STRING) AS source_system_name",                        # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                             # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                           # Add current timestamp for created_date
     ]
@@ -351,6 +364,7 @@ electronic_address_schema = [
     "CAST(related_identifier_source AS STRING) AS related_identifier_source",      # Cast to STRING
     "CAST(electronic_address_type AS STRING) AS electronic_address_type",          # Cast to STRING
     "CAST(electronic_address AS STRING) AS electronic_address",                    # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                         # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                       # Add current timestamp for created_date
     ]
@@ -369,6 +383,7 @@ physical_address_schema = [
     "CAST(postal_code AS STRING) AS postal_code",                              # Cast to STRING
   #  "CAST(location_name AS STRING) AS location_name",                          # Cast to STRING
   #  "CAST(site_identifier AS STRING) AS site_identifier",                      # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                     # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                   # Add current timestamp for created_date
     ]
@@ -382,6 +397,7 @@ restrictions_schema = [
 #    "CAST(restriction_reason AS STRING) AS restriction_reason",                  # Cast to STRING
  #   "CAST(restriction_for_products AS STRING) AS restriction_for_products",      # Cast to STRING
   #  "CAST(restriction_added_dt AS DATE) AS restriction_added_dt",                # Cast to DATE
+    "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
     ]
@@ -394,6 +410,7 @@ telecommunication_address_schema = [
    # "CAST(area_dialing_code AS STRING) AS area_dialing_code",                        # Cast to STRING
     "CAST(phone_number AS STRING) AS phone_number",                                  # Cast to STRING
    # "CAST(extension_number AS STRING) AS extension_number",                          # Cast to STRING
+   "CAST(true AS BOOLEAN) AS is_active",
     "CAST('PFD' AS STRING) AS created_by",                                           # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                         # Add current timestamp for created_date
     ]
