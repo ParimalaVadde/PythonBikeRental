@@ -3,7 +3,6 @@ import boto3
 import json
 import hashlib
 import uuid
-import logging
 import psycopg2
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
@@ -26,7 +25,7 @@ from pyspark.sql.functions import  concat_ws,current_timestamp
 def compute_uuid(*cols):
     try:
         # Concatenate all column values into a single string
-        name = ','.join(str(col) if col is not None else '' for col in cols)
+        name = ','.join(str(col) if col is not None else '' for col in sorted(cols))
         # Generate MD5 digest
         digest = hashlib.md5(name.encode()).digest()
         # Generate UUID from the digest
@@ -34,13 +33,13 @@ def compute_uuid(*cols):
     except Exception as e:
         print(f"Error in compute_uuid: {e}")
         return None
+		
+		
+
+
 
 
 def truncate_tables(rds_host, rds_port, db_name, db_user, rds_token, ssl_cert_s3_path):
-    
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
-
     connection = None
     cursor = None
 
@@ -61,21 +60,20 @@ def truncate_tables(rds_host, rds_port, db_name, db_user, rds_token, ssl_cert_s3
         selecting_tables = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'sds_staging'"
         cursor.execute(selecting_tables)
         tables = [row[0] for row in cursor.fetchall()]  # Fetch all rows and extract table names
-        logger.info("Tables to truncate: %s", tables)
+        print("Tables to truncate:", tables)
 
         # Truncate each table
         for table in tables:
             truncate_query = f'TRUNCATE TABLE sds_staging.{table} CASCADE'
             cursor.execute(truncate_query)
-            logger.info("Truncated table: sds_staging.%s", table)
-
+            print(f"Truncated table: sds_staging.{table}")
 
         # Commit the transaction
         connection.commit()
-        logger.info("All tables in the schema have been truncated successfully.")
+        print("All tables in the schema have been truncated successfully.")
 
     except Exception as e:
-        logger.error("Error truncating tables: %s", e)
+        print(f"Error truncating tables: {e}")
         if connection:
             connection.rollback()  # Rollback the transaction on error
 
