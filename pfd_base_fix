@@ -1,0 +1,90 @@
+# Add these CSV writing options to handle special characters properly
+
+def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
+    """
+    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
+    """
+    # Coalesce to one partition and write to temp S3 directory with proper CSV options
+    df.coalesce(1).write.mode("overwrite") \
+        .option("header", True) \
+        .option("quote", '"') \
+        .option("escape", '"') \
+        .option("quoteAll", True) \
+        .option("multiLine", True) \
+        .csv(temp_path)
+
+    # Rest of your S3 copy logic remains the same
+    s3 = boto3.client("s3")
+    temp_bucket = temp_path.replace("s3://", "").split("/")[0]
+    temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
+
+    objects = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
+    part_file = next(
+        obj['Key'] for obj in objects.get('Contents', []) if obj['Key'].endswith(".csv")
+    )
+
+    s3.copy_object(
+        Bucket=s3_bucket,
+        CopySource={'Bucket': temp_bucket, 'Key': part_file},
+        Key=s3_key
+    )
+
+    # Clean up temp files
+    for obj in objects.get('Contents', []):
+        s3.delete_object(Bucket=temp_bucket, Key=obj['Key'])
+
+# Alternative: Add CSV reading options when reading from PostgreSQL
+def get_landing_data_fixed():
+    try:
+        query = "(SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee = 'N') AS temp_table"
+
+        # Add connection options to handle special characters
+        enhanced_pg_options = {
+            **pg_connection_options,
+            "stringtype": "unspecified"  # This helps with special character handling
+        }
+
+        source_df = glueContext.read.format("jdbc").options(
+            dbtable=query,
+            **enhanced_pg_options
+        ).load()
+
+        # Your existing UUID logic
+        source_df = source_df.withColumn(
+            "stg_business_entity_id",
+            when(
+                col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+            ).otherwise(
+                compute_uuid_udf(concat_ws(",", col("vendor_name_cleaned")))
+            )
+        )
+
+        source_df = source_df.withColumn(
+            "stg_buying_entity",
+            compute_uuid_udf(concat_ws(",", col("buying_entity")))
+        )
+
+        return source_df
+
+    except Exception as e:
+        print('Error Message is:', e)
+        return None
+
+# Replace your existing function calls with:
+landing_tables = get_landing_data_fixed()
+transformed_df = process_mapping_and_transform_data(landing_tables, ss.mapping_file_path, ss.output_data_path)
+
+# Use the fixed CSV writing function
+write_single_csv_to_s3_fixed(
+    transformed_df,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-by081rbjj1vo",
+    s3_key="upsert/pfd_staging/transformed_df.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/pfd_staging/_tmp"
+)
+
+write_single_csv_to_s3_fixed(
+    landing_tables,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-by081rbjj1vo",
+    s3_key="upsert/pfd_staging/source_df.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/pfd_staging/_tmp"
+)
