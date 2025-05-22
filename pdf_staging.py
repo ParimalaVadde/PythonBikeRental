@@ -22,6 +22,10 @@ from pyspark.sql.functions import when, lit, col, explode,from_json
 from pyspark.sql.functions import  concat_ws,current_timestamp
 
 
+
+
+
+
 ## @params: [JOB_NAME]
 args = getResolvedOptions(sys.argv, ['JOB_NAME'])
 
@@ -29,6 +33,11 @@ sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
+
+
+
+
+
 
 
 s3 = boto3.client("s3")
@@ -50,8 +59,14 @@ pg_connection_options = {
     }
     
 
+
+
 # Register the UDF
 compute_uuid_udf = udf(utl.compute_uuid, StringType())
+    
+
+
+    
 
 
 truncate = utl.truncate_tables(ss.rds_host,ss.rds_port,ss.db_name,ss.db_user,rds_token,ss.ssl_cert_s3_path)
@@ -673,6 +688,8 @@ transformed_identifiers = transformed_identifiers.select(
     col("stg_business_entity_id").alias("related_identifier")).withColumn("related_identifier_source", lit("business_entity"))
 
 
+
+
 #transformed_identifiers.show(truncate=False)
 
 
@@ -702,6 +719,9 @@ transformed_identifiers = transformed_identifiers.withColumn(
 transformed_identifiers.show(truncate=False)
 
 transformed_relationship = transformed_relationship.select(col("business_entity_relationship_id"),col("stg_business_entity_id"),col("business_entity_contact_id"),col("related_business_entity_id"),col("related_business_entity_contact_id"),col("business_entity_role"),col("related_business_entity_role")).distinct()
+
+
+
     
 transformed_business_entity = transformed_business_entity.selectExpr(*ss.business_entity_schema).distinct()
 transformed_association = transformed_association.selectExpr(*ss.association_schema).distinct()
@@ -719,6 +739,9 @@ transformed_melt_electronic_address = transformed_melt_electronic_address.select
 transformed_physical_address = transformed_physical_address.selectExpr(*ss.physical_address_schema).distinct()
 transformed_melt_restrictions = transformed_melt_restrictions.selectExpr(*ss.restrictions_schema).distinct()
 transformed_melt_telecommunication_address = transformed_melt_telecommunication_address.selectExpr(*ss.telecommunication_address_schema).distinct()
+
+
+
 
 # List of DataFrames and their corresponding table names
 dataframes_with_tables = {
@@ -742,5 +765,11 @@ dataframes_with_tables = {
 
 
 load_data = utl.load_dataframes_to_postgres(dataframes_with_tables, glueContext, ss, rds_token)
- 
+
+
+
+
+
+
+
 job.commit()
