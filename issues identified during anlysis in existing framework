@@ -1,190 +1,510 @@
-You're doing a fantastic job breaking this down step-by-step — now let's clearly and thoroughly **deep dive into part 3**:
-
-> ### `transformed_melt_payment_profile_attribute → business_entity_receivables_attribute`
-
-We'll cover:
-
-1. 🔍 What this is trying to do
-2. 📂 Source column(s)
-3. 🧪 JSON example
-4. 🧱 How the code transforms the data step-by-step
-5. 📊 Sample DataFrames at each step
-6. 💾 Final output structure
+You're doing great tackling this complex logic! 💪
+Let’s now **break down the entire identifier logic** line by line — especially the parts you're struggling with — and I’ll show you **clear input/output examples** for every key step.
 
 ---
 
-## ✅ 1. What is `payment_profile`?
+## ✅ Objective of This Block
 
-It refers to **vendor-level financial performance metrics**, such as:
+The goal is to:
 
-* Days Sales Outstanding (DSO)
-* Days Payable Outstanding (DPO)
-* Whether they support virtual cards, ACH, etc.
+* Extract **all identifiers** (like `vendor_id`, `site_id`, `client_ecid`)
+* Link them to either:
 
-These are **flat columns** in your `source_df`, **not nested JSON** — but there are **many of them**, and we want to **unpivot** (melt) them.
-
----
-
-## ✅ 2. Source Fields from `source_df`
-
-They come from the columns listed in `ss.payment_profile` and `ss.payment_profile_columns`.
-
-📘 From `staging_schema.py`:
-
-```python
-ss.payment_profile = [
-    "stg_business_entity_id", 
-    "average_vendor_dso", "average_vendor_dpo", "average_vendor_dio", 
-    "enrolled_scf_supplier", "enrolled_vc_supplier", "vc_concierge", 
-    "virtual_card_vcn", "spend_on_jpmc_vc", "vc_enrollment_duration_years", 
-    "vc_buyercount", "vc_interchange_amt", "cms_enrolled", "cms_subacct_enrolled", 
-    "businessbank_enrolled", "vcn_payment_accepted", "product_segmentation_applicable", 
-    "jpmc_cc_payment_accepted", "jpmc_cc_spend", "jpmc_cc_enrolled_years", 
-    "jpmc_cc_buyer_count", "has_online_payments"
-]
-
-ss.payment_profile_columns = [ # same as above, excluding stg_business_entity_id
-    "average_vendor_dso", "average_vendor_dpo", "average_vendor_dio", 
-    "enrolled_scf_supplier", "enrolled_vc_supplier", "vc_concierge", 
-    "virtual_card_vcn", "spend_on_jpmc_vc", "vc_enrollment_duration_years", 
-    "vc_buyercount", "vc_interchange_amt", "cms_enrolled", "cms_subacct_enrolled", 
-    "businessbank_enrolled", "vcn_payment_accepted", "product_segmentation_applicable", 
-    "jpmc_cc_payment_accepted", "jpmc_cc_spend", "jpmc_cc_enrolled_years", 
-    "jpmc_cc_buyer_count", "has_online_payments"
-]
-```
+  * A **business entity** (normal case)
+  * A **relationship** between two entities (when identifiers are linked to a relationship, not just the entity itself)
+* Produce a final unified `transformed_identifiers` table with a UUID per identifier
 
 ---
 
-## 🧪 3. Sample `source_df` Input Row (Flat JSON)
+## 🔷 Step-by-Step Walkthrough with Examples
 
-Here’s a row from your `source_df.csv`:
+---
+
+### ✅ Step 1: Start with `transformed_relationship`
+
+Let’s say you have this after `.distinct().show()`:
 
 ```plaintext
-| stg_business_entity_id | average_vendor_dso | average_vendor_dpo | average_vendor_dio | enrolled_scf_supplier | enrolled_vc_supplier | vc_concierge | virtual_card_vcn | ... | has_online_payments |
-|------------------------|--------------------|--------------------|--------------------|------------------------|----------------------|--------------|------------------|-----|----------------------|
-| abc-123                | 35.0               | 20.0               | 60.0               | Y                      | N                    | N            | N                | ... | True                 |
+| business_entity_relationship_id | stg_business_entity_id | business_entity_contact_id | related_business_entity_id | vendor_id | site_id | client_ecid |
+|----------------------------------|-------------------------|-----------------------------|-----------------------------|-----------|---------|-------------|
+| REL-UUID-1                      | BE123                   | uuid-contact-123            | BE999                       | V123      | S123    | CECID123    |
+| REL-UUID-2                      | BE456                   | uuid-contact-456            | BE888                       | V456      | null    | null        |
 ```
 
 ---
 
-## 🔄 4. The MELT Operation (wide to long)
-
-### Code:
+### ✅ Step 2: Extract identifiers from relationship table
 
 ```python
-transformed_df.select(*ss.payment_profile)
-```
-
-This selects a wide-format table like:
-
-| stg\_business\_entity\_id | average\_vendor\_dso | enrolled\_scf\_supplier | ... |
-| ------------------------- | -------------------- | ----------------------- | --- |
-| abc-123                   | 35.0                 | Y                       | ... |
-
-Then:
-
-```python
-utl.melt_dataframe(..., columns_to_melt=ss.payment_profile_columns, melted_column_names=("receivables_attribute_type", "receivables_attribute_value"))
-```
-
-This converts it to a long format like:
-
-| stg\_business\_entity\_id | receivables\_attribute\_type | receivables\_attribute\_value |
-| ------------------------- | ---------------------------- | ----------------------------- |
-| abc-123                   | average\_vendor\_dso         | 35.0                          |
-| abc-123                   | average\_vendor\_dpo         | 20.0                          |
-| abc-123                   | has\_online\_payments        | True                          |
-| ...                       | ...                          | ...                           |
-
-This is done using the **`melt_dataframe()`** utility from `utils.py`.
-
----
-
-## 🧱 5. Step-by-Step Breakdown
-
-### 🔹 Step 1: SELECT relevant columns
-
-```python
-transformed_df.select(*ss.payment_profile)
-```
-
-✅ Input:
-
-```plaintext
-| stg_id | avg_dso | avg_dpo | enrolled_vc | has_online |
-|--------|---------|---------|-------------|------------|
-| abc-123| 35.0    | 20.0    | Y           | True       |
-```
-
----
-
-### 🔹 Step 2: MELT / UNPIVOT
-
-```python
-utl.melt_dataframe(df, id_column="stg_business_entity_id", columns_to_melt=..., melted_column_names=("type", "value"))
+transformed_rel_identifiers = transformed_relationship.select(
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("vendor_id"),
+    col("site_id"),
+    col("client_ecid")
+)
 ```
 
 ✅ Output:
 
 ```plaintext
-| stg_business_entity_id | receivables_attribute_type | receivables_attribute_value |
-|------------------------|----------------------------|------------------------------|
-| abc-123                | average_vendor_dso         | 35.0                         |
-| abc-123                | average_vendor_dpo         | 20.0                         |
-| abc-123                | enrolled_vc_supplier       | Y                            |
-| abc-123                | has_online_payments        | True                         |
+| stg_business_entity_id | business_entity_relationship_id | vendor_id | site_id | client_ecid |
+|------------------------|----------------------------------|-----------|---------|-------------|
+| BE123                  | REL-UUID-1                       | V123      | S123    | CECID123    |
+| BE456                  | REL-UUID-2                       | V456      | null    | null        |
 ```
 
 ---
 
-### 🔹 Step 3: Add UUID
+### ✅ Step 3: Melt this data using `utl.melt_dataframe()`
 
 ```python
-.withColumn("attribute_id", compute_uuid_udf(concat_ws(",", *all_columns)))
+# Columns to melt:
+transformed_rel_identifiers_columns = ["vendor_id", "site_id", "client_ecid"]
+```
+
+This will **unpivot** the wide format to long format:
+
+```python
+transformed_rel_identifiers = utl.melt_dataframe(
+    df=transformed_rel_identifiers,
+    id_column="business_entity_relationship_id",
+    columns_to_melt=transformed_rel_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+```
+
+✅ Output after melting:
+
+```plaintext
+| business_entity_relationship_id | identifier_type | identifier_value |
+|----------------------------------|------------------|------------------|
+| REL-UUID-1                       | vendor_id        | V123             |
+| REL-UUID-1                       | site_id          | S123             |
+| REL-UUID-1                       | client_ecid      | CECID123         |
+| REL-UUID-2                       | vendor_id        | V456             |
+```
+
+---
+
+### ✅ Step 4: Join back with `transformed_relationship` to tag metadata
+
+```python
+transformed_rel_identifiers = transformed_rel_identifiers.join(
+    transformed_relationship,
+    on="business_entity_relationship_id",
+    how="inner"
+)
+```
+
+This brings back:
+
+* `stg_business_entity_id`
+* `business_entity_role`
+* etc. — but we **don’t need all that** in the next output.
+
+---
+
+### ✅ Step 5: Final format for relationship identifiers
+
+```python
+transformed_rel_identifiers = transformed_rel_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("business_entity_relationship_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("relationship"))
 ```
 
 ✅ Output:
 
 ```plaintext
-| attribute_id | stg_business_entity_id | receivables_attribute_type | receivables_attribute_value |
-|--------------|------------------------|-----------------------------|------------------------------|
-| UUID         | abc-123                | average_vendor_dso          | 35.0                         |
-| UUID         | abc-123                | has_online_payments         | True                         |
+| identifier_type | identifier_value | related_identifier | related_identifier_source |
+|------------------|------------------|---------------------|----------------------------|
+| vendor_id        | V123             | REL-UUID-1          | relationship               |
+| site_id          | S123             | REL-UUID-1          | relationship               |
+| client_ecid      | CECID123         | REL-UUID-1          | relationship               |
+| vendor_id        | V456             | REL-UUID-2          | relationship               |
 ```
 
 ---
 
-## 💾 6. Final Table: `business_entity_receivables_attribute`
+### ✅ Step 6: Also extract business-level identifiers
 
-This will be written to the staging database table.
+```python
+transformed_identifiers = transformed_df.select(*ss.identifiers)
+```
 
-### Final Schema:
+Let’s assume:
 
-| Column                        | Type                |
-| ----------------------------- | ------------------- |
-| `attribute_id`                | UUID                |
-| `stg_business_entity_id`      | STRING              |
-| `receivables_attribute_type`  | STRING              |
-| `receivables_attribute_value` | STRING/BOOL/NUMERIC |
+```python
+ss.identifiers = ["stg_business_entity_id", "vendor_id", "site_id", "client_ecid"]
+```
+
+So from `transformed_df`, you might get:
+
+```plaintext
+| stg_business_entity_id | vendor_id | site_id | client_ecid |
+|------------------------|-----------|---------|-------------|
+| BE123                  | V123      | S123    | CECID123    |
+| BE789                  | V789      | S789    | CECID789    |
+```
+
+Then melt:
+
+```python
+transformed_identifiers = utl.melt_dataframe(
+    transformed_identifiers,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.transformed_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+```
+
+✅ Output:
+
+```plaintext
+| stg_business_entity_id | identifier_type | identifier_value |
+|------------------------|------------------|------------------|
+| BE123                  | vendor_id        | V123             |
+| BE123                  | site_id          | S123             |
+| BE123                  | client_ecid      | CECID123         |
+| BE789                  | vendor_id        | V789             |
+```
+
+Now tag with source and rename:
+
+```python
+transformed_identifiers = transformed_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("stg_business_entity_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("business_entity"))
+```
+
+✅ Output:
+
+```plaintext
+| identifier_type | identifier_value | related_identifier | related_identifier_source |
+|------------------|------------------|---------------------|----------------------------|
+| vendor_id        | V123             | BE123               | business_entity            |
+| site_id          | S123             | BE123               | business_entity            |
+| client_ecid      | CECID123         | BE123               | business_entity            |
+| vendor_id        | V789             | BE789               | business_entity            |
+```
 
 ---
 
-## 📌 Summary
+### ✅ Step 7: Union Both Sets
 
-| Step | Action              | Data Shape       | Notes                                   |
-| ---- | ------------------- | ---------------- | --------------------------------------- |
-| 1    | Select flat fields  | Wide (1 row)     | From `transformed_df`, not JSON         |
-| 2    | Melt into long form | Tall (many rows) | One row per attribute type              |
-| 3    | Add UUID            | Same as above    | Used as `attribute_id`                  |
-| 4    | Final table         | PostgreSQL table | `business_entity_receivables_attribute` |
+```python
+transformed_identifiers = transformed_identifiers.union(transformed_rel_identifiers)
+```
+
+✅ Final Unified Table:
+
+```plaintext
+| identifier_type | identifier_value | related_identifier | related_identifier_source |
+|------------------|------------------|---------------------|----------------------------|
+| vendor_id        | V123             | BE123               | business_entity            |
+| site_id          | S123             | BE123               | business_entity            |
+| vendor_id        | V123             | REL-UUID-1          | relationship               |
+| site_id          | S123             | REL-UUID-1          | relationship               |
+```
 
 ---
 
-Would you like to:
+### ✅ Step 8: Clean and Add UUID
 
-* See this on your real `transformed_df.csv`?
-* Go next into `telecommunication_address`?
-* Explore how `compute_uuid_udf` exactly works?
+```python
+transformed_identifiers = transformed_identifiers.filter(
+    col("identifier_value").isNotNull()
+).dropDuplicates()
 
-Just say the word — and we’ll continue step-by-step.
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_id",
+    compute_uuid_udf(concat_ws(",", *[col for col in transformed_identifiers.columns]))
+)
+```
+
+Final Output:
+
+```plaintext
+| identifier_id | identifier_type | identifier_value | related_identifier | related_identifier_source |
+|----------------|------------------|------------------|---------------------|----------------------------|
+| UUID1          | vendor_id        | V123             | BE123               | business_entity            |
+| UUID2          | vendor_id        | V123             | REL-UUID-1          | relationship               |
+```
+
+---
+
+## 🔁 Summary
+
+| Step | Action                                 | Key Outcome                                 |
+| ---- | -------------------------------------- | ------------------------------------------- |
+| 1    | Extract identifiers from relationships | Link IDs to relationship UUIDs              |
+| 2    | Melt & tag relationship identifiers    | Assign `"relationship"` as source           |
+| 3    | Melt normal entity identifiers         | Assign `"business_entity"` as source        |
+| 4    | Union both                             | Unified `transformed_identifiers` DataFrame |
+| 5    | Generate UUID                          | Unique `identifier_id` per record           |
+
+---
+
+Let me know if you’d like a **diagram** for this step or want to move on to the **final save/load step**.
+
+
+****************************************************************************************************************************************************************************
+
+
+You're doing great tackling this complex logic! 💪
+Let’s now **break down the entire identifier logic** line by line — especially the parts you're struggling with — and I’ll show you **clear input/output examples** for every key step.
+
+---
+
+## ✅ Objective of This Block
+
+The goal is to:
+
+* Extract **all identifiers** (like `vendor_id`, `site_id`, `client_ecid`)
+* Link them to either:
+
+  * A **business entity** (normal case)
+  * A **relationship** between two entities (when identifiers are linked to a relationship, not just the entity itself)
+* Produce a final unified `transformed_identifiers` table with a UUID per identifier
+
+---
+
+## 🔷 Step-by-Step Walkthrough with Examples
+
+---
+
+### ✅ Step 1: Start with `transformed_relationship`
+
+Let’s say you have this after `.distinct().show()`:
+
+```plaintext
+| business_entity_relationship_id | stg_business_entity_id | business_entity_contact_id | related_business_entity_id | vendor_id | site_id | client_ecid |
+|----------------------------------|-------------------------|-----------------------------|-----------------------------|-----------|---------|-------------|
+| REL-UUID-1                      | BE123                   | uuid-contact-123            | BE999                       | V123      | S123    | CECID123    |
+| REL-UUID-2                      | BE456                   | uuid-contact-456            | BE888                       | V456      | null    | null        |
+```
+
+---
+
+### ✅ Step 2: Extract identifiers from relationship table
+
+```python
+transformed_rel_identifiers = transformed_relationship.select(
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("vendor_id"),
+    col("site_id"),
+    col("client_ecid")
+)
+```
+
+✅ Output:
+
+```plaintext
+| stg_business_entity_id | business_entity_relationship_id | vendor_id | site_id | client_ecid |
+|------------------------|----------------------------------|-----------|---------|-------------|
+| BE123                  | REL-UUID-1                       | V123      | S123    | CECID123    |
+| BE456                  | REL-UUID-2                       | V456      | null    | null        |
+```
+
+---
+
+### ✅ Step 3: Melt this data using `utl.melt_dataframe()`
+
+```python
+# Columns to melt:
+transformed_rel_identifiers_columns = ["vendor_id", "site_id", "client_ecid"]
+```
+
+This will **unpivot** the wide format to long format:
+
+```python
+transformed_rel_identifiers = utl.melt_dataframe(
+    df=transformed_rel_identifiers,
+    id_column="business_entity_relationship_id",
+    columns_to_melt=transformed_rel_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+```
+
+✅ Output after melting:
+
+```plaintext
+| business_entity_relationship_id | identifier_type | identifier_value |
+|----------------------------------|------------------|------------------|
+| REL-UUID-1                       | vendor_id        | V123             |
+| REL-UUID-1                       | site_id          | S123             |
+| REL-UUID-1                       | client_ecid      | CECID123         |
+| REL-UUID-2                       | vendor_id        | V456             |
+```
+
+---
+
+### ✅ Step 4: Join back with `transformed_relationship` to tag metadata
+
+```python
+transformed_rel_identifiers = transformed_rel_identifiers.join(
+    transformed_relationship,
+    on="business_entity_relationship_id",
+    how="inner"
+)
+```
+
+This brings back:
+
+* `stg_business_entity_id`
+* `business_entity_role`
+* etc. — but we **don’t need all that** in the next output.
+
+---
+
+### ✅ Step 5: Final format for relationship identifiers
+
+```python
+transformed_rel_identifiers = transformed_rel_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("business_entity_relationship_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("relationship"))
+```
+
+✅ Output:
+
+```plaintext
+| identifier_type | identifier_value | related_identifier | related_identifier_source |
+|------------------|------------------|---------------------|----------------------------|
+| vendor_id        | V123             | REL-UUID-1          | relationship               |
+| site_id          | S123             | REL-UUID-1          | relationship               |
+| client_ecid      | CECID123         | REL-UUID-1          | relationship               |
+| vendor_id        | V456             | REL-UUID-2          | relationship               |
+```
+
+---
+
+### ✅ Step 6: Also extract business-level identifiers
+
+```python
+transformed_identifiers = transformed_df.select(*ss.identifiers)
+```
+
+Let’s assume:
+
+```python
+ss.identifiers = ["stg_business_entity_id", "vendor_id", "site_id", "client_ecid"]
+```
+
+So from `transformed_df`, you might get:
+
+```plaintext
+| stg_business_entity_id | vendor_id | site_id | client_ecid |
+|------------------------|-----------|---------|-------------|
+| BE123                  | V123      | S123    | CECID123    |
+| BE789                  | V789      | S789    | CECID789    |
+```
+
+Then melt:
+
+```python
+transformed_identifiers = utl.melt_dataframe(
+    transformed_identifiers,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.transformed_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+```
+
+✅ Output:
+
+```plaintext
+| stg_business_entity_id | identifier_type | identifier_value |
+|------------------------|------------------|------------------|
+| BE123                  | vendor_id        | V123             |
+| BE123                  | site_id          | S123             |
+| BE123                  | client_ecid      | CECID123         |
+| BE789                  | vendor_id        | V789             |
+```
+
+Now tag with source and rename:
+
+```python
+transformed_identifiers = transformed_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("stg_business_entity_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("business_entity"))
+```
+
+✅ Output:
+
+```plaintext
+| identifier_type | identifier_value | related_identifier | related_identifier_source |
+|------------------|------------------|---------------------|----------------------------|
+| vendor_id        | V123             | BE123               | business_entity            |
+| site_id          | S123             | BE123               | business_entity            |
+| client_ecid      | CECID123         | BE123               | business_entity            |
+| vendor_id        | V789             | BE789               | business_entity            |
+```
+
+---
+
+### ✅ Step 7: Union Both Sets
+
+```python
+transformed_identifiers = transformed_identifiers.union(transformed_rel_identifiers)
+```
+
+✅ Final Unified Table:
+
+```plaintext
+| identifier_type | identifier_value | related_identifier | related_identifier_source |
+|------------------|------------------|---------------------|----------------------------|
+| vendor_id        | V123             | BE123               | business_entity            |
+| site_id          | S123             | BE123               | business_entity            |
+| vendor_id        | V123             | REL-UUID-1          | relationship               |
+| site_id          | S123             | REL-UUID-1          | relationship               |
+```
+
+---
+
+### ✅ Step 8: Clean and Add UUID
+
+```python
+transformed_identifiers = transformed_identifiers.filter(
+    col("identifier_value").isNotNull()
+).dropDuplicates()
+
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_id",
+    compute_uuid_udf(concat_ws(",", *[col for col in transformed_identifiers.columns]))
+)
+```
+
+Final Output:
+
+```plaintext
+| identifier_id | identifier_type | identifier_value | related_identifier | related_identifier_source |
+|----------------|------------------|------------------|---------------------|----------------------------|
+| UUID1          | vendor_id        | V123             | BE123               | business_entity            |
+| UUID2          | vendor_id        | V123             | REL-UUID-1          | relationship               |
+```
+
+---
+
+## 🔁 Summary
+
+| Step | Action                                 | Key Outcome                                 |
+| ---- | -------------------------------------- | ------------------------------------------- |
+| 1    | Extract identifiers from relationships | Link IDs to relationship UUIDs              |
+| 2    | Melt & tag relationship identifiers    | Assign `"relationship"` as source           |
+| 3    | Melt normal entity identifiers         | Assign `"business_entity"` as source        |
+| 4    | Union both                             | Unified `transformed_identifiers` DataFrame |
+| 5    | Generate UUID                          | Unique `identifier_id` per record           |
+
+---
+
+Let me know if you’d like a **diagram** for this step or want to move on to the **final save/load step**.
+
