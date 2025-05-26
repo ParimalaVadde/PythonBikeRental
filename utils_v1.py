@@ -1,0 +1,219 @@
+import sys
+import boto3
+import json
+import hashlib
+import uuid
+import psycopg2
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from pyspark.sql import SparkSession
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue.dynamicframe import DynamicFrame
+from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, concat_ws, from_json
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
+from pyspark.sql.utils import AnalysisException
+from datetime import datetime
+from pyspark.sql.functions import  concat_ws,current_timestamp
+
+
+
+# Define a UDF to compute UUID from concatenated column values
+def compute_uuid(*cols):
+    try:
+        # Concatenate all column values into a single string
+        name = ','.join(str(col) if col is not None else '' for col in sorted(cols))
+        # Generate MD5 digest
+        digest = hashlib.md5(name.encode()).digest()
+        # Generate UUID from the digest
+        return str(uuid.UUID(bytes=digest))
+    except Exception as e:
+        print(f"Error in compute_uuid: {e}")
+        return None
+
+
+
+def truncate_tables(rds_host, rds_port, db_name, db_user, rds_token, ssl_cert_s3_path):
+    connection = None
+    cursor = None
+
+    try:
+        # Establish a connection to the database
+        connection = psycopg2.connect(
+            host=rds_host,
+            port=rds_port,
+            database=db_name,
+            user=db_user,
+            password=rds_token,
+            sslmode="require",
+            sslrootcert=ssl_cert_s3_path
+        )
+        cursor = connection.cursor()
+
+        # Fetch all table names in the schema
+        selecting_tables = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'sds_staging'"
+        cursor.execute(selecting_tables)
+        tables = [row[0] for row in cursor.fetchall()]  # Fetch all rows and extract table names
+        print("Tables to truncate:", tables)
+
+        # Truncate each table
+        for table in tables:
+            truncate_query = f'TRUNCATE TABLE sds_staging.{table} CASCADE'
+            cursor.execute(truncate_query)
+            print(f"Truncated table: sds_staging.{table}")
+
+        # Commit the transaction
+        connection.commit()
+        print("All tables in the schema have been truncated successfully.")
+
+    except Exception as e:
+        print(f"Error truncating tables: {e}")
+        if connection:
+            connection.rollback()  # Rollback the transaction on error
+
+    finally:
+        # Close the cursor and connection if they were created
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+
+def flatten_nested_json_column(df, column_name, schema, explode_array=True):
+    """
+    Flattens a nested JSON column in a PySpark DataFrame.
+
+    Args:
+        df (DataFrame): The input PySpark DataFrame.
+        column_name (str): The name of the JSON column to flatten.
+        schema (StructType): The schema of the JSON column.
+        explode_array (bool): Whether to explode arrays or join strings.
+
+    Returns:
+        DataFrame: The DataFrame with the flattened JSON column.
+    """
+    try:
+        # Parse the JSON column into structured data
+        df = df.withColumn(column_name, from_json(col(column_name), schema))
+
+        # Handle ArrayType(StringType)
+        if isinstance(schema, ArrayType) and isinstance(schema.elementType, StringType):
+            if explode_array:
+                df = df.withColumn(column_name, explode(col(column_name)))
+            else:
+                df = df.withColumn(column_name, concat_ws(";", col(column_name)))
+            return df
+
+        # Explode the array to create one row per element
+        df = df.withColumn(column_name, explode(col(column_name)))
+
+        # Iterate over the fields in the schema
+        for field in schema.elementType.fields:  # Use `elementType` for ArrayType
+            field_name = field.name
+            field_type = field.dataType
+
+            # If the field is a nested struct, recursively flatten it
+            if isinstance(field_type, StructType):
+                for nested_field in field_type.fields:
+                    nested_field_name = nested_field.name
+                    df = df.withColumn(
+                        f"{column_name}__{field_name}__{nested_field_name}",
+                        col(f"{column_name}.{field_name}.{nested_field_name}")
+                    )
+            else:
+                # If the field is not nested, extract it directly
+                df = df.withColumn(f"{column_name}__{field_name}", col(f"{column_name}.{field_name}"))
+
+        # Drop the original JSON column
+        df = df.drop(column_name)
+
+    except Exception as error:
+        print(f"Error flattening column {column_name}: {error}")
+
+    return df
+	
+	
+def melt_dataframe(df, id_column, columns_to_melt, melted_column_names) :
+    """
+    Melts a PySpark DataFrame by unpivoting specified columns into key-value pairs.
+
+    Args:
+        df (DataFrame): The input PySpark DataFrame.
+        id_column (str): The column to retain as the identifier.
+        columns_to_melt (list): The list of columns to melt.
+        melted_column_names (tuple): A tuple containing the names of the new columns 
+                                     (e.g., ("melted_column_name", "melted_value_name")).
+
+    Returns:
+        DataFrame: The melted PySpark DataFrame.
+    """
+    melted_dfs = []
+    melted_column_name, melted_value_name = melted_column_names
+
+    for col_name in columns_to_melt:
+        melted_df = df.select(
+            col(id_column),
+            lit(col_name).alias(melted_column_name),  # Add the column name as the melted column
+            col(col_name).alias(melted_value_name)   # Add the column value as the melted value
+        )
+        melted_dfs.append(melted_df)
+
+    # Combine all the melted DataFrames using `unionByName`
+    melted_df = melted_dfs[0]
+    for df in melted_dfs[1:]:
+        melted_df = melted_df.unionByName(df)
+
+    # Drop duplicates and filter out rows with null values in the melted value column
+    melted_df = melted_df.dropDuplicates().filter(col(melted_value_name).isNotNull())
+
+    return melted_df
+    
+    
+def load_dataframes_to_postgres(dataframes_with_tables, glueContext, ss, rds_token):
+    """
+    Function to load multiple PySpark DataFrames into PostgreSQL using AWS Glue.
+
+    Args:
+        dataframes_with_tables (dict): A dictionary where keys are table names and values are PySpark DataFrames.
+        glueContext (GlueContext): The AWS Glue context.
+        ss (object): An object containing database connection details (e.g., `rds_host`, `rds_port`, `db_name`, `ssl_cert_s3_path`, `db_user`).
+        rds_token (str): The RDS authentication token.
+
+    Returns:
+        None
+    """
+
+
+    # Add common columns to all DataFrames
+    for table_name, df in dataframes_with_tables.items():
+        dataframes_with_tables[table_name] = df  # Update the DataFrame in the dictionary
+
+    # Load each DataFrame into its corresponding table
+    for table_name, df in dataframes_with_tables.items():
+        try:
+            # Convert PySpark DataFrame to Glue DynamicFrame
+            dynamic_frame = DynamicFrame.fromDF(df, glueContext, table_name)
+            
+            # Define connection options
+            connection_options = {
+                "url": f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
+                "user": ss.db_user,
+                "password": rds_token,
+                "dbtable": f"sds_staging.{table_name}",  # Specify the target table name here
+            }
+
+            # Write the DynamicFrame to the database
+            glueContext.write_dynamic_frame.from_options(
+                frame=dynamic_frame,
+                connection_type="postgresql",  # Specify the connection type
+                connection_options=connection_options,
+                transformation_ctx=f"write_{table_name}"
+            )
+            
+            print(f"Data written successfully to the table {table_name}.")
+        except Exception as e:
+            print(f"Error loading data into {table_name}: {e}")
+			
+    return "Data written successfully to all tables"
