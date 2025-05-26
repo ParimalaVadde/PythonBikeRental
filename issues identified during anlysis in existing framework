@@ -1,3 +1,14 @@
 relationship_key_pairs = transformed_rel_identifiers.select(
     "identifier_type", "identifier_value", "related_identifier"
 ).distinct()
+
+
+filtered_business_identifiers = melted_business_identifiers.alias("biz").join(
+    broadcast(relationship_key_pairs).alias("rel"),
+    on=[
+        col("biz.identifier_type") == col("rel.identifier_type"),
+        col("biz.identifier_value") == col("rel.identifier_value"),
+        col("biz.stg_business_entity_id") == col("rel.related_identifier")
+    ],
+    how="left_anti"
+)
