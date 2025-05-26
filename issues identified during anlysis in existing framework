@@ -1,0 +1,106 @@
+need to disscuss abt 
+transformed_melt_industry_classification → business_entity_industry_classification
+
+ss.industry_classification = [
+    "stg_business_entity_id", "vendor_industry_lvl_1", "vendor_industry_lvl_2", "vendor_industry_lvl_3"
+]
+
+ss.industry_classification_columns = [
+    "vendor_industry_lvl_1", "vendor_industry_lvl_2", "vendor_industry_lvl_3"
+]
+
+
+| stg_business_entity_id | vendor_industry_lvl_1 | vendor_industry_lvl_2 | vendor_industry_lvl_3 |
+|------------------------|------------------------|------------------------|------------------------|
+| BE123                  | Level-1                | Level-2                | Level-3                |
+| BE456                  | NAICS_54               | NAICS_5413             |                        |
+
+
+transformed_melt_industry_classification = utl.melt_dataframe(
+    transformed_df.select(*ss.industry_classification),
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.industry_classification_columns,
+    melted_column_names=("classification_code", "classification_description")
+)
+
+
+| stg_business_entity_id | classification_code   | classification_description |
+|------------------------|------------------------|-----------------------------|
+| BE123                  | vendor_industry_lvl_1 | Level-1                     |
+| BE123                  | vendor_industry_lvl_2 | Level-2                     |
+| BE123                  | vendor_industry_lvl_3 | Level-3                     |
+| BE456                  | vendor_industry_lvl_1 | NAICS_54                    |
+| BE456                  | vendor_industry_lvl_2 | NAICS_5413                  |
+
+
+.withColumn(
+    "classification_type",
+    when(col("classification_code").isin("Level-1", "Level-2", "Level-3"), "bloomberg")
+    .otherwise("individual")
+)
+
+
+| stg_business_entity_id | classification_code   | classification_description | classification_type |
+|------------------------|------------------------|-----------------------------|----------------------|
+| BE123                  | vendor_industry_lvl_1 | Level-1                     | individual           |
+| BE123                  | vendor_industry_lvl_2 | Level-2                     | individual           |
+| BE123                  | vendor_industry_lvl_3 | Level-3                     | individual           |
+| BE456                  | vendor_industry_lvl_1 | NAICS_54                    | individual           |
+| BE456                  | vendor_industry_lvl_2 | NAICS_5413                  | individual           |
+
+
+fix required or not
+
+.withColumn(
+    "classification_type",
+    when(col("classification_description").isin("Level-1", "Level-2", "Level-3"), "bloomberg")
+    .otherwise("individual")
+)
+
+
+| stg_business_entity_id | classification_code   | classification_description | classification_type |
+|------------------------|------------------------|-----------------------------|----------------------|
+| BE123                  | vendor_industry_lvl_1 | Level-1                     | bloomberg            |
+| BE123                  | vendor_industry_lvl_2 | Level-2                     | bloomberg            |
+| BE123                  | vendor_industry_lvl_3 | Level-3                     | bloomberg            |
+| BE456                  | vendor_industry_lvl_1 | NAICS_54                    | individual           |
+| BE456                  | vendor_industry_lvl_2 | NAICS_5413                  | individual           |
+
+
+
+########################################################################################################
+Also for characteristic
+
+| stg_business_entity_id | characteristic_type           | characteristic_value        |
+|------------------------|-------------------------------|-----------------------------|
+| BE123                  | vendor_dso                    | 35                          |
+| BE123                  | vendor_credit_rating_moody    | AA                          |
+| BE123                  | vendor_credit_rating_sp       | A                           |
+| BE123                  | registered_agents             | Corporation Inc.            |
+
+
+F.when(
+    F.col("characteristic_type").isin("Moody", "SP"),
+    F.concat_ws(";", F.col("characteristic_type"), F.col("characteristic_value"), F.lit(current_date))
+)
+
+
+ "Moody" and "SP" aren't actual column names, we might  meant:
+
+"vendor_credit_rating_moody"
+
+"vendor_credit_rating_sp"
+
+transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+    "characteristic_value",
+    F.when(
+        col("characteristic_type").isin("vendor_credit_rating_moody", "vendor_credit_rating_sp"),
+        F.concat_ws(";", col("characteristic_type"), col("characteristic_value"), lit(current_date))
+    ).otherwise(col("characteristic_value"))
+)
+
+
+| characteristic_type        | characteristic_value                 |
+|---------------------------|--------------------------------------|
+| vendor_dso                | 35                                   |
+| vendor_credit_rating_moody| vendor_credit_rating_moody;AA;2024-05-22 |
