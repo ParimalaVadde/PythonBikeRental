@@ -20,6 +20,7 @@ from pyspark.sql.utils import AnalysisException
 from datetime import datetime
 from pyspark.sql.functions import when, lit, col, explode,from_json
 from pyspark.sql.functions import  concat_ws,current_timestamp
+from pyspark.sql.functions import broadcast
 
 
 
@@ -619,9 +620,22 @@ def relationship(transformed_business_entity, transformed_contacts, transformed_
         .otherwise("")
     )
 
+    #Get vendor contact names from transformed_df
+    vendor_names_df = transformed_df.select(
+        col("stg_business_entity_id"),
+        col("vendor_contact_name").alias("contact_name")
+    ).distinct()
+
+    #Joining this with transformed_contacts to get the accurate business_entity_contact_id
+    preferred_contacts = vendor_names_df.join(
+        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
+        on=["stg_business_entity_id", "contact_name"],
+        how="inner"
+    ).distinct()
+
     # Perform a left join between `transformed_business_entity` and `transformed_contacts`
     merged_df = transformed_business_entity.join(
-        transformed_contacts,
+        preferred_contacts,
         on="stg_business_entity_id",
         how="left"
     )
@@ -728,10 +742,12 @@ transformed_rel_identifiers = transformed_rel_identifiers.select(
     
 #transformed_rel_identifiers.show(truncate=False)
 
+relationship_pairs = transformed_rel_identifiers.select(
+    "identifier_value", "related_identifier"
+).distinct()
+
 # Select columns from `transformed_df` for `transformed_identifiers`
 transformed_identifiers = transformed_df.select(*ss.identifiers)
-
-
 
 # Melt `transformed_identifiers` using the `melt_dataframe` function
 transformed_identifiers = utl.melt_dataframe(
@@ -741,8 +757,18 @@ transformed_identifiers = utl.melt_dataframe(
     melted_column_names=("identifier_type", "identifier_value")
 )
 
+#Apply anti-join BEFORE assigning source
+melted_business_identifiers  = transformed_identifiers.alias("biz").join(
+    broadcast(relationship_pairs).alias("rel"),
+    on=[
+        col("biz.identifier_value") == col("rel.identifier_value"),
+        col("biz.stg_business_entity_id") == col("rel.related_identifier")
+    ],
+    how="left_anti"
+)
+
 # Add `related_identifier` and `related_identifier_source` columns to `transformed_identifiers`
-transformed_identifiers = transformed_identifiers.select(
+transformed_identifiers = melted_business_identifiers.select(
     col("identifier_type"),
     col("identifier_value"),
     col("stg_business_entity_id").alias("related_identifier")).withColumn("related_identifier_source", lit("business_entity"))
