@@ -1,1 +1,1 @@
-Error Category: QUERY_ERROR; Failed Line Number: 723; Spark Error Class: MISSING_COLUMN; AnalysisException: Column 'rel.identifier_type' does not exist. Did you mean one of the following? [biz.identifier_type, rel.identifier_value, biz.identifier_value, rel.related_identifier, biz.stg_business_entity_id];
+"identifier_type", "identifier_value"
