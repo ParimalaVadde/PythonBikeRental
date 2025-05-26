@@ -742,7 +742,7 @@ transformed_rel_identifiers = transformed_rel_identifiers.select(
     
 #transformed_rel_identifiers.show(truncate=False)
 
-relationship_pairs = transformed_rel_identifiers.select(
+relationship_key_pairs = transformed_rel_identifiers.select(
     "identifier_value", "related_identifier"
 ).distinct()
 
@@ -750,29 +750,29 @@ relationship_pairs = transformed_rel_identifiers.select(
 transformed_identifiers = transformed_df.select(*ss.identifiers)
 
 # Melt `transformed_identifiers` using the `melt_dataframe` function
-transformed_identifiers = utl.melt_dataframe(
+melted_business_identifiers = utl.melt_dataframe(
     transformed_identifiers,
     id_column="stg_business_entity_id",
     columns_to_melt=ss.transformed_identifiers_columns,
     melted_column_names=("identifier_type", "identifier_value")
 )
 
-#Apply anti-join BEFORE assigning source
-melted_business_identifiers  = transformed_identifiers.alias("biz").join(
-    broadcast(relationship_pairs).alias("rel"),
+#Apply Anti-join using only identifier_type + identifier_value
+filtered_business_identifiers = melted_business_identifiers.alias("biz").join(
+    broadcast(relationship_key_pairs).alias("rel"),
     on=[
-        col("biz.identifier_value") == col("rel.identifier_value"),
-        col("biz.stg_business_entity_id") == col("rel.related_identifier")
+        col("biz.identifier_type") == col("rel.identifier_type"),
+        col("biz.identifier_value") == col("rel.identifier_value")
     ],
     how="left_anti"
 )
 
-# Add `related_identifier` and `related_identifier_source` columns to `transformed_identifiers`
-transformed_identifiers = melted_business_identifiers.select(
+# Final selection with source
+transformed_identifiers = filtered_business_identifiers.select(
     col("identifier_type"),
     col("identifier_value"),
-    col("stg_business_entity_id").alias("related_identifier")).withColumn("related_identifier_source", lit("business_entity"))
-
+    col("stg_business_entity_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("business_entity"))
 
 
 
