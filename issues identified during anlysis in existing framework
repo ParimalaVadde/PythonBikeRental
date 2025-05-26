@@ -1,135 +1,21 @@
-Excellent follow-up! Let’s **go deep into Step 5** of the `relationship()` function — **line by line**, and I’ll also show **realistic sample data before and after**.
-
----
-
-## 🔄 Background Recap
-
-```python
-merged_df = transformed_business_entity \
-    .join(transformed_contacts, on="stg_business_entity_id", how="left") \
-    .join(transformed_df, on="stg_business_entity_id", how="inner")
-```
-
-This `merged_df` now contains:
-
-* From `transformed_business_entity`: a clean list of business entities
-* From `transformed_contacts`: `business_entity_contact_id`
-* From `transformed_df`: roles, identifiers (`vendor_id`, `site_id`, `client_ecid`), and payor-related info
-
----
-
-## ✅ Code: Step 5 — Select Relationship Columns
-
-```python
-merged_df = merged_df.select(
-    "stg_business_entity_id",
-    "business_entity_contact_id",
-    "stg_payor_business_entity_id",
-    lit(None).alias("related_business_entity_contact_id"),
-    "business_entity_role",
-    "related_business_entity_role",
-    "vendor_id",
-    "site_id",
-    "client_ecid"
-)
-```
-
----
-
-## 🔍 Line-by-Line Explanation
-
-### ▶ `"stg_business_entity_id"`
-
-The **main entity's UUID** — this is the **left-side (business entity)** in the relationship.
-
----
-
-### ▶ `"business_entity_contact_id"`
-
-Comes from `transformed_contacts` — a contact person linked to this business.
-
----
-
-### ▶ `"stg_payor_business_entity_id"`
-
-Represents the **related entity** in the relationship (the "other side" of the link).
-
-Examples:
-
-* If `BE123` is a supplier to `BE999`, then:
-
-  * `stg_business_entity_id = BE123`
-  * `stg_payor_business_entity_id = BE999`
-
----
-
-### ▶ `lit(None).alias("related_business_entity_contact_id")`
-
-**💡 What's happening:**
-
-* You're preparing this field for **consistency with future models**, where you may have a contact person on the **related entity side**.
-* For now, you **don't have such contact data**, so it's set to **null** using:
-
-```python
-lit(None).alias("related_business_entity_contact_id")
-```
-
-🧠 Think of it like:
-
-> “Leave a placeholder column here, in case I have related-side contacts in the future.”
-
----
-
-### ▶ `"business_entity_role"` and `"related_business_entity_role"`
-
-These were calculated earlier in the function:
-
-* "Supplier", "Client", "intercompany\_supplier", etc.
-
----
-
-### ▶ `"vendor_id"`, `"site_id"`, `"client_ecid"`
-
-These are identifiers from the **main business entity** (left side of the relationship).
-
----
-
-## 🧪 Sample Input Before This Step
-
-Assume:
-
-```plaintext
-| stg_business_entity_id | business_entity_contact_id | stg_payor_business_entity_id | business_entity_role | related_business_entity_role | vendor_id | site_id | client_ecid |
-|------------------------|-----------------------------|------------------------------|----------------------|-------------------------------|-----------|---------|-------------|
-| BE123                  | uuid-contact-123            | BE999                        | Supplier             | Client                        | V123      | S123    | CECID123    |
-| BE456                  | uuid-contact-456            | BE888                        | intercompany_supplier| intercompany_buyer            | V456      | S456    | CECID456    |
-```
-
----
-
-## ✅ Output After Step 5
-
-```plaintext
-| stg_business_entity_id | business_entity_contact_id | stg_payor_business_entity_id | related_business_entity_contact_id | business_entity_role     | related_business_entity_role | vendor_id | site_id | client_ecid |
-|------------------------|-----------------------------|------------------------------|------------------------------------|---------------------------|-------------------------------|-----------|---------|-------------|
-| BE123                  | uuid-contact-123            | BE999                        | null                               | Supplier                  | Client                        | V123      | S123    | CECID123    |
-| BE456                  | uuid-contact-456            | BE888                        | null                               | intercompany_supplier     | intercompany_buyer            | V456      | S456    | CECID456    |
-```
-
-> ✅ You now have a normalized, structured representation of a **business-to-business relationship**.
-
----
-
-## 🔁 Summary: Why `lit(None)`?
-
-| Column                               | Why it's here                             |
-| ------------------------------------ | ----------------------------------------- |
-| `related_business_entity_contact_id` | Placeholder for future data support       |
-| `lit(None).alias(...)`               | Adds a nullable column with explicit name |
-| Keeps schema consistent              | Even if contact data isn’t present now    |
-
----
-
-Would you like to continue to the **UUID generation**, or want to explore how this plays into **identifier melting** next?
-
-Just say the word!
+"identifier_id","identifier_type","identifier_value","related_identifier","related_identifier_source","is_active","created_by","created_date"
+"682c3deb-ebdc-1e74-c1bf-cf816599befb","vendor_id","1921677","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"60aa9fd3-a681-ee69-2020-b3757706b45e","Tax_Id","321343299","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"a8e5d8f8-f917-83e9-4336-249c497953ef","enigma_business_id","34352.0","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"a31bdb0b-d042-579f-63cd-2f6c256606a5","Tax_Id","678343290","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"b850770e-8f04-60f4-c006-f26e8cff8581","client_ecid","221645072","f042a4da-a491-5d72-29f9-74618d62690b","relationship",True,"PFD","2025-05-26 15:54:01.516"
+"57762254-e8fd-0cb9-9104-89c280fa833a","DBA","WASTE MANAGEMENT SERVICES","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"04381f5a-8b68-fab2-3f11-be042df02a94","vendor_id","8745823","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"dbcdfe98-cc61-3bc8-a88a-d48df67b0b65","DBA","Advanced Windows ","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"4f231e1d-62c4-127e-55db-807348435a3e","google_places_id","65234765-239865","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"f6cd2f48-ccdc-7019-85ee-9ec2007a72a4","vendor_id","1921677","f042a4da-a491-5d72-29f9-74618d62690b","relationship",True,"PFD","2025-05-26 15:54:01.516"
+"f273e304-1cb1-daf1-716b-0efb85d4df52","site_id","8744","54305142-23c1-2cec-d40e-775b850ed721","relationship",True,"PFD","2025-05-26 15:54:01.516"
+"74d93f49-1837-bd71-965f-68a640ef55e3","site_id","192","f042a4da-a491-5d72-29f9-74618d62690b","relationship",True,"PFD","2025-05-26 15:54:01.516"
+"03da28c7-6e9f-fa99-d98b-d93e2044735a","site_id","8744","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"81b5e21a-fb50-02e2-bb39-3cd70b1bf34a","client_ecid","221645072","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"402a598c-a3af-a474-4573-e0aa0e3f959a","vendor_id","8745823","54305142-23c1-2cec-d40e-775b850ed721","relationship",True,"PFD","2025-05-26 15:54:01.516"
+"f4f8758a-d0ae-730c-fe15-a0fdd5324070","site_id","192","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"82a7e9c5-e18d-9d29-10cb-dbab53d51412","enigma_id","278923.0","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"ce9befa0-8fa8-7c16-335b-9cce785ac7b9","client_ecid","221645072","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"76ff3e62-175f-cd5e-e8d1-65dbb29b6e2f","google_places_id","345-90865","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 15:54:01.516"
+"facebcd9-2208-7dbf-8e5c-18889b937172","client_ecid","221645072","54305142-23c1-2cec-d40e-775b850ed721","relationship",True,"PFD","2025-05-26 15:54:01.516"
