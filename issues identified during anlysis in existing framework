@@ -28,7 +28,7 @@ New PFD field analysis completed with 6 field mappings identified. Data format a
 
 ✅ **Fixed:** registered_agents processing - maintains semicolon-separated format in characteristics table  
 ⚠️ **Pending:** product_segmentation - currently string type, awaiting source team confirmation on data type for proper handling
-
+receivables_attribute currently contains only single values (not semicolon-separated). No changes applied, as the source file doesn't provide multi-value data yet. Will revisit if source format changes.
 **Note:** Pivoting approach used instead of exploding to maintain semicolon-separated format in receivables_attribute table.
 
 ---
