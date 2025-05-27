@@ -1,21 +1,49 @@
-"identifier_id","identifier_type","identifier_value","related_identifier","related_identifier_source","is_active","created_by","created_date"
-"f4f8758a-d0ae-730c-fe15-a0fdd5324070","site_id","192","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"81b5e21a-fb50-02e2-bb39-3cd70b1bf34a","client_ecid","221645072","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"f273e304-1cb1-daf1-716b-0efb85d4df52","site_id","8744","54305142-23c1-2cec-d40e-775b850ed721","relationship",True,"PFD","2025-05-26 16:56:27.958"
-"03da28c7-6e9f-fa99-d98b-d93e2044735a","site_id","8744","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"b850770e-8f04-60f4-c006-f26e8cff8581","client_ecid","221645072","f042a4da-a491-5d72-29f9-74618d62690b","relationship",True,"PFD","2025-05-26 16:56:27.958"
-"82a7e9c5-e18d-9d29-10cb-dbab53d51412","enigma_id","278923.0","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"a31bdb0b-d042-579f-63cd-2f6c256606a5","Tax_Id","678343290","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"dbcdfe98-cc61-3bc8-a88a-d48df67b0b65","DBA","Advanced Windows ","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"04381f5a-8b68-fab2-3f11-be042df02a94","vendor_id","8745823","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"facebcd9-2208-7dbf-8e5c-18889b937172","client_ecid","221645072","54305142-23c1-2cec-d40e-775b850ed721","relationship",True,"PFD","2025-05-26 16:56:27.958"
-"682c3deb-ebdc-1e74-c1bf-cf816599befb","vendor_id","1921677","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"a8e5d8f8-f917-83e9-4336-249c497953ef","enigma_business_id","34352.0","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"76ff3e62-175f-cd5e-e8d1-65dbb29b6e2f","google_places_id","345-90865","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"4f231e1d-62c4-127e-55db-807348435a3e","google_places_id","65234765-239865","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"74d93f49-1837-bd71-965f-68a640ef55e3","site_id","192","f042a4da-a491-5d72-29f9-74618d62690b","relationship",True,"PFD","2025-05-26 16:56:27.958"
-"402a598c-a3af-a474-4573-e0aa0e3f959a","vendor_id","8745823","54305142-23c1-2cec-d40e-775b850ed721","relationship",True,"PFD","2025-05-26 16:56:27.958"
-"f6cd2f48-ccdc-7019-85ee-9ec2007a72a4","vendor_id","1921677","f042a4da-a491-5d72-29f9-74618d62690b","relationship",True,"PFD","2025-05-26 16:56:27.958"
-"60aa9fd3-a681-ee69-2020-b3757706b45e","Tax_Id","321343299","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"ce9befa0-8fa8-7c16-335b-9cce785ac7b9","client_ecid","221645072","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 16:56:27.958"
-"57762254-e8fd-0cb9-9104-89c280fa833a","DBA","WASTE MANAGEMENT SERVICES","cf49fb42-dd63-1eae-454f-6be3d14c2bbe","business_entity",True,"PFD","2025-05-26 16:56:27.958"
+def flatten_nested_json_column(df, column_name, schema, explode_array=True):
+    """
+    Flattens a nested JSON column in a PySpark DataFrame.
+
+    Args:
+        df (DataFrame): The input PySpark DataFrame.
+        column_name (str): The name of the JSON column to flatten.
+        schema (StructType): The schema of the JSON column.
+        explode_array (bool): Whether to explode arrays or join strings.
+
+    Returns:
+        DataFrame: The DataFrame with the flattened JSON column.
+    """
+    try:
+        # Parse the JSON column into structured data
+        df = df.withColumn(column_name, from_json(col(column_name), schema))
+
+        # Handle ArrayType(StringType)
+        if isinstance(schema, ArrayType) and isinstance(schema.elementType, StringType) and not explode_array:
+            df = df.withColumn(column_name, concat_ws(";", col(column_name)))
+            return df
+
+        # Explode the array to create one row per element
+        df = df.withColumn(column_name, explode(col(column_name)))
+
+        # Iterate over the fields in the schema
+        for field in schema.elementType.fields:  # Use `elementType` for ArrayType
+            field_name = field.name
+            field_type = field.dataType
+
+            # If the field is a nested struct, recursively flatten it
+            if isinstance(field_type, StructType):
+                for nested_field in field_type.fields:
+                    nested_field_name = nested_field.name
+                    df = df.withColumn(
+                        f"{column_name}__{field_name}__{nested_field_name}",
+                        col(f"{column_name}.{field_name}.{nested_field_name}")
+                    )
+            else:
+                # If the field is not nested, extract it directly
+                df = df.withColumn(f"{column_name}__{field_name}", col(f"{column_name}.{field_name}"))
+
+        # Drop the original JSON column
+        df = df.drop(column_name)
+
+    except Exception as error:
+        print(f"Error flattening column {column_name}: {error}")
+
+    return df
