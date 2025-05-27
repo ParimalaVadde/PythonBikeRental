@@ -1,3 +1,8 @@
+# Add the missing import at the top of your file
+from pyspark.sql import DataFrame
+import boto3
+from pyspark.sql.functions import col, when, concat_ws
+
 # Add these CSV writing options to handle special characters properly
 
 def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
