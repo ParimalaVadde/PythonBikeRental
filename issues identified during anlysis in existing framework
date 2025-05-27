@@ -47,3 +47,52 @@ def flatten_nested_json_column(df, column_name, schema, explode_array=True):
         print(f"Error flattening column {column_name}: {error}")
 
     return df
+
+
+
+*******************************************************
+
+def flatten_nested_json_column(df, column_name, schema):
+    """
+    Flattens a nested JSON column in a PySpark DataFrame.
+    
+    Args:
+        df (DataFrame): The input PySpark DataFrame.
+        column_name (str): The name of the JSON column to flatten.
+        schema (StructType): The schema of the JSON column.
+    
+    Returns:
+        DataFrame: The DataFrame with the flattened JSON column.
+    """
+    try:
+        # Parse the JSON column into structured data
+        df = df.withColumn(column_name, from_json(col(column_name), schema))
+
+        # Explode the array to create one row per element
+        df = df.withColumn(column_name, explode(col(column_name)))
+
+        # Iterate over the fields in the schema
+        for field in schema.elementType.fields:  # Use `elementType` for ArrayType
+            field_name = field.name
+            field_type = field.dataType
+
+            # If the field is a nested struct, recursively flatten it
+            if isinstance(field_type, StructType):
+                for nested_field in field_type.fields:
+                    nested_field_name = nested_field.name
+                    df = df.withColumn(
+                        f"{column_name}__{field_name}__{nested_field_name}",
+                        col(f"{column_name}.{field_name}.{nested_field_name}")
+                    )
+            else:
+                # If the field is not nested, extract it directly
+                df = df.withColumn(f"{column_name}__{field_name}", col(f"{column_name}.{field_name}"))
+
+        # Drop the original JSON column
+        df = df.drop(column_name)
+
+    except Exception as error:
+        print(f"Error flattening column {column_name}: {error}")
+
+    return df
+
