@@ -1,21 +1,19 @@
-Here’s a crisp and precise **description** and **acceptance criteria** for your Jira story:
+Given your scope, **two well-scoped sub-tasks** are sufficient and clearer for execution tracking. Here's how you can split them:
 
 ---
+
+### **Sub-Task 1: Ingest New PFD Source File into SDS Pipeline**
 
 **Description:**
-Ingest the newly shared PFD source file and enhance the SDS data pipeline to integrate additional fields. Update mapping logic, apply necessary schema changes, and ensure end-to-end data flow for new attributes is validated and functional. Address any format discrepancies or structural changes in the new file.
+Load the newly shared PFD file into the SDS staging layer. Validate structure, handle format changes, and ensure compatibility with existing ingestion logic.
 
 ---
 
-**Acceptance Criteria:**
+### **Sub-Task 2: Apply DDL Changes & Integrate New PFD Fields**
 
-* New PFD source file successfully ingested into staging.
-* All new fields correctly integrated across relevant tables.
-* Schema and mapping files updated to reflect new additions.
-* Data format discrepancies (if any) identified and handled.
-* Validation completed using sample/test data.
-* No regression in existing pipeline functionality.
+**Description:**
+Implement necessary schema changes and update mappings to support the new fields. Ensure fields are reflected correctly in downstream transformations and data sinks.
 
 ---
 
-Let me know if you want to tailor this toward [specific fields](f) or [team handoff clarity](f).
+Let me know if you want help drafting [comments for each sub-task](f) or [linking to prior work](f) for reference.
