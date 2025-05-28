@@ -1,49 +1,21 @@
-# JIRA Comments
-
-## Main User Story Comment:
-**Analysis Phase Complete - Implementation Scheduled for Next Sprint**
-
-New PFD field analysis completed with 6 field mappings identified. Data format and entity relationship fixes validated. Implementation deferred to next sprint due to file discrepancies requiring additional review.
+Here’s a crisp and precise **description** and **acceptance criteria** for your Jira story:
 
 ---
 
-## Sub-Task 1: Integrate New PFD Fields into Data Pipeline
-
-**Analysis Complete - 6 New Field Mappings Identified:**
-
-1. **task_id** → analysis_task_id: New column addition to business_entity_spend_analysis table
-2. **sds_upload_id** → analysis_external_reference_id: Column rename from user_request_id  
-3. **client_name** → stg_payor_business_entity_id: Updated mapping source column
-4. **supplier_ecid** → business_entity_identifiers: New identifier_type required in types table
-5. **ind_decline/stp_partnershiplist** → business_entity_characteristics: New characteristic_types required
-6. **Financial metrics (6 fields)** → business_entity_receivables_attribute: New attribute_types for throughput_usd, avg_spread, avg_payment_terms, rate_proposed, rate_offered, esg_discount
-
-**Implementation deferred to next sprint due to file discrepancies requiring source validation.**
+**Description:**
+Ingest the newly shared PFD source file and enhance the SDS data pipeline to integrate additional fields. Update mapping logic, apply necessary schema changes, and ensure end-to-end data flow for new attributes is validated and functional. Address any format discrepancies or structural changes in the new file.
 
 ---
 
-## Sub-Task 2: Fix Data Format Issues in Staging Glue Job
+**Acceptance Criteria:**
 
-**Status: Partially Complete**
-
-✅ **Fixed:** registered_agents processing - maintains semicolon-separated format in characteristics table  
-⚠️ **Pending:** product_segmentation - currently string type, awaiting source team confirmation on data type for proper handling
-receivables_attribute currently contains only single values (not semicolon-separated). No changes applied, as the source file doesn't provide multi-value data yet. Will revisit if source format changes.
-**Note:** Pivoting approach used instead of exploding to maintain semicolon-separated format in receivables_attribute table.
+* New PFD source file successfully ingested into staging.
+* All new fields correctly integrated across relevant tables.
+* Schema and mapping files updated to reflect new additions.
+* Data format discrepancies (if any) identified and handled.
+* Validation completed using sample/test data.
+* No regression in existing pipeline functionality.
 
 ---
 
-## Sub-Task 3: Fix Entity Relationship Handling
-
-**Status: Complete - All Issues Resolved**
-
-✅ **Fixed:** vendor_contact_name mapping to relationship table contact names  
-✅ **Fixed:** contact_id reference handling in relationship table  
-✅ **Fixed:** start/end date format mapping in spend_analysis  
-✅ **Fixed:** duplicate records elimination in identifiers table - implemented logic to prevent same identifier mapping to both business_entity and relationship sources
-
-**Validation report confirms all relationship integrity issues resolved.**
-
-
-
-Analysis completed for new PFD fields. Existing data load issues in the SDS pipeline have been fixed. Noted discrepancies in the latest shared file — remaining changes to be implemented in the next sprint.
+Let me know if you want to tailor this toward [specific fields](f) or [team handoff clarity](f).
