@@ -1,2 +1,4 @@
-SELECT * FROM sds_staging.business_entity_identifiers where identifier_type = 'DBA' 
-and identifier_value in ("CSI LABORATORIES")
+UPDATE sds_staging.business_entity_identifiers
+SET identifier_type = 'tax_id'
+WHERE identifier_type = 'DBA'
+  AND identifier_value IN ('CSI LABORATORIES');
