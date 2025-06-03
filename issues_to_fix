@@ -286,3 +286,7 @@ transformed_dataframes = transform_dataframes(transformed_df, ss, glueContext, c
 
 
 job.commit()
+
+
+
+Error Category: QUERY_ERROR; Failed Line Number: 571; AnalysisException: CSV data source does not support array<string> data type.
