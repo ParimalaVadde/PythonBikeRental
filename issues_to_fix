@@ -1,4 +1,30 @@
-UPDATE sds_staging.business_entity_identifiers
-SET identifier_type = 'tax_id'
-WHERE identifier_type = 'DBA'
-  AND identifier_value IN ('CSI LABORATORIES');
+card_revenue_schema in staging_schema.py
+
+# existing Define the schema for the `card_revenue` column
+industries_schema =  ArrayType(StructType([
+                StructField("classification_type", StringType(), True),
+                StructField("classification_code", StringType(), True),
+                StructField("classification_description", StringType(), True)
+            ]))
+
+industries earlier and new file sample value
+
+new file
+
+{'classification_description': 'tire shop', 'classification_type': 'enigma_description'}
+{'classification_code': '23', 'classification_description': 'Construction', 'classification_type': 'NAICS_2017'}
+
+
+old file 
+
+"[ {
+      ""classification_type"": ""NAICS_2017"",
+      ""classification_code"": ""2361"",
+      ""classification_description"": ""Residential Building Construction""
+      } ]"
+
+"[ {
+      ""classification_type"": ""NAICS_2017"",
+      ""classification_code"": ""2361"",
+      ""classification_description"": ""Residential Building Construction""
+      } ]"
