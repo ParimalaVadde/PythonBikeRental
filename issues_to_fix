@@ -1,35 +1,4 @@
-5) technologies
-
-wat changes required in below schema
-technologies_schema =  ArrayType(StructType([
-                StructField("vendor_name", StringType(), True),
-                StructField("category", StringType(), True)
-            ]))
-
-new file :
-{'vendor_name': 'Paypal', 'category': 'payments'}
-{'vendor_name': 'Shopify', 'category': 'payments'}
-
-
-old file 
-" [
-  {
-  	""vendor_name"": ""Stripe"",
-  	""category"": ""payments""
-	},
-	{
-    ""vendor_name"":""Square"",
-    ""category"": ""payments""
-  }
-]"
-
-" [
-  {
-  	""vendor_name"": ""Stripe"",
-  	""category"": ""payments""
-	},
-	{
-    ""vendor_name"":""Square"",
-    ""category"": ""payments""
-  }
-]"
+technologies_schema = StructType([
+    StructField("vendor_name", StringType(), True),
+    StructField("category", StringType(), True)
+])
