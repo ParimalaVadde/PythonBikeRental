@@ -1,9 +1,5 @@
 # Transform `transformed_business_entity_details`
-    transformed_business_entity_details = transformed_df.select(*ss.business_entity_details).join(
-        transformed_json_df.select("stg_business_entity_id", "company_structure__corporate_structure"),
-        on="stg_business_entity_id",
-        how="left"
-    ).withColumn(
-        "company_structure",
-        when(col("filter_individual") == "Y", "individual").otherwise(col("company_structure__corporate_structure"))
-    ).drop("filter_individual", "company_structure__corporate_structure").dropDuplicates()
+transformed_business_entity_details = transformed_df.select(*ss.business_entity_details).withColumn(
+    "company_structure",
+    when(col("filter_individual") == "Y", "individual").otherwise(col("company_structure"))
+).drop("filter_individual").dropDuplicates()
