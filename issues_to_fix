@@ -385,6 +385,7 @@ else:
 
 *********************************************************************
 
+def flatten_nested_json_column(df, column_name, schema, explode_array=True):
     """
     Flattens a nested JSON column in a PySpark DataFrame.
     
