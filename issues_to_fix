@@ -372,3 +372,12 @@ def flatten_nested_json_column(df, column_name, schema, explode_array=True):
     except Exception as error:
         print(f"Error flattening column {column_name}: {error}")
     return df
+
+
+
+else:
+    if isinstance(field_type, ArrayType) and isinstance(field_type.elementType, StringType):
+        # Join array<string> with semicolon
+        df = df.withColumn(f"{column_name}__{field_name}", concat_ws(";", col(f"{column_name}.{field_name}")))
+    else:
+        df = df.withColumn(f"{column_name}__{field_name}", col(f"{column_name}.{field_name}"))
