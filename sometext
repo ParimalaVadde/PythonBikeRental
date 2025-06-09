@@ -1,66 +1,38 @@
-# Show what we have in transformed_json_df for debugging
-print("=== Checking transformed_json_df contacts data ===")
-transformed_json_df.select("stg_business_entity_id", "associated_people__name", "associated_people__title").show(20, False)
-
-print("=== Checking ss.contacts columns ===")
-print("ss.contacts columns:", ss.contacts)
-
-# Transform `transformed_contacts` from associated_people data
-transformed_contact = transformed_json_df.select(*ss.contacts).distinct().withColumnRenamed(
+# Transform contacts from associated_people data
+people_contacts = transformed_json_df.select(*ss.contacts).distinct().withColumnRenamed(
     "associated_people__name", "contact_name"
 ).withColumnRenamed(
     "associated_people__title", "contact_title"
 )
 
-print("=== Transformed contact from associated_people ===")
-transformed_contact.show(20, False)
-
-# Process vendor_contact_df - ONLY if vendor_contact_name is not null
-vendor_contact_df = transformed_df.select(*ss.vendor_contact).distinct()
-
-print("=== Raw vendor_contact_df ===")
-vendor_contact_df.show(20, False)
-
-# FIXED: Filter out rows where vendor_contact_name is null
-vendor_contact_df_filtered = vendor_contact_df.filter(col("vendor_contact_name").isNotNull())
-
-print("=== Filtered vendor_contact_df (non-null only) ===")
-vendor_contact_df_filtered.show(20, False)
+# Process vendor contacts - ONLY if vendor_contact_name is not null
+vendor_contacts_raw = transformed_df.select(*ss.vendor_contact).distinct()
+vendor_contacts_filtered = vendor_contacts_raw.filter(col("vendor_contact_name").isNotNull())
 
 # Check if there are any non-null vendor contacts
-vendor_contact_count = vendor_contact_df_filtered.count()
-print(f"Number of non-null vendor contacts: {vendor_contact_count}")
+vendor_contact_count = vendor_contacts_filtered.count()
 
 if vendor_contact_count > 0:
-    vendor_contact_df_final = vendor_contact_df_filtered.select(
+    vendor_contacts_final = vendor_contacts_filtered.select(
         col("stg_business_entity_id"),
         col("vendor_contact_name").alias("contact_name"),
         lit(None).cast("string").alias("contact_title")
     )
-    
     # Union the two dataframes
-    transformed_contacts = transformed_contact.unionByName(vendor_contact_df_final)
+    all_contacts = people_contacts.unionByName(vendor_contacts_final)
 else:
-    print("No vendor contacts found, using only associated_people contacts")
-    # Use only the transformed_contact data
-    transformed_contacts = transformed_contact
+    # Use only the people contacts data
+    all_contacts = people_contacts
 
-print("=== Final transformed_contacts before UUID ===")
-transformed_contacts.show(20, False)
-
-# FIXED: Only create contact IDs for rows that actually have contact names
-transformed_contacts_final = transformed_contacts.filter(col("contact_name").isNotNull())
-
-print("=== Final contacts (non-null names only) ===")
-transformed_contacts_final.show(20, False)
+# FIXED: Only keep contacts that actually have contact names
+transformed_contacts = all_contacts.filter(col("contact_name").isNotNull())
 
 # Generate UUIDs only for valid contacts
-if transformed_contacts_final.count() > 0:
-    transformed_contacts_final = transformed_contacts_final.withColumn(
+if transformed_contacts.count() > 0:
+    transformed_contacts = transformed_contacts.withColumn(
         "business_entity_contact_id",
-        compute_uuid_udf(concat_ws(",", *[col for col in transformed_contacts_final.columns]))
+        compute_uuid_udf(concat_ws(",", *[col for col in transformed_contacts.columns]))
     )
-    print("=== Final contacts with UUIDs ===")
-    transformed_contacts_final.show(20, False)
-else:
-    print("No valid contacts found - no contact IDs generated")
+    
+print("=== Final transformed_contacts ===")
+transformed_contacts.show()
