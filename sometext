@@ -1,125 +1,63 @@
-# FUNCTION 1: Updated flatten_nested_json_column (in utl module)
-def flatten_nested_json_column(df, column_name, schema, explode_array=True):
-    """
-    Flattens a nested JSON column in a PySpark DataFrame.
+vendor_contact = ["stg_business_entity_id", "vendor_contact_name"]
+
+transformed_json_df.select(*ss.contacts).distinct().show()
     
-    Args:
-        df (DataFrame): The input PySpark DataFrame.
-        column_name (str): The name of the JSON column to flatten.
-        schema (StructType): The schema of the JSON column.
-        explode_array (bool): Whether to explode arrays or join with semicolon.
     
-    Returns:
-        DataFrame: The DataFrame with the flattened JSON column.
-    """
-    try:
-        # NEW: Check if the column exists and has any non-null values
-        if column_name not in df.columns:
-            print(f"Column {column_name} does not exist in DataFrame")
-            return df
-            
-        # NEW: Check if all values in the column are null
-        non_null_count = df.filter(col(column_name).isNotNull()).count()
-        
-        if non_null_count == 0:
-            print(f"Column {column_name} contains only null values, skipping flattening")
-            # Just return the dataframe as-is, keeping the null column
-            return df
-        
-        # Parse the JSON column into structured data
-        df = df.withColumn(column_name, from_json(col(column_name), schema))
-        
-        # If explode_array is False, join array elements with semicolon
-        if not explode_array:
-            df = df.withColumn(column_name, concat_ws(";", col(column_name)))
-            return df
-        
-        # Explode the array to create one row per element
-        df = df.withColumn(column_name, explode(col(column_name)))
-        # Iterate over the fields in the schema
-        for field in schema.elementType.fields:  # Use `elementType` for ArrayType
-            field_name = field.name
-            field_type = field.dataType
-            # If the field is a nested struct, recursively flatten it
-            if isinstance(field_type, StructType):
-                for nested_field in field_type.fields:
-                    nested_field_name = nested_field.name
-                    df = df.withColumn(
-                        f"{column_name}__{field_name}__{nested_field_name}",
-                        col(f"{column_name}.{field_name}.{nested_field_name}")
-                    )
-            else:
-                # If the field is not nested, extract it directly
-                df = df.withColumn(f"{column_name}__{field_name}", col(f"{column_name}.{field_name}"))
-        # Drop the original JSON column
-        df = df.drop(column_name)
-    except Exception as error:
-        print(f"Error flattening column {column_name}: {error}")
-    return df
+    # Transform `transformed_contacts`
+    transformed_contact = transformed_json_df.select(*ss.contacts).distinct().withColumnRenamed(
+        "associated_people__name", "contact_name"
+    ).withColumnRenamed(
+        "associated_people__title", "contact_title"
+    )
+
+    vendor_contact_df = transformed_df.select(*ss.vendor_contact).distinct()
+
+    vendor_contact_df = vendor_contact_df.select(
+        col("stg_business_entity_id"),
+        col("vendor_contact_name").alias("contact_name"),
+        lit(None).cast("string").alias("contact_title")
+    )
+
+    transformed_contacts = transformed_contact.unionByName(vendor_contact_df)
+
+    transformed_contacts.show()
+    transformed_contacts = transformed_contacts.withColumn(
+        "business_entity_contact_id",
+        compute_uuid_udf(concat_ws(",", *[col for col in transformed_contacts.columns]))
+    )
+    transformed_contacts.show()
+	
+	
+	
+output
+
+"business_entity_contact_id","stg_business_entity_id","source_system_contact_id","source_system_name","contact_type","contact_name","contact_title","contact_active_indicator","contact_deactivated_date","decision_maker_indicator","decision_maker_type","is_active","created_by","created_date"
+"526ca76b-1058-3957-1552-85bdb89a6c70","494a0c65-628f-83e4-7960-a72cce2dd664",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-06-09 08:46:21.467"
+"91891c33-008c-4118-d6ea-cfcb782edc8a","086faff0-7440-94e7-a5a4-0ea8e2a3791b",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-06-09 08:46:21.467"
+"b5666364-85e2-82a4-bdcb-3c9cc9e6b1ba","d14508c6-6c53-c6cd-4c89-2e96c3125233",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-06-09 08:46:21.467"
+"b498c34e-bc93-38e2-aff4-d5cae1d2875e","8980d8b7-b4de-1b44-a0d0-4964ed19b7b4",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-06-09 08:46:21.467"
 
 
-# FUNCTION 2: Updated transform_dataframes function
-def transform_dataframes(transformed_df, ss, glueContext, compute_uuid_udf, utl):
-    """
-    Function to transform multiple DataFrames based on the provided schemas and logic.
-    Args:
-        transformed_df (DataFrame): The input PySpark DataFrame.
-        ss (object): An object containing schema definitions and column mappings.
-        glueContext (GlueContext): The AWS Glue context.
-        compute_uuid_udf (UDF): A UDF to compute UUIDs.
-        utl (module): A utility module containing helper functions like `flatten_nested_json_column` and `melt_dataframe`.
-    Returns:
-        dict: A dictionary of transformed DataFrames.
-    """
-    # Flatten the JSON columns
-    transformed_json_df = transformed_df.select(*ss.jsoncol)
- 
-    # Flatten nested JSON columns
-    for column, schema in [
-        ("card_revenue", ss.card_revenue_schema),
-        ("card_transactions_stability", ss.card_transactions_stability),
-        ("associated_people", ss.associated_people_schema),
-        ("industries", ss.industries_schema),  # CHANGED: Uncommented - now handles nulls
-        ("company_structure", ss.company_structure_schema),  # CHANGED: Uncommented - now handles nulls
-        ("technologies", ss.technologies_schema),
-    ]:
-        transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
-    
-    # NEW: Explode and process specific columns with null safety
-    # Check if the column exists and has non-null values before exploding
-    if "associated_people__titles" in transformed_json_df.columns:
-        # Check if there are any non-null values in the titles column
-        non_null_titles = transformed_json_df.filter(col("associated_people__titles").isNotNull()).count()
-        if non_null_titles > 0:
-            transformed_json_df = transformed_json_df.withColumn(
-                "associated_people__title", 
-                explode(col("associated_people__titles"))
-            ).drop("associated_people__titles")
-        else:
-            # If all titles are null, create a null title column and drop titles
-            transformed_json_df = transformed_json_df.withColumn(
-                "associated_people__title", 
-                lit(None).cast("string")
-            ).drop("associated_people__titles")
-    else:
-        print("Warning: associated_people__titles column not found")
-    
-    # NEW: Process registered_agents with null handling
-    if "registered_agents" in transformed_json_df.columns:
-        transformed_json_df = utl.flatten_nested_json_column(
-            transformed_json_df,
-            "registered_agents",
-            ss.registered_agents_schema,
-            explode_array=False
-        )
-    else:
-        print("Warning: registered_agents column not found")
+there is no vendor_contact_name(all are null) in source file. logically it shouldn't create any contact id right , if person only doesn't exist then how contact_id is getting created.
 
-    #transformed_json_df = transformed_json_df.withColumn("associated_tax_ids", from_json(col("associated_tax_ids"), ss.associated_tax_ids_schema))
-    #transformed_json_df = transformed_json_df.withColumn("associated_tax_id", explode(col("associated_tax_ids"))).drop("associated_tax_ids")
-    #transformed_json_df = transformed_json_df.withColumn("registered_agents", from_json(col("registered_agents"), ss.registered_agents_schema))
-    #transformed_json_df = transformed_json_df.withColumn("registered_agents", explode(col("registered_agents")))
-    
-    transformed_json_df.show()
-    
-    return transformed_json_df
+Also in transformed_json_df associated_people__name, associated_people__title there are some values. why isn't it picking up these values.
+
+sample transformed_json_df
+
+stg_business_entity_id	registered_agents	industries	technologies	associated_tax_ids	card_revenue__end_date	card_revenue__1m__start_date	card_revenue__1m__average_monthly_amount	card_revenue__3m__start_date	card_revenue__3m__average_monthly_amount	card_revenue__12m__start_date	card_revenue__12m__average_monthly_amount	card_transactions_stability__end_date	card_transactions_stability__date_accessible	card_transactions_stability__1m__start_date	card_transactions_stability__1m__days_present	card_transactions_stability__1m__weeks_present	card_transactions_stability__1m__months_present	card_transactions_stability__1m__daily_coverage_ratio	card_transactions_stability__1m__weekly_coverage_ratio	card_transactions_stability__1m__monthly_coverage_ratio	card_transactions_stability__3m__start_date	card_transactions_stability__3m__days_present	card_transactions_stability__3m__weeks_present	card_transactions_stability__3m__months_present	card_transactions_stability__3m__daily_coverage_ratio	card_transactions_stability__3m__weekly_coverage_ratio	card_transactions_stability__3m__monthly_coverage_ratio	card_transactions_stability__12m__start_date	card_transactions_stability__12m__days_present	card_transactions_stability__12m__weeks_present	card_transactions_stability__12m__months_present	card_transactions_stability__12m__daily_coverage_ratio	card_transactions_stability__12m__weekly_coverage_ratio	card_transactions_stability__12m__monthly_coverage_ratio	associated_people__name	associated_people__title
+ff7391f5-629c-89f2-dbcd-1ab04c2f3296					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	VIRAT	CEO
+ff7391f5-629c-89f2-dbcd-1ab04c2f3296					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	VIRAT	OFFICER
+ff7391f5-629c-89f2-dbcd-1ab04c2f3296					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	RAVI	OFFICER
+52063241-a3e2-3562-fc0a-e45dcd493182					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	VIRAT KOHLI	CEO
+52063241-a3e2-3562-fc0a-e45dcd493182					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	VIRAT KOHLI	OFFICER
+52063241-a3e2-3562-fc0a-e45dcd493182					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	JADEJA RAVI	OFFICER
+a934454e-a853-871c-dcd4-1f8d8d3ebafe					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	RAM	CEO
+a934454e-a853-871c-dcd4-1f8d8d3ebafe					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	RAM	OFFICER
+a934454e-a853-871c-dcd4-1f8d8d3ebafe					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	RAVI	OFFICER
+d7121504-2037-d6c6-6ef4-c2b657a4424e					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	VHLI	CEO
+d7121504-2037-d6c6-6ef4-c2b657a4424e					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	VHLI	OFFICER
+d7121504-2037-d6c6-6ef4-c2b657a4424e					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	J RAVI	OFFICER
+d8589a20-d5ff-2f30-8381-aa7aa75b9a27					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	VIRAT KOHLI	CEO
+d8589a20-d5ff-2f30-8381-aa7aa75b9a27					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	VIRAT KOHLI	OFFICER
+d8589a20-d5ff-2f30-8381-aa7aa75b9a27					8/31/2020	8/1/2020	1200.11	6/1/2020	1400.77	9/1/2020	3200.8	8/31/2020	11/15/2020	8/1/2020	25	4	1	0.8064	0.8	1	6/1/2020	61	10	3	0.6667	0.7692	1	9/1/2019	110	27	11	0.3013	0.5192	0.9167	JADEJA RAVI	OFFICER
+
