@@ -1,53 +1,4 @@
-def transform_dataframes(transformed_df, ss, glueContext, compute_uuid_udf, utl):
-    """
-    Function to transform multiple DataFrames based on the provided schemas and logic.
-
-    Args:
-        transformed_df (DataFrame): The input PySpark DataFrame.
-        ss (object): An object containing schema definitions and column mappings.
-        glueContext (GlueContext): The AWS Glue context.
-        compute_uuid_udf (UDF): A UDF to compute UUIDs.
-        utl (module): A utility module containing helper functions like `flatten_nested_json_column` and `melt_dataframe`.
-
-    Returns:
-        dict: A dictionary of transformed DataFrames.
-    """
-    # Flatten the JSON columns
-    transformed_json_df = transformed_df.select(*ss.jsoncol)
- 
-    # Flatten nested JSON columns
-    for column, schema in [
-        ("card_revenue", ss.card_revenue_schema),
-        ("card_transactions_stability", ss.card_transactions_stability),
-        ("associated_people", ss.associated_people_schema),
-        #("industries", ss.industries_schema),
-        #("company_structure", ss.company_structure_schema),
-        ("technologies", ss.technologies_schema),
-    ]:
-        transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
-
-    # Explode and process specific columns
-    transformed_json_df = transformed_json_df.withColumn("associated_people__title", explode(col("associated_people__titles"))).drop("associated_people__titles")
-    #transformed_json_df = transformed_json_df.withColumn("associated_tax_ids", from_json(col("associated_tax_ids"), ss.associated_tax_ids_schema))
-    #transformed_json_df = transformed_json_df.withColumn("associated_tax_id", explode(col("associated_tax_ids"))).drop("associated_tax_ids")
-    #transformed_json_df = transformed_json_df.withColumn("registered_agents", from_json(col("registered_agents"), ss.registered_agents_schema))
-    #transformed_json_df = transformed_json_df.withColumn("registered_agents", explode(col("registered_agents")))
-    transformed_json_df = utl.flatten_nested_json_column(
-        transformed_json_df,
-        "registered_agents",
-        ss.registered_agents_schema,
-        explode_array=False)
-
-    transformed_json_df.show()
-    
-    
-    return transformed_json_df
-    
-
-
-transformed_dataframes = transform_dataframes(transformed_df, ss, glueContext, compute_uuid_udf, utl)
-
-
+# FUNCTION 1: Updated flatten_nested_json_column (in utl module)
 def flatten_nested_json_column(df, column_name, schema, explode_array=True):
     """
     Flattens a nested JSON column in a PySpark DataFrame.
@@ -62,6 +13,19 @@ def flatten_nested_json_column(df, column_name, schema, explode_array=True):
         DataFrame: The DataFrame with the flattened JSON column.
     """
     try:
+        # NEW: Check if the column exists and has any non-null values
+        if column_name not in df.columns:
+            print(f"Column {column_name} does not exist in DataFrame")
+            return df
+            
+        # NEW: Check if all values in the column are null
+        non_null_count = df.filter(col(column_name).isNotNull()).count()
+        
+        if non_null_count == 0:
+            print(f"Column {column_name} contains only null values, skipping flattening")
+            # Just return the dataframe as-is, keeping the null column
+            return df
+        
         # Parse the JSON column into structured data
         df = df.withColumn(column_name, from_json(col(column_name), schema))
         
@@ -92,3 +56,70 @@ def flatten_nested_json_column(df, column_name, schema, explode_array=True):
     except Exception as error:
         print(f"Error flattening column {column_name}: {error}")
     return df
+
+
+# FUNCTION 2: Updated transform_dataframes function
+def transform_dataframes(transformed_df, ss, glueContext, compute_uuid_udf, utl):
+    """
+    Function to transform multiple DataFrames based on the provided schemas and logic.
+    Args:
+        transformed_df (DataFrame): The input PySpark DataFrame.
+        ss (object): An object containing schema definitions and column mappings.
+        glueContext (GlueContext): The AWS Glue context.
+        compute_uuid_udf (UDF): A UDF to compute UUIDs.
+        utl (module): A utility module containing helper functions like `flatten_nested_json_column` and `melt_dataframe`.
+    Returns:
+        dict: A dictionary of transformed DataFrames.
+    """
+    # Flatten the JSON columns
+    transformed_json_df = transformed_df.select(*ss.jsoncol)
+ 
+    # Flatten nested JSON columns
+    for column, schema in [
+        ("card_revenue", ss.card_revenue_schema),
+        ("card_transactions_stability", ss.card_transactions_stability),
+        ("associated_people", ss.associated_people_schema),
+        ("industries", ss.industries_schema),  # CHANGED: Uncommented - now handles nulls
+        ("company_structure", ss.company_structure_schema),  # CHANGED: Uncommented - now handles nulls
+        ("technologies", ss.technologies_schema),
+    ]:
+        transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
+    
+    # NEW: Explode and process specific columns with null safety
+    # Check if the column exists and has non-null values before exploding
+    if "associated_people__titles" in transformed_json_df.columns:
+        # Check if there are any non-null values in the titles column
+        non_null_titles = transformed_json_df.filter(col("associated_people__titles").isNotNull()).count()
+        if non_null_titles > 0:
+            transformed_json_df = transformed_json_df.withColumn(
+                "associated_people__title", 
+                explode(col("associated_people__titles"))
+            ).drop("associated_people__titles")
+        else:
+            # If all titles are null, create a null title column and drop titles
+            transformed_json_df = transformed_json_df.withColumn(
+                "associated_people__title", 
+                lit(None).cast("string")
+            ).drop("associated_people__titles")
+    else:
+        print("Warning: associated_people__titles column not found")
+    
+    # NEW: Process registered_agents with null handling
+    if "registered_agents" in transformed_json_df.columns:
+        transformed_json_df = utl.flatten_nested_json_column(
+            transformed_json_df,
+            "registered_agents",
+            ss.registered_agents_schema,
+            explode_array=False
+        )
+    else:
+        print("Warning: registered_agents column not found")
+
+    #transformed_json_df = transformed_json_df.withColumn("associated_tax_ids", from_json(col("associated_tax_ids"), ss.associated_tax_ids_schema))
+    #transformed_json_df = transformed_json_df.withColumn("associated_tax_id", explode(col("associated_tax_ids"))).drop("associated_tax_ids")
+    #transformed_json_df = transformed_json_df.withColumn("registered_agents", from_json(col("registered_agents"), ss.registered_agents_schema))
+    #transformed_json_df = transformed_json_df.withColumn("registered_agents", explode(col("registered_agents")))
+    
+    transformed_json_df.show()
+    
+    return transformed_json_df
