@@ -1,47 +1,3 @@
-old code
-# Transform `transformed_business_entity_details`
-    transformed_business_entity_details = transformed_df.select(*ss.business_entity_details).join(
-        transformed_json_df.select("stg_business_entity_id", "company_structure__corporate_structure"),
-        on="stg_business_entity_id",
-        how="left"
-    ).withColumn(
-        "company_structure",
-        when(col("filter_individual") == "Y", "individual").otherwise(col("company_structure__corporate_structure"))
-    ).drop("filter_individual", "company_structure__corporate_structure").dropDuplicates()
-
-    # Add additional rows to `transformed_business_entity_details`
-    for additional_row in [
-        transformed_df.select(
-            col("stg_jpmc_business_entity_id").alias("stg_business_entity_id"),
-            lit("jpmc").alias("business_entity_name"),
-            lit("").alias("company_structure"),
-            lit("").alias("year_incorporated"),
-            lit("").alias("reported_annual_revenue")
-        ),
-        transformed_df.select(
-            col("stg_payor_business_entity_id").alias("stg_business_entity_id"),
-            col("buying_entity").alias("business_entity_name"),
-            lit("").alias("company_structure"),
-            lit("").alias("year_incorporated"),
-            lit("").alias("reported_annual_revenue")
-        )
-    ]:
-        transformed_business_entity_details = transformed_business_entity_details.union(additional_row)
-    
-    transformed_business_entity_details = transformed_business_entity_details.withColumn(
-        "business_entity_details_id",
-        compute_uuid_udf(concat_ws(",", *[col for col in transformed_business_entity_details.columns]))
-    )
-    
-    transformed_business_entity_details.show()
-	
-	
-
-
-
-see now transformed_df itself has company_structure so didnt use transformed_json_df, but seems like code is not working
-
-new code
 # Transform `transformed_business_entity_details`
     transformed_business_entity_details = transformed_df.select(*ss.business_entity_details).withColumn(
     "company_structure",
@@ -72,3 +28,46 @@ new code
     )
     
     transformed_business_entity_details.show()
+
+
+business_entity_details = ["stg_business_entity_id", "business_entity_name", "reported_annual_revenue", "year_incorporated", "filter_individual", "company_structure"]
+
+business_entity_details_schema = [
+    "CAST(business_entity_details_id AS STRING) AS business_entity_details_id",  # Cast to STRING
+    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",          # Cast to STRING
+    "CAST(business_entity_name AS STRING) AS business_entity_name",              # Cast to STRING
+    "CAST(company_structure AS STRING) AS company_structure",                    # Cast to STRING
+   # "CAST(market_segment_type AS STRING) AS market_segment_type",                # Cast to STRING
+    "CAST(year_incorporated AS STRING) AS year_incorporated",                    # Cast to STRING
+    "CAST(reported_annual_revenue AS STRING) AS reported_annual_revenue",        # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
+    "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
+    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
+    ]
+	
+	
+transformed_business_entity_details = transformed_business_entity_details.selectExpr(*ss.business_entity_details_schema).distinct()
+
+
+# List of DataFrames and their corresponding table names
+dataframes_with_tables = {
+    "business_entity": transformed_business_entity,
+    "business_entity_details": transformed_business_entity_details,
+    "business_entity_characteristics": transformed_melt_characteristics,
+    "physical_address": transformed_physical_address,
+    "business_entity_identifiers": transformed_identifiers,
+    "telecommunication_address": transformed_melt_telecommunication_address,
+    "electronic_address": transformed_melt_electronic_address,
+    "business_entity_spend_analysis": transformed_spend_analysis,
+    "restrictions": transformed_melt_restrictions,
+    "business_entity_industry_classification": transformed_melt_industry_classification,
+    "business_entity_card_association": transformed_association,
+    "business_entity_contacts": transformed_contacts,
+    "business_entity_relationships": transformed_relationship,
+    "business_entity_card_transactions_stability": transformed_transaction_stability,
+    "business_entity_card_revenues": transformed_revenue,
+    "business_entity_receivables_attribute": transformed_melt_payment_profile_attribute,
+}
+
+
+load_data = utl.load_dataframes_to_postgres(dataframes_with_tables, glueContext, ss, rds_token)
