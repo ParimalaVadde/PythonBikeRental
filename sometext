@@ -1,32 +1,74 @@
-Columns	Data Origin	Format/Example Data	Description	Is this currently mapped in SDS	Does it need to be mapped 	Comments	column addition	Recommendation / Justification
-task_id	PFD	string	Task ID entered by user in the UI  	n	n	Take this as it’s the shrepoint id for which the analysis is being performed 	additional column	"* Recommendation: Create a new column `analysis_task_id` in `business_entity_spend_analysis` table
-* Justification: Should flow to SDS as per Andy. Useful for salesforce"
-sds_upload_name	PFD	string	name for sds upload enter by user	n	n		additional column	"* Recommendation: No need to map as specified
-* Justification: This is metadata about the upload process rather than business entity data"
-sds_upload_id	PFD	string	id unique to SDS upload	n	y	map this to business_entity_spend_analysis - analysis_external_reference_id instead of user_request_id	additional column	"* Recommendation: Map to `business_entity_spend_analysis.analysis_external_reference_id` (replacing user_request_id)
-* Justification: This provides a better unique identifier for the analysis than user_request_id"
-client_name	PFD	string	client name as entered by user	n	y	Take this as the client name 	additional column	"* Recommendation: Replace `vendor_name_cleaned` with `client_name` in the mapping to `business_entity_details.business_entity_name`
-* Justification: This provides more accurate client identification as specified in requirements"
-upload_user	PFD	string	sid of user the uploaded file to SDS	n	n		additional column	"* Recommendation: Might not need to mapped.
-* Justification: This is metadata about the user upload  rather than business entity data"
-sds_upload_ts	PFD	string	timestamp that the file was uploaded to SDS	n	n		additional column	"* Recommendation: Might not need to mapped.
-* Justification: This is metadata about the uploaded  timestamp than business entity data"
-sds_note	PFD	string	any notes added by the user when uploading to SDS	n	n		additional column	"* Recommendation: Might not need to mapped.
-* Justification: This is metadata about the uploaded  timestamp than business entity data"
-buying_entity	Spend File	string	placeholder column	n	n		additional column	"* Recommendation: No need to map (placeholder)
-* Justification: This is indicated as a placeholder column"
-supplier_ecid (match_supplier_id_clientreference)	jpmc reference data		supplier ecid, provided if the supplier is a client of jpmc	n	y		additional column	"* Recommendation: Map to `business_entity_identifiers.identifier_value` with a new `identifier_type` value of ""ECID""
-* Justification: This is a type of identifier for the business entity"
-scf_buyerlist			placeholder column	n	n		additional column	"* Recommendation: No need to map (placeholder)
-* Justification: This is indicated as a placeholder column"
-throughput_usd	apar	int	dollar amount going through scf to the supplier	n	y		additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` for these columns
-* Justification: These columns are all related to supply chain finance details"
-avg_spread	apar	float	average spread for scf programs with that supplier	n	y		additional column	
-avg_payment_terms	apar	float	average payment terms for scf programs with that supplier	n	y		additional column	
-rate_proposed	apar	float	scf program rate proposed by jpmc	n	y		additional column	
-rate_offered	apar	float	actual rate offered by jpmc	n	y		additional column	
-esg_discount	apar	float	appliead esg related discounts	n	y		additional column	
-ind_decline	apar	binary (Y/N)	if supplier has previously rejected attempts to onboard to jpmc scf	n	y		additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` of ""SCF_DECLINE_INDICATOR""
-* Justification: This is a characteristic of the business entity's relationship with JPMC"
-stp_partnershiplist	stp/cardcampaign	list	list of stp services that have a relationship with the supplier & stg codes from ccdw(stg_codelist has been deprecated)	n	y		additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` of ""STP_PARTNERSHIP_LIST""
-* Justification: This represents service partnerships for the entity"
+old code
+# Transform `transformed_business_entity_details`
+    transformed_business_entity_details = transformed_df.select(*ss.business_entity_details).join(
+        transformed_json_df.select("stg_business_entity_id", "company_structure__corporate_structure"),
+        on="stg_business_entity_id",
+        how="left"
+    ).withColumn(
+        "company_structure",
+        when(col("filter_individual") == "Y", "individual").otherwise(col("company_structure__corporate_structure"))
+    ).drop("filter_individual", "company_structure__corporate_structure").dropDuplicates()
+
+    # Add additional rows to `transformed_business_entity_details`
+    for additional_row in [
+        transformed_df.select(
+            col("stg_jpmc_business_entity_id").alias("stg_business_entity_id"),
+            lit("jpmc").alias("business_entity_name"),
+            lit("").alias("company_structure"),
+            lit("").alias("year_incorporated"),
+            lit("").alias("reported_annual_revenue")
+        ),
+        transformed_df.select(
+            col("stg_payor_business_entity_id").alias("stg_business_entity_id"),
+            col("buying_entity").alias("business_entity_name"),
+            lit("").alias("company_structure"),
+            lit("").alias("year_incorporated"),
+            lit("").alias("reported_annual_revenue")
+        )
+    ]:
+        transformed_business_entity_details = transformed_business_entity_details.union(additional_row)
+    
+    transformed_business_entity_details = transformed_business_entity_details.withColumn(
+        "business_entity_details_id",
+        compute_uuid_udf(concat_ws(",", *[col for col in transformed_business_entity_details.columns]))
+    )
+    
+    transformed_business_entity_details.show()
+	
+	
+
+
+
+see now transformed_df itself has company_structure so didnt use transformed_json_df, but seems like code is not working
+
+new code
+# Transform `transformed_business_entity_details`
+    transformed_business_entity_details = transformed_df.select(*ss.business_entity_details).withColumn(
+    "company_structure",
+    when(col("filter_individual") == "Y", "individual").otherwise(col("company_structure"))).drop("filter_individual").dropDuplicates()
+
+    # Add additional rows to `transformed_business_entity_details`
+    for additional_row in [
+        transformed_df.select(
+            col("stg_jpmc_business_entity_id").alias("stg_business_entity_id"),
+            lit("jpmc").alias("business_entity_name"),
+            lit("").alias("company_structure"),
+            lit("").alias("year_incorporated"),
+            lit("").alias("reported_annual_revenue")
+        ),
+        transformed_df.select(
+            col("stg_payor_business_entity_id").alias("stg_business_entity_id"),
+            col("client_name").alias("business_entity_name"),
+            lit("").alias("company_structure"),
+            lit("").alias("year_incorporated"),
+            lit("").alias("reported_annual_revenue")
+        )
+    ]:
+        transformed_business_entity_details = transformed_business_entity_details.union(additional_row)
+    
+    transformed_business_entity_details = transformed_business_entity_details.withColumn(
+        "business_entity_details_id",
+        compute_uuid_udf(concat_ws(",", *[col for col in transformed_business_entity_details.columns]))
+    )
+    
+    transformed_business_entity_details.show()
