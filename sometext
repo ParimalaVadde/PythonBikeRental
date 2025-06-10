@@ -1,38 +1,41 @@
-# Transform contacts from associated_people data
-people_contacts = transformed_json_df.select(*ss.contacts).distinct().withColumnRenamed(
-    "associated_people__name", "contact_name"
-).withColumnRenamed(
-    "associated_people__title", "contact_title"
-)
+spend_analysis = ["stg_business_entity_id", "stg_payor_business_entity_id", "analysis_conducted_dt", "analysis_external_reference_id", "analysis_stage", "count_of_invoices", "payment_terms", "count_of_payments", "sum_of_payments", "period_start_date", "period_end_date", "payment_ccy", "actual_days_payment_outstanding", "payment_mode", "payment_term_days", "payment_terms_discount_ind", "payment_terms_discount_rate", "payment_terms_discount_days"]
 
-# Process vendor contacts - ONLY if vendor_contact_name is not null
-vendor_contacts_raw = transformed_df.select(*ss.vendor_contact).distinct()
-vendor_contacts_filtered = vendor_contacts_raw.filter(col("vendor_contact_name").isNotNull())
 
-# Check if there are any non-null vendor contacts
-vendor_contact_count = vendor_contacts_filtered.count()
 
-if vendor_contact_count > 0:
-    vendor_contacts_final = vendor_contacts_filtered.select(
-        col("stg_business_entity_id"),
-        col("vendor_contact_name").alias("contact_name"),
-        lit(None).cast("string").alias("contact_title")
+transformed_spend_analysis = transformed_df.select(*ss.spend_analysis).withColumnRenamed(
+		"stg_business_entity_id", "stg_payee_business_entity_id"
+	)
+
+    # Rename the column `stg_business_entity_id` to `stg_payee_business_entity_id`
+    transformed_spend_analysis = transformed_spend_analysis.withColumnRenamed(
+        "stg_business_entity_id", "stg_payee_business_entity_id"
+    ).withColumn(
+        "analysis_conducted_dt",
+        when(
+            col("analysis_conducted_dt").isNotNull(),
+            to_date(col("analysis_conducted_dt").substr(1, 8), "yyyyMMdd")
+        )
+    ).withColumn(
+        "period_start_date",
+        when(
+            col("period_start_date").isNotNull(),
+            to_date(col("period_start_date").substr(1, 8), "MMddyyyy")
+        )
+    ).withColumn(
+        "period_end_date",
+        when(
+            col("period_end_date").isNotNull(),
+            to_date(col("period_end_date").substr(1, 8), "MMddyyyy")
+        )
     )
-    # Union the two dataframes
-    all_contacts = people_contacts.unionByName(vendor_contacts_final)
-else:
-    # Use only the people contacts data
-    all_contacts = people_contacts
 
-# FIXED: Only keep contacts that actually have contact names
-transformed_contacts = all_contacts.filter(col("contact_name").isNotNull())
+    transformed_spend_analysis = transformed_spend_analysis.withColumn(
+		"spend_analysis_id",
+		compute_uuid_udf(concat_ws(",", *[col for col in transformed_spend_analysis.columns]))
+	)
+	
+	
+**********************
 
-# Generate UUIDs only for valid contacts
-if transformed_contacts.count() > 0:
-    transformed_contacts = transformed_contacts.withColumn(
-        "business_entity_contact_id",
-        compute_uuid_udf(concat_ws(",", *[col for col in transformed_contacts.columns]))
-    )
-    
-print("=== Final transformed_contacts ===")
-transformed_contacts.show()
+business_end_date	business_start_date
+2024-05-08T04:00:00.000Z	2025-05-08T04:00:00.000Z
