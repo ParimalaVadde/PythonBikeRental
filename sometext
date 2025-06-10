@@ -1,29 +1,32 @@
-from pyspark.sql.functions import col, when, to_date, concat_ws
-
-spend_analysis = ["stg_business_entity_id", "stg_payor_business_entity_id", "analysis_conducted_dt", 
-                 "analysis_external_reference_id", "analysis_stage", "count_of_invoices", "payment_terms", 
-                 "count_of_payments", "sum_of_payments", "period_start_date", "period_end_date", 
-                 "payment_ccy", "actual_days_payment_outstanding", "payment_mode", "payment_term_days", 
-                 "payment_terms_discount_ind", "payment_terms_discount_rate", "payment_terms_discount_days"]
-
-transformed_spend_analysis = transformed_df.select(*spend_analysis).withColumnRenamed(
-    "stg_business_entity_id", "stg_payee_business_entity_id"
-)
-
-# Since all dates are now in ISO timestamp format, we can directly convert them
-transformed_spend_analysis = transformed_spend_analysis.withColumn(
-    "analysis_conducted_dt",
-    when(col("analysis_conducted_dt").isNotNull(), to_date(col("analysis_conducted_dt")))
-).withColumn(
-    "period_start_date",
-    when(col("period_start_date").isNotNull(), to_date(col("period_start_date")))
-).withColumn(
-    "period_end_date",
-    when(col("period_end_date").isNotNull(), to_date(col("period_end_date")))
-)
-
-# Add the UUID column
-transformed_spend_analysis = transformed_spend_analysis.withColumn(
-    "spend_analysis_id",
-    compute_uuid_udf(concat_ws(",", *[col(c) for c in transformed_spend_analysis.columns]))
-)
+Columns	Data Origin	Format/Example Data	Description	Is this currently mapped in SDS	Does it need to be mapped 	Comments	column addition	Recommendation / Justification
+task_id	PFD	string	Task ID entered by user in the UI  	n	n	Take this as it’s the shrepoint id for which the analysis is being performed 	additional column	"* Recommendation: Create a new column `analysis_task_id` in `business_entity_spend_analysis` table
+* Justification: Should flow to SDS as per Andy. Useful for salesforce"
+sds_upload_name	PFD	string	name for sds upload enter by user	n	n		additional column	"* Recommendation: No need to map as specified
+* Justification: This is metadata about the upload process rather than business entity data"
+sds_upload_id	PFD	string	id unique to SDS upload	n	y	map this to business_entity_spend_analysis - analysis_external_reference_id instead of user_request_id	additional column	"* Recommendation: Map to `business_entity_spend_analysis.analysis_external_reference_id` (replacing user_request_id)
+* Justification: This provides a better unique identifier for the analysis than user_request_id"
+client_name	PFD	string	client name as entered by user	n	y	Take this as the client name 	additional column	"* Recommendation: Replace `vendor_name_cleaned` with `client_name` in the mapping to `business_entity_details.business_entity_name`
+* Justification: This provides more accurate client identification as specified in requirements"
+upload_user	PFD	string	sid of user the uploaded file to SDS	n	n		additional column	"* Recommendation: Might not need to mapped.
+* Justification: This is metadata about the user upload  rather than business entity data"
+sds_upload_ts	PFD	string	timestamp that the file was uploaded to SDS	n	n		additional column	"* Recommendation: Might not need to mapped.
+* Justification: This is metadata about the uploaded  timestamp than business entity data"
+sds_note	PFD	string	any notes added by the user when uploading to SDS	n	n		additional column	"* Recommendation: Might not need to mapped.
+* Justification: This is metadata about the uploaded  timestamp than business entity data"
+buying_entity	Spend File	string	placeholder column	n	n		additional column	"* Recommendation: No need to map (placeholder)
+* Justification: This is indicated as a placeholder column"
+supplier_ecid (match_supplier_id_clientreference)	jpmc reference data		supplier ecid, provided if the supplier is a client of jpmc	n	y		additional column	"* Recommendation: Map to `business_entity_identifiers.identifier_value` with a new `identifier_type` value of ""ECID""
+* Justification: This is a type of identifier for the business entity"
+scf_buyerlist			placeholder column	n	n		additional column	"* Recommendation: No need to map (placeholder)
+* Justification: This is indicated as a placeholder column"
+throughput_usd	apar	int	dollar amount going through scf to the supplier	n	y		additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` for these columns
+* Justification: These columns are all related to supply chain finance details"
+avg_spread	apar	float	average spread for scf programs with that supplier	n	y		additional column	
+avg_payment_terms	apar	float	average payment terms for scf programs with that supplier	n	y		additional column	
+rate_proposed	apar	float	scf program rate proposed by jpmc	n	y		additional column	
+rate_offered	apar	float	actual rate offered by jpmc	n	y		additional column	
+esg_discount	apar	float	appliead esg related discounts	n	y		additional column	
+ind_decline	apar	binary (Y/N)	if supplier has previously rejected attempts to onboard to jpmc scf	n	y		additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` of ""SCF_DECLINE_INDICATOR""
+* Justification: This is a characteristic of the business entity's relationship with JPMC"
+stp_partnershiplist	stp/cardcampaign	list	list of stp services that have a relationship with the supplier & stg codes from ccdw(stg_codelist has been deprecated)	n	y		additional column	"* Recommendation: Map to `business_entity_characteristics` with a new `characteristic_type` of ""STP_PARTNERSHIP_LIST""
+* Justification: This represents service partnerships for the entity"
