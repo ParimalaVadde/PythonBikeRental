@@ -71,3 +71,15 @@ dataframes_with_tables = {
 
 
 load_data = utl.load_dataframes_to_postgres(dataframes_with_tables, glueContext, ss, rds_token)
+
+
+
+
++----------------------+--------------------+-----------------------+-----------------+-----------------+--------------------------+
+|stg_business_entity_id|business_entity_name|reported_annual_revenue|year_incorporated|company_structure|business_entity_details_id|
++----------------------+--------------------+-----------------------+-----------------+-----------------+--------------------------+
+|  d00b7654-d1e1-c9e...|ANTIMICROBIAL THE...|                   null|             2006|      CORPORATION|      dd8ac747-e80f-ba3...|
+|  0381d6af-165a-08d...| FLOWERS BAKERIES GA|                   null|             null|             null|      ab35018a-831b-3c8...|
+|  573387dd-5c3c-da9...|       STARR STORAGE|                   null|             null|             null|      eb2ca7ff-006e-dd1...|
+|  3717cfe1-3663-08b...|     FEDERAL EXPRESS|                   null|             null|      CORPORATION|      59f26b32-587b-6ed...|
+|  c2887c02-8d97-f5b...|     NEPHROPATHOLOGY|                   null|             null|      
