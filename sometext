@@ -1,41 +1,29 @@
-spend_analysis = ["stg_business_entity_id", "stg_payor_business_entity_id", "analysis_conducted_dt", "analysis_external_reference_id", "analysis_stage", "count_of_invoices", "payment_terms", "count_of_payments", "sum_of_payments", "period_start_date", "period_end_date", "payment_ccy", "actual_days_payment_outstanding", "payment_mode", "payment_term_days", "payment_terms_discount_ind", "payment_terms_discount_rate", "payment_terms_discount_days"]
+from pyspark.sql.functions import col, when, to_date, concat_ws
 
+spend_analysis = ["stg_business_entity_id", "stg_payor_business_entity_id", "analysis_conducted_dt", 
+                 "analysis_external_reference_id", "analysis_stage", "count_of_invoices", "payment_terms", 
+                 "count_of_payments", "sum_of_payments", "period_start_date", "period_end_date", 
+                 "payment_ccy", "actual_days_payment_outstanding", "payment_mode", "payment_term_days", 
+                 "payment_terms_discount_ind", "payment_terms_discount_rate", "payment_terms_discount_days"]
 
+transformed_spend_analysis = transformed_df.select(*spend_analysis).withColumnRenamed(
+    "stg_business_entity_id", "stg_payee_business_entity_id"
+)
 
-transformed_spend_analysis = transformed_df.select(*ss.spend_analysis).withColumnRenamed(
-		"stg_business_entity_id", "stg_payee_business_entity_id"
-	)
+# Since all dates are now in ISO timestamp format, we can directly convert them
+transformed_spend_analysis = transformed_spend_analysis.withColumn(
+    "analysis_conducted_dt",
+    when(col("analysis_conducted_dt").isNotNull(), to_date(col("analysis_conducted_dt")))
+).withColumn(
+    "period_start_date",
+    when(col("period_start_date").isNotNull(), to_date(col("period_start_date")))
+).withColumn(
+    "period_end_date",
+    when(col("period_end_date").isNotNull(), to_date(col("period_end_date")))
+)
 
-    # Rename the column `stg_business_entity_id` to `stg_payee_business_entity_id`
-    transformed_spend_analysis = transformed_spend_analysis.withColumnRenamed(
-        "stg_business_entity_id", "stg_payee_business_entity_id"
-    ).withColumn(
-        "analysis_conducted_dt",
-        when(
-            col("analysis_conducted_dt").isNotNull(),
-            to_date(col("analysis_conducted_dt").substr(1, 8), "yyyyMMdd")
-        )
-    ).withColumn(
-        "period_start_date",
-        when(
-            col("period_start_date").isNotNull(),
-            to_date(col("period_start_date").substr(1, 8), "MMddyyyy")
-        )
-    ).withColumn(
-        "period_end_date",
-        when(
-            col("period_end_date").isNotNull(),
-            to_date(col("period_end_date").substr(1, 8), "MMddyyyy")
-        )
-    )
-
-    transformed_spend_analysis = transformed_spend_analysis.withColumn(
-		"spend_analysis_id",
-		compute_uuid_udf(concat_ws(",", *[col for col in transformed_spend_analysis.columns]))
-	)
-	
-	
-**********************
-
-business_end_date	business_start_date
-2024-05-08T04:00:00.000Z	2025-05-08T04:00:00.000Z
+# Add the UUID column
+transformed_spend_analysis = transformed_spend_analysis.withColumn(
+    "spend_analysis_id",
+    compute_uuid_udf(concat_ws(",", *[col(c) for c in transformed_spend_analysis.columns]))
+)
