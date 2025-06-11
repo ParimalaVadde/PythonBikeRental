@@ -19,3 +19,43 @@ Schema and mapping files updated to reflect new additions.
 Data format discrepancies (if any) identified and handled.
 Validation completed using sample/test data.
 No regression in existing pipeline functionality.
+
+
+Based on your reference, here's a user story for UAT testing and fixing issues for the Staging data load:
+
+## User Story
+**UAT Testing - Staging Data Load Issue Resolution**
+
+### Description
+Conduct comprehensive User Acceptance Testing (UAT) on the staging environment data load processes and resolve any identified issues to ensure data quality, integrity, and pipeline stability. This includes validating the recently integrated PFD source file changes, verifying data transformations, and addressing any defects or inconsistencies discovered during testing phase.
+
+### Acceptance Criteria:
+
+1. **Test Execution Completed**
+   - All UAT test cases executed against staging data load processes
+   - Test results documented with detailed findings and evidence
+
+2. **Issue Identification & Documentation**
+   - All data quality issues, pipeline failures, or discrepancies identified and logged
+   - Root cause analysis completed for each identified issue
+   - Issues prioritized based on severity and business impact
+
+3. **Defect Resolution**
+   - Critical and high-priority issues resolved and deployed to staging
+   - Data mapping corrections applied where necessary
+   - Schema inconsistencies addressed and validated
+
+4. **Data Validation & Verification**
+   - End-to-end data flow verified from source to target tables
+   - Data completeness and accuracy validated against expected results
+   - Business rules and transformation logic confirmed working correctly
+
+5. **Regression Testing**
+   - Existing functionality verified to ensure no new issues introduced
+   - Previously working data loads confirmed still operational
+   - Performance benchmarks maintained or improved
+
+6. **Sign-off & Documentation**
+   - UAT test summary report prepared with all results
+   - Updated documentation reflecting any changes made during issue resolution
+   - Business stakeholder sign-off obtained for staging environment readiness
