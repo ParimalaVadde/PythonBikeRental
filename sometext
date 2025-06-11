@@ -1,85 +1,21 @@
-# Transform `transformed_business_entity_details`
-    transformed_business_entity_details = transformed_df.select(*ss.business_entity_details).withColumn(
-    "company_structure",
-    when(col("filter_individual") == "Y", "individual").otherwise(col("company_structure"))).drop("filter_individual").dropDuplicates()
+i need to create user story for below give me description and acceptance criteria
 
-    # Add additional rows to `transformed_business_entity_details`
-    for additional_row in [
-        transformed_df.select(
-            col("stg_jpmc_business_entity_id").alias("stg_business_entity_id"),
-            lit("jpmc").alias("business_entity_name"),
-            lit("").alias("company_structure"),
-            lit("").alias("year_incorporated"),
-            lit("").alias("reported_annual_revenue")
-        ),
-        transformed_df.select(
-            col("stg_payor_business_entity_id").alias("stg_business_entity_id"),
-            col("client_name").alias("business_entity_name"),
-            lit("").alias("company_structure"),
-            lit("").alias("year_incorporated"),
-            lit("").alias("reported_annual_revenue")
-        )
-    ]:
-        transformed_business_entity_details = transformed_business_entity_details.union(additional_row)
-    
-    transformed_business_entity_details = transformed_business_entity_details.withColumn(
-        "business_entity_details_id",
-        compute_uuid_udf(concat_ws(",", *[col for col in transformed_business_entity_details.columns]))
-    )
-    
-    transformed_business_entity_details.show()
-
-
-business_entity_details = ["stg_business_entity_id", "business_entity_name", "reported_annual_revenue", "year_incorporated", "filter_individual", "company_structure"]
-
-business_entity_details_schema = [
-    "CAST(business_entity_details_id AS STRING) AS business_entity_details_id",  # Cast to STRING
-    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",          # Cast to STRING
-    "CAST(business_entity_name AS STRING) AS business_entity_name",              # Cast to STRING
-    "CAST(company_structure AS STRING) AS company_structure",                    # Cast to STRING
-   # "CAST(market_segment_type AS STRING) AS market_segment_type",                # Cast to STRING
-    "CAST(year_incorporated AS STRING) AS year_incorporated",                    # Cast to STRING
-    "CAST(reported_annual_revenue AS STRING) AS reported_annual_revenue",        # Cast to STRING
-    "CAST(true AS BOOLEAN) AS is_active",
-    "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
-    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
-    ]
-	
-	
-transformed_business_entity_details = transformed_business_entity_details.selectExpr(*ss.business_entity_details_schema).distinct()
-
-
-# List of DataFrames and their corresponding table names
-dataframes_with_tables = {
-    "business_entity": transformed_business_entity,
-    "business_entity_details": transformed_business_entity_details,
-    "business_entity_characteristics": transformed_melt_characteristics,
-    "physical_address": transformed_physical_address,
-    "business_entity_identifiers": transformed_identifiers,
-    "telecommunication_address": transformed_melt_telecommunication_address,
-    "electronic_address": transformed_melt_electronic_address,
-    "business_entity_spend_analysis": transformed_spend_analysis,
-    "restrictions": transformed_melt_restrictions,
-    "business_entity_industry_classification": transformed_melt_industry_classification,
-    "business_entity_card_association": transformed_association,
-    "business_entity_contacts": transformed_contacts,
-    "business_entity_relationships": transformed_relationship,
-    "business_entity_card_transactions_stability": transformed_transaction_stability,
-    "business_entity_card_revenues": transformed_revenue,
-    "business_entity_receivables_attribute": transformed_melt_payment_profile_attribute,
-}
-
-
-load_data = utl.load_dataframes_to_postgres(dataframes_with_tables, glueContext, ss, rds_token)
+UAT testing-fixing issues  for the Staging data load
 
 
 
+for ur reference earlier user story
+SDS Data Processing : Process New PFD source file & integrate additional fields into pipeline
 
-+----------------------+--------------------+-----------------------+-----------------+-----------------+--------------------------+
-|stg_business_entity_id|business_entity_name|reported_annual_revenue|year_incorporated|company_structure|business_entity_details_id|
-+----------------------+--------------------+-----------------------+-----------------+-----------------+--------------------------+
-|  d00b7654-d1e1-c9e...|ANTIMICROBIAL THE...|                   null|             2006|      CORPORATION|      dd8ac747-e80f-ba3...|
-|  0381d6af-165a-08d...| FLOWERS BAKERIES GA|                   null|             null|             null|      ab35018a-831b-3c8...|
-|  573387dd-5c3c-da9...|       STARR STORAGE|                   null|             null|             null|      eb2ca7ff-006e-dd1...|
-|  3717cfe1-3663-08b...|     FEDERAL EXPRESS|                   null|             null|      CORPORATION|      59f26b32-587b-6ed...|
-|  c2887c02-8d97-f5b...|     NEPHROPATHOLOGY|                   null|             null|      
+Description
+Ingest the newly shared PFD source file and enhance the SDS data pipeline to integrate additional fields. Update mapping logic, apply necessary schema changes, and ensure end-to-end data flow for new attributes is validated and functional. Address any format discrepancies or structural changes in the new file.
+
+
+Acceptance Criteria:
+
+New PFD source file successfully ingested into staging.
+All new fields correctly integrated across relevant tables.
+Schema and mapping files updated to reflect new additions.
+Data format discrepancies (if any) identified and handled.
+Validation completed using sample/test data.
+No regression in existing pipeline functionality.
