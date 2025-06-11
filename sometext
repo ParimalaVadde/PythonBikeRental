@@ -59,3 +59,36 @@ Conduct comprehensive User Acceptance Testing (UAT) on the staging environment d
    - UAT test summary report prepared with all results
    - Updated documentation reflecting any changes made during issue resolution
    - Business stakeholder sign-off obtained for staging environment readiness
+
+
+***********
+
+Here's a simplified version focused on manual testing with Excel documentation:
+
+## User Story
+**UAT Testing - Staging Data Load Issue Resolution**
+
+### Description
+Conduct manual User Acceptance Testing (UAT) on the staging environment data load processes and fix any identified issues. Test the PySpark Glue job functionality and document all findings in Excel format.
+
+### Acceptance Criteria:
+
+1. **Manual Testing Completed**
+   - All test scenarios executed manually on staging environment
+   - Excel test documentation created with test results
+
+2. **Issues Identified & Fixed**
+   - Data load issues identified and documented in Excel tracker
+   - All critical issues resolved in the PySpark Glue job
+
+3. **Data Validation Passed**
+   - Source to target data mapping verified manually
+   - Data quality checks completed with expected results
+
+4. **Documentation Updated**
+   - Excel test summary completed with pass/fail status
+   - Issue resolution log maintained in Excel format
+
+5. **Staging Environment Ready**
+   - All identified issues resolved and validated
+   - Staging data load process working as expected
