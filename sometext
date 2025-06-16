@@ -1,70 +1,45 @@
-existing functions 
-
-# Define a UDF to compute UUID from concatenated column values
-def compute_uuid(*cols):
-    try:
-        # Concatenate all column values into a single string
-        name = ','.join(str(col) if col is not None else '' for col in sorted(cols))
-        # Generate MD5 digest
-        digest = hashlib.md5(name.encode()).digest()
-        # Generate UUID from the digest
-        return   getstr(uuid.UUID(bytes=digest))
-    except Exception as e:
-        print(f"Error in compute_uuid: {e}")
-        return None
+in below function i need to make changes
 
 
-		
-and how it is called
+mapping_file_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/pfd/mapping/pfd_mapping.csv"
 
-# Register the UDF
-compute_uuid_udf = udf(utl.compute_uuid, StringType())
+def process_mapping_and_transform_data(source_df, mapping_file_path, output_data_path):
+    """
+    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
+    """
+    # Read the mapping file into a Glue DynamicFrame
+    mapping_df = glueContext.create_dynamic_frame.from_options(
+        connection_type="s3",
+        connection_options={"paths": [mapping_file_path]},
+        format="csv",
+        format_options={"withHeader": True}
+    ).toDF()
 
-# Define UDFs for computing business entity ID and buying entity ID
-        
-        
-source_df = source_df.withColumn(
-                        "stg_business_entity_id",
-                        when(
-                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
-                            ).otherwise(
-                                compute_uuid_udf(concat_ws(",", col("vendor_name_cleaned")))
-                            )
-                            )
-                
+    print("Reading mapping file completed")
+	
+	
 
-print("stg_business_entity_id column added.")
-
-
-
-now the issue is if all *cols are null then it shouldn't create uuid but it is creating uuid even when all cols are null.
-so how to fix this 
-
-only if we make changes in function compute_uuid(*cols) will it be fixed. how to fix it.
+currently we are reading csv file which is in specific s3 paths
+but now this shouldn't be the case
 
 
+means i need to import csv file in python file
+like it the csv file "pfd_mapping.csv" will be in same path as that of python file 
 
-**********************************************************************************************
+in that case what chnages to be done. will below changes work???
 
-# Define a UDF to compute UUID from concatenated column values
-def compute_uuid(*cols):
-    try:
-        # Check if all columns are null or empty
-        non_null_cols = [str(col) for col in cols if col is not None and str(col).strip() != '']
-        
-        # If no valid columns, return None
-        if not non_null_cols:
-            return None
-            
-        # Concatenate all non-null column values into a single string
-        name = ','.join(sorted(non_null_cols))
-        
-        # Generate MD5 digest
-        digest = hashlib.md5(name.encode()).digest()
-        
-        # Generate UUID from the digest
-        return str(uuid.UUID(bytes=digest))  # Fixed: removed getstr() function call
-        
-    except Exception as e:
-        print(f"Error in compute_uuid: {e}")
-        return None
+mapping_file_path = "pfd_mapping.csv"
+
+def process_mapping_and_transform_data(source_df, mapping_file_path, output_data_path):
+    """
+    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
+    """
+    # Read the mapping file into a Glue DynamicFrame
+    mapping_df = glueContext.create_dynamic_frame.from_options(
+        connection_type="s3",
+        connection_options={"paths": [mapping_file_path]},
+        format="csv",
+        format_options={"withHeader": True}
+    ).toDF()
+
+    print("Reading mapping file completed")
