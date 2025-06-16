@@ -1,8 +1,3 @@
-in below function i need to make changes
-
-
-mapping_file_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/pfd/mapping/pfd_mapping.csv"
-
 def process_mapping_and_transform_data(source_df, mapping_file_path, output_data_path):
     """
     Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
@@ -16,30 +11,9 @@ def process_mapping_and_transform_data(source_df, mapping_file_path, output_data
     ).toDF()
 
     print("Reading mapping file completed")
-	
-	
 
-currently we are reading csv file which is in specific s3 paths
-but now this shouldn't be the case
-
-
-means i need to import csv file in python file
-like it the csv file "pfd_mapping.csv" will be in same path as that of python file 
-
-in that case what chnages to be done. will below changes work???
-
-mapping_file_path = "pfd_mapping.csv"
-
-def process_mapping_and_transform_data(source_df, mapping_file_path, output_data_path):
-    """
-    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
-    """
-    # Read the mapping file into a Glue DynamicFrame
-    mapping_df = glueContext.create_dynamic_frame.from_options(
-        connection_type="s3",
-        connection_options={"paths": [mapping_file_path]},
-        format="csv",
-        format_options={"withHeader": True}
-    ).toDF()
-
-    print("Reading mapping file completed")
+    # Validate mapping DataFrame
+    if mapping_df.rdd.isEmpty():
+        raise ValueError("The mapping DataFrame is empty. Please check the mapping file.")
+    if "source_column" not in mapping_df.columns or "target_column" not in mapping_df.columns:
+        raise ValueError("The mapping DataFrame does not contain the required columns: 'source_column' and 'target_column'.")
