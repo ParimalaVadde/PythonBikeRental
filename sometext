@@ -1,19 +1,27 @@
+import os
+
+mapping_file_path = "pfd_mapping.csv"
+
 def process_mapping_and_transform_data(source_df, mapping_file_path, output_data_path):
     """
     Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
     """
-    # Read the mapping file into a Glue DynamicFrame
-    mapping_df = glueContext.create_dynamic_frame.from_options(
-        connection_type="s3",
-        connection_options={"paths": [mapping_file_path]},
-        format="csv",
-        format_options={"withHeader": True}
-    ).toDF()
-
+    # Get the full path of the CSV file (assuming it's in the same directory as the script)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    full_mapping_path = os.path.join(script_dir, mapping_file_path)
+    
+    # Read the CSV file using Spark DataFrame (not Glue DynamicFrame since it's local)
+    mapping_df = spark.read \
+        .option("header", "true") \
+        .option("inferSchema", "true") \
+        .csv(f"file://{full_mapping_path}")
+    
     print("Reading mapping file completed")
-
+    
     # Validate mapping DataFrame
     if mapping_df.rdd.isEmpty():
         raise ValueError("The mapping DataFrame is empty. Please check the mapping file.")
     if "source_column" not in mapping_df.columns or "target_column" not in mapping_df.columns:
         raise ValueError("The mapping DataFrame does not contain the required columns: 'source_column' and 'target_column'.")
+    
+    # Rest of your function logic continues here...
