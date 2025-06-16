@@ -1,9 +1,43 @@
-Here are 2 simple sub-tasks:
+existing functions 
 
-## Sub-task 1
-**Name:** Create UAT Test Documentation Template
-**Description:** Prepare Excel template with test scenarios, data validation checkpoints, and result tracking columns for manual testing of the staging data load process.
+# Define a UDF to compute UUID from concatenated column values
+def compute_uuid(*cols):
+    try:
+        # Concatenate all column values into a single string
+        name = ','.join(str(col) if col is not None else '' for col in sorted(cols))
+        # Generate MD5 digest
+        digest = hashlib.md5(name.encode()).digest()
+        # Generate UUID from the digest
+        return   getstr(uuid.UUID(bytes=digest))
+    except Exception as e:
+        print(f"Error in compute_uuid: {e}")
+        return None
 
-## Sub-task 2
-**Name:** Execute Manual Testing & Issue Resolution
-**Description:** Run manual tests on staging environment, document findings in Excel, identify and fix any data load issues in the PySpark Glue job, and update test results.
+
+		
+and how it is called
+
+# Register the UDF
+compute_uuid_udf = udf(utl.compute_uuid, StringType())
+
+# Define UDFs for computing business entity ID and buying entity ID
+        
+        
+source_df = source_df.withColumn(
+                        "stg_business_entity_id",
+                        when(
+                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+                            ).otherwise(
+                                compute_uuid_udf(concat_ws(",", col("vendor_name_cleaned")))
+                            )
+                            )
+                
+
+print("stg_business_entity_id column added.")
+
+
+
+now the issue is if all *cols are null then it shouldn't create uuid but it is creating uuid even when all cols are null.
+so how to fix this 
+
+only if we make changes in function compute_uuid(*cols) will it be fixed. how to fix it.
