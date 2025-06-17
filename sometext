@@ -1,53 +1,21 @@
-import os
+source_df = source_df.withColumn(
+                        "stg_business_entity_id",
+                        when(
+                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+                            ).otherwise(
+                                compute_uuid_udf(concat_ws(",", col("vendor_name_cleaned")))
+                            )
+                            )
+                
 
-mapping_file_path = "pfd_mapping.csv"
+                    
+        print("stg_business_entity_id column added.")
 
-def process_mapping_and_transform_data(source_df, mapping_file_path, output_data_path):
-    """
-    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
-    """
-    # Debug: Print current working directory and script location
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Script file location: {os.path.abspath(__file__)}")
-    print(f"Script directory: {os.path.dirname(os.path.abspath(__file__))}")
-    
-    # Try different path approaches
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    full_mapping_path = os.path.join(script_dir, mapping_file_path)
-    cwd_mapping_path = os.path.join(os.getcwd(), mapping_file_path)
-    
-    print(f"Script-based path: {full_mapping_path}")
-    print(f"CWD-based path: {cwd_mapping_path}")
-    
-    # Check which files exist
-    print(f"Script-based path exists: {os.path.exists(full_mapping_path)}")
-    print(f"CWD-based path exists: {os.path.exists(cwd_mapping_path)}")
-    
-    # List files in current directory
-    print(f"Files in current directory: {os.listdir(os.getcwd())}")
-    
-    # Try the path that exists
-    if os.path.exists(full_mapping_path):
-        file_path = full_mapping_path
-    elif os.path.exists(cwd_mapping_path):
-        file_path = cwd_mapping_path
-    else:
-        raise FileNotFoundError(f"Cannot find {mapping_file_path} in expected locations")
-    
-    print(f"Using file path: {file_path}")
-    
-    # Read the CSV file using Spark DataFrame
-    mapping_df = spark.read \
-        .option("header", "true") \
-        .option("inferSchema", "true") \
-        .csv(f"file://{file_path}")
-    
-    print("Reading mapping file completed")
-    
-    # Validate mapping DataFrame
-    if mapping_df.rdd.isEmpty():
-        raise ValueError("The mapping DataFrame is empty. Please check the mapping file.")
-    if "source_column" not in mapping_df.columns or "target_column" not in mapping_df.columns:
-        raise ValueError("The mapping DataFrame does not contain the required columns: 'source_column' and 'target_column'.")
-    
-    # Rest of your function logic continues here...
+
+        source_df = source_df.withColumn(
+                "stg_buying_entity",
+            compute_uuid_udf(concat_ws(",", col("client_name")))
+                )
+                
+        print("stg_buying_entity column added.")
+        source_df = source_df.filter(col("stg_business_entity_id").isNotNull())
