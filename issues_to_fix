@@ -1,15 +1,17 @@
-update sds_landing.analysis_pfd 
-set = '[{
-            "name": "MANI",
-            "titles": [
-            		"CEO",
-                "OFFICER"
-            ]
-        },
-        {
-            "name": "BUVI",
-            "titles": [
-               "OFFICER"
-            ]
-        }]'
-where client_name = 'TATA';
+UPDATE sds_landing.analysis_pfd 
+SET data_json = '[
+    {
+        "name": "MANI",
+        "titles": [
+            "CEO",
+            "OFFICER"
+        ]
+    },
+    {
+        "name": "BUVI",
+        "titles": [
+            "OFFICER"
+        ]
+    }
+]'
+WHERE client_name = 'TATA';
