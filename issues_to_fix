@@ -1,7 +1,15 @@
-SELECT * FROM sds_landing.analysis_pfd where client_name = "TATA"
-
-ERROR:  column "TATA" does not exist
-LINE 1: ...T * FROM sds_landing.analysis_pfd where client_name = "TATA"
-                                                                 ^
-SQL state: 42703
-Character: 60
+update sds_landing.analysis_pfd 
+set = '[{
+            "name": "MANI",
+            "titles": [
+            		"CEO",
+                "OFFICER"
+            ]
+        },
+        {
+            "name": "BUVI",
+            "titles": [
+               "OFFICER"
+            ]
+        }]'
+where client_name = 'TATA';
