@@ -1,48 +1,68 @@
-from pyspark.sql import DataFrame
-import boto3
-import os
+# Modified compute_uuid function - returns None for null inputs (gracefully handled)
+def compute_uuid(*cols):
+    try:
+        # Check if all columns are null, empty, or whitespace-only
+        has_valid_data = False
+        
+        for col in cols:
+            if col is not None:
+                col_str = str(col).strip()
+                if col_str:  # Non-empty after stripping whitespace
+                    has_valid_data = True
+                    break
+        
+        # If no valid data found, return None (this won't create a dummy record)
+        if not has_valid_data:
+            return None
+            
+        # Concatenate all column values into a single string
+        name = ','.join(str(col) if col is not None else '' for col in sorted(cols))
+        
+        # Generate MD5 digest
+        digest = hashlib.md5(name.encode()).digest()
+        
+        # Generate UUID from the digest
+        return str(uuid.UUID(bytes=digest))
+        
+    except Exception as e:
+        print(f"Error in compute_uuid: {e}")
+        return None
 
-def write_single_csv_to_s3(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
-    """
-    Writes a Spark DataFrame as a single CSV file with a specific name to S3.
+# Register the UDF
+compute_uuid_udf = udf(utl.compute_uuid, StringType())
 
-    Args:
-        df (DataFrame): The Spark DataFrame.
-        s3_bucket (str): The S3 bucket name (without `s3://`).
-        s3_key (str): The full S3 key for the final CSV file (e.g. `folder/my_file.csv`).
-        temp_path (str): Temporary S3 folder (e.g. `s3://my-bucket/tmp-folder/`)
-    """
-    # Coalesce to one partition and write to temp S3 directory
-    df.coalesce(1).write.mode("overwrite").option("header", True).csv(temp_path)
-
-    # Initialize boto3
-    s3 = boto3.client("s3")
-
-    # Extract bucket and prefix from temp path
-    temp_bucket = temp_path.replace("s3://", "").split("/")[0]
-    temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
-
-    # List objects in temp S3 folder to find the part file
-    objects = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
-    part_file = next(
-        obj['Key'] for obj in objects.get('Contents', []) if obj['Key'].endswith(".csv")
+# Modified transformations - use CASE/WHEN logic to prevent calling UDF with null data
+source_df = source_df.withColumn(
+    "stg_business_entity_id",
+    when(
+        col("sds_supplier_id").isNotNull(), 
+        col("sds_supplier_id")
+    ).when(
+        col("vendor_name_cleaned").isNotNull() & 
+        (trim(col("vendor_name_cleaned")) != ""),
+        compute_uuid_udf(col("vendor_name_cleaned"))  # Only call UDF when data exists
     )
-
-    # Copy part file to desired S3 location with custom name
-    s3.copy_object(
-        Bucket=s3_bucket,
-        CopySource={'Bucket': temp_bucket, 'Key': part_file},
-        Key=s3_key
-    )
-
-    # Optionally delete temp files
-    for obj in objects.get('Contents', []):
-        s3.delete_object(Bucket=temp_bucket, Key=obj['Key'])
-
-# Usage:
-write_single_csv_to_s3(
-    transformed_df,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-by081rbjj1vo",
-    s3_key="upsert/pfd_staging/transformed_df.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/pfd_staging/_tmp"
+    # NO .otherwise() - this means null values remain null, no dummy records created
 )
+
+print("stg_business_entity_id column added.")
+
+source_df = source_df.withColumn(
+    "stg_buying_entity",
+    when(
+        col("client_name").isNotNull() & 
+        (trim(col("client_name")) != ""),
+        compute_uuid_udf(col("client_name"))  # Only call UDF when data exists
+    )
+    # NO .otherwise() - this means null values remain null, no dummy records created
+)
+
+print("stg_buying_entity column added.")
+
+# Filter out rows where UUID columns are null (these had no valid source data)
+source_df = source_df.filter(
+    col("stg_business_entity_id").isNotNull() & 
+    col("stg_buying_entity").isNotNull()
+)
+
+print("Rows with null UUID values filtered out - ready for table insertion.")
