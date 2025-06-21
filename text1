@@ -1,1 +1,4 @@
-source_df = source_df.filter(col("stg_business_entity_id").isNotNull())
+test case name	descripton	expected output	actual output
+if all cols comefrom landing		entire data gets loaded	entire data gets loaded
+if any cols doesn't come		these cols data will not be loaded	these cols data will not be loaded
+if data format changes(data structure changes)		data doesn't get loaded	data doesn't get loaded
