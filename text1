@@ -2,3 +2,33 @@ test case name	descripton	expected output	actual output
 if all cols comefrom landing		entire data gets loaded	entire data gets loaded
 if any cols doesn't come		these cols data will not be loaded	these cols data will not be loaded
 if data format changes(data structure changes)		data doesn't get loaded	data doesn't get loaded
+
+
+
+SDS Data Processing : UAT Testing - Staging Data Load Issue Resolution
+Acceptance Criteria:
+
+1. Testing Completed
+   - All test scenarios executed on staging schema.
+   - Excel test documentation created with test results.
+
+2. Issues Identified & Fixed
+   - Data load issues identified and documented.
+   - All critical issues resolved in the PySpark Glue job.
+
+3. Data Validation Passed
+   - Source to target data mapping verified manually.
+   - Data quality checks completed with expected results.
+
+4. Documentation Updated
+   - Excel test summary completed with pass/fail status.
+   - Issue resolution log maintained in Excel format.
+
+5. Staging Environment Ready
+   - All identified issues resolved and validated.
+   - Staging data load process working as expected.
+
+Create UAT Test Documentation Template
+
+Description
+Prepare Excel template with test scenarios, data validation checkpoints, and result tracking columns for manual testing of the staging data load process.
