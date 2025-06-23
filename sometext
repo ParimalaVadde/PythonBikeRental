@@ -10,3 +10,18 @@ Prepare Excel template with test scenarios, data validation checkpoints, and res
 
 sub task 2
 Run tests on staging schema, document findings in Excel, identify and fix any data load issues in the PySpark Glue job, and update test results.
+
+
+
+Sure! Here are concise closing comments for your user story and sub-tasks:
+
+**Main User Story:**
+Completed comprehensive UAT on staging data loads, validating PFD source changes and ensuring data quality and pipeline stability by resolving all identified issues.
+
+**Sub-task 1:**
+Prepared detailed Excel template capturing test scenarios, validation points, and results for effective manual testing of staging data loads.
+
+**Sub-task 2:**
+Executed tests on staging schema, documented results, fixed data load issues in PySpark Glue jobs, and updated tracking accordingly.
+
+Want them more formal or casual?
