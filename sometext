@@ -54,3 +54,9 @@ Enable upload functionality in existing SDS pipeline with proper UUID handling a
 - Sort input columns for UUID computation
 - Filter null primary key values in staging tables
 - Create test cases for UUID functionality
+
+
+******************************************************************************************************************************
+
+As a data processing system user, I want to implement upload functionality in the existing SDS Data Processing pipeline so that data can be seamlessly uploaded through the UI and processed correctly in the staging environment with proper UUID handling and data integrity validation.
+The current pipeline needs enhancements to support upload operations, including modifications to the staging Glue job for UUID computation, removal of data truncation processes, and improvements to handle decimal columns and data synchronization between staging jobs and API endpoints.
