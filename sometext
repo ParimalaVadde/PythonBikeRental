@@ -1,27 +1,13 @@
-main user story
+SDS Data Processing : staging glue job changes for upload functionality in UI
 
-Conduct comprehensive User Acceptance Testing (UAT) on the staging data load processes and resolve any identified issues to ensure data quality, integrity, and pipeline stability. This includes validating the recently integrated PFD source file changes, verifying data transformations, and addressing any defects or inconsistencies discovered during testing phase.
+description
 
-
-sub task 1
-Prepare Excel template with test scenarios, data validation checkpoints, and result tracking columns for manual testing of the staging data load process.
-
-
-
-sub task 2
-Run tests on staging schema, document findings in Excel, identify and fix any data load issues in the PySpark Glue job, and update test results.
+1.compute uuid changes
+2.remove staging data truncate 
+3.Data is not loading completely in staging for contacts, revenues, transactions stability
 
 
-
-Sure! Here are concise closing comments for your user story and sub-tasks:
-
-**Main User Story:**
-Completed comprehensive UAT on staging data loads, validating PFD source changes and ensuring data quality and pipeline stability by resolving all identified issues.
-
-**Sub-task 1:**
-Prepared detailed Excel template capturing test scenarios, validation points, and results for effective manual testing of staging data loads.
-
-**Sub-task 2:**
-Executed tests on staging schema, documented results, fixed data load issues in PySpark Glue jobs, and updated tracking accordingly.
-
-Want them more formal or casual?
+staging main file changes to 
+  handle decimal columns while creating uuid to sync with uuid created by staging job and api
+  columns which are passed as input to compute uuid , need to be sorted to sync with api
+  apply filter condition to each taable in staging tables to filter out null values for primarey columnstest cases for compute uuiddata load issues for contacts,revenue, transaction_stability
