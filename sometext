@@ -1,62 +1,83 @@
-SDS Data Processing : staging glue job changes for upload functionality in UI
-
-description
-
-1.compute uuid changes
-2.remove staging data truncate 
-3.Data is not loading completely in staging for contacts, revenues, transactions stability
-
-
-staging main file changes to 
-  handle decimal columns while creating uuid to sync with uuid created by staging job and api
-  columns which are passed as input to compute uuid , need to be sorted to sync with api
-  apply filter condition to each taable in staging tables to filter out null values for primarey columnstest cases for compute uuiddata load issues for contacts,revenue, transaction_stability
-
-***************************************************************************************************************
-
-
-# JIRA User Story: SDS Upload Functionality
-
-## Story Name
-**Implement Upload Functionality in SDS Data Processing Pipeline**
-
-## Description
-Enable upload functionality in existing SDS pipeline with proper UUID handling and complete data loading for contacts, revenues, and transaction_stability tables.
-
-## Acceptance Criteria
-- [ ] Upload functionality works through UI
-- [ ] Complete data loading for contacts, revenues, transaction_stability
-- [ ] UUID computation synced between staging job and API
-- [ ] Decimal columns handled correctly in UUID creation
-- [ ] Null primary key values filtered from staging tables
-
----
-
-# Sub-Task 1: Staging Glue Job Changes
-
-## Title
-**Update Staging Glue Job for Upload Support**
-
-## Description
-- Modify UUID computation for uploaded data
-- Remove staging data truncate step
-- Fix incomplete data loading issues
-
----
-
-# Sub-Task 2: Main File Processing Updates
-
-## Title  
-**Enhance UUID Sync and Data Filtering**
-
-## Description
-- Handle decimal columns in UUID creation
-- Sort input columns for UUID computation
-- Filter null primary key values in staging tables
-- Create test cases for UUID functionality
+transformed_business_entity_details = transformed_business_entity_details.withColumn(
+        "business_entity_details_id",
+        compute_uuid_udf(concat_ws(",", *[col for col in transformed_business_entity_details.columns]))
+    )
+	
+	
+source_df = source_df.withColumn(
+                        "stg_business_entity_id",
+                        when(
+                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+                            ).otherwise(
+                                compute_uuid_udf(concat_ws(",", col("vendor_name_cleaned")))
+                            )
+                            )
+							
+							
+**************************************************************************************************************************************
 
 
-******************************************************************************************************************************
+def compute_uuid(data: dict):
+    values = []
+    decimal_columns = {
+        "card_transactions_stability__1m__daily_coverage_ratio",
+        "card_transactions_stability__1m__weekly_coverage_ratio",
+        "card_transactions_stability__1m__monthly_coverage_ratio",
+        "card_transactions_stability__3m__daily_coverage_ratio",
+        "card_transactions_stability__3m__weekly_coverage_ratio",
+        "card_transactions_stability__3m__monthly_coverage_ratio",
+        "card_transactions_stability__12m__daily_coverage_ratio",
+        "card_transactions_stability__12m__weekly_coverage_ratio",
+        "card_transactions_stability__12m__monthly_coverage_ratio",
+        "card_revenue__1m__average_monthly_amount",
+        "card_revenue__3m__average_monthly_amount",
+        "card_revenue__12m__average_monthly_amount",
+        "count_of_invoices",
+        "count_of_payments",
+        "sum_of_payments",
+        "chargeback_amount",
+        "chargeback_percentage",
+        "actual_days_payment_outstanding",
+        "payment_term_days",
+        "payment_terms_discount_rate",
+        "payment_terms_discount_days",
+    }
+    for column in sorted(data.keys()):
+        val = data[column]
+        if val and str(val).strip().lower() not in {"", "nan", "null", "none","nat"}:
+            if column in decimal_columns:
+                val = f"{val:.6f}"
+            values.append(str(val))
+        name = ','.join(values)
+        return str(uuid.UUID(bytes=hashlib.md5(name.encode()).digest())) if name else None
 
-As a data processing system user, I want to implement upload functionality in the existing SDS Data Processing pipeline so that data can be seamlessly uploaded through the UI and processed correctly in the staging environment with proper UUID handling and data integrity validation.
-The current pipeline needs enhancements to support upload operations, including modifications to the staging Glue job for UUID computation, removal of data truncation processes, and improvements to handle decimal columns and data synchronization between staging jobs and API endpoints.
+
+
+*********************************************************************************************************************************************************************************************************************************
+def compute_uuid(data: dict , decimal_columns):
+    for column in sorted(data.keys()):
+        val = data[column]
+        if val and str(val).strip().lower() not in {"", "nan", "null", "none","nat"}:
+            if column in decimal_columns:
+                val = f"{val:.6f}"
+            values.append(str(val))
+        name = ','.join(values)
+        return str(uuid.UUID(bytes=hashlib.md5(name.encode()).digest())) if name else None
+
+
+****************************************************
+
+source_df = source_df.withColumn(
+                        "stg_business_entity_id",
+                        when(
+                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+                            ).otherwise(
+                                compute_uuid_udf(struct("vendor_name_cleaned"))
+                            )
+                            )
+							
+							
+transformed_business_entity_details = transformed_business_entity_details.withColumn(
+        "business_entity_details_id",
+        compute_uuid_udf(struct(*transformed_business_entity_details.columns))
+    )
