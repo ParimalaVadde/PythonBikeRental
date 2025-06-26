@@ -1,111 +1,39 @@
-# Define a UDF to compute UUID from concatenated column values
-def compute_uuid(*cols):
-    try:
-        # Concatenate all column values into a single string
-        name = ','.join(str(col) if col is not None else '' for col in sorted(cols))
-        # Generate MD5 digest
-        digest = hashlib.md5(name.encode()).digest()
-        # Generate UUID from the digest
-        return str(uuid.UUID(bytes=digest))
-    except Exception as e:
-        print(f"Error in compute_uuid: {e}")
-        return None
-***************************************************************************************************************************************************************
-transformed_business_entity_details = transformed_business_entity_details.withColumn(
-        "business_entity_details_id",
-        compute_uuid_udf(concat_ws(",", *[col for col in transformed_business_entity_details.columns]))
-    )
-	
-	
-source_df = source_df.withColumn(
-                        "stg_business_entity_id",
-                        when(
-                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
-                            ).otherwise(
-                                compute_uuid_udf(concat_ws(",", col("vendor_name_cleaned")))
-                            )
-                            )
-							
-							
-**************************************************************************************************************************************
+from pyspark.sql.functions import udf, struct, when, col
+from pyspark.sql.types import StringType
+import hashlib
+import uuid
 
-
-def compute_uuid(data: dict):
+def compute_uuid(data_row, decimal_columns):
     values = []
-    decimal_columns = {
-        "card_transactions_stability__1m__daily_coverage_ratio",
-        "card_transactions_stability__1m__weekly_coverage_ratio",
-        "card_transactions_stability__1m__monthly_coverage_ratio",
-        "card_transactions_stability__3m__daily_coverage_ratio",
-        "card_transactions_stability__3m__weekly_coverage_ratio",
-        "card_transactions_stability__3m__monthly_coverage_ratio",
-        "card_transactions_stability__12m__daily_coverage_ratio",
-        "card_transactions_stability__12m__weekly_coverage_ratio",
-        "card_transactions_stability__12m__monthly_coverage_ratio",
-        "card_revenue__1m__average_monthly_amount",
-        "card_revenue__3m__average_monthly_amount",
-        "card_revenue__12m__average_monthly_amount",
-        "count_of_invoices",
-        "count_of_payments",
-        "sum_of_payments",
-        "chargeback_amount",
-        "chargeback_percentage",
-        "actual_days_payment_outstanding",
-        "payment_term_days",
-        "payment_terms_discount_rate",
-        "payment_terms_discount_days",
-    }
+    
+    # Convert Row object to dictionary
+    data = data_row.asDict()
+    
+    # Sort by column names to ensure consistent order
     for column in sorted(data.keys()):
         val = data[column]
-        if val and str(val).strip().lower() not in {"", "nan", "null", "none","nat"}:
+        if val is not None and str(val).strip().lower() not in {"", "nan", "null", "none", "nat"}:
             if column in decimal_columns:
-                val = f"{val:.6f}"
+                val = f"{float(val):.6f}"
             values.append(str(val))
-        name = ','.join(values)
-        return str(uuid.UUID(bytes=hashlib.md5(name.encode()).digest())) if name else None
+    
+    name = ','.join(values)
+    return str(uuid.UUID(bytes=hashlib.md5(name.encode()).digest())) if name else None
 
+# Register UDF
+compute_uuid_udf = udf(lambda x: compute_uuid(x, decimal_columns), StringType())
 
-
-*********************************************************************************************************************************************************************************************************************************
-def compute_uuid(data: dict , decimal_columns):
-    for column in sorted(data.keys()):
-        val = data[column]
-        if val and str(val).strip().lower() not in {"", "nan", "null", "none","nat"}:
-            if column in decimal_columns:
-                val = f"{val:.6f}"
-            values.append(str(val))
-        name = ','.join(values)
-        return str(uuid.UUID(bytes=hashlib.md5(name.encode()).digest())) if name else None
-
-
-****************************************************
+# Usage - works for both single and multiple columns
+transformed_business_entity_details = transformed_business_entity_details.withColumn(
+    "business_entity_details_id",
+    compute_uuid_udf(struct(*transformed_business_entity_details.columns))
+)
 
 source_df = source_df.withColumn(
-                        "stg_business_entity_id",
-                        when(
-                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
-                            ).otherwise(
-                                compute_uuid_udf(struct("vendor_name_cleaned"))
-                            )
-                            )
-							
-							
-transformed_business_entity_details = transformed_business_entity_details.withColumn(
-        "business_entity_details_id",
-        compute_uuid_udf(struct(*transformed_business_entity_details.columns))
+    "stg_business_entity_id",
+    when(
+        col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+    ).otherwise(
+        compute_uuid_udf(struct("vendor_name_cleaned"))
     )
-
-**********************************************************************************
-
-# Define a UDF to compute UUID from concatenated column values
-def compute_uuid(*cols):
-    try:
-        # Concatenate all column values into a single string
-        name = ','.join(str(col) if col is not None else '' for col in sorted(cols))
-        # Generate MD5 digest
-        digest = hashlib.md5(name.encode()).digest()
-        # Generate UUID from the digest
-        return str(uuid.UUID(bytes=digest))
-    except Exception as e:
-        print(f"Error in compute_uuid: {e}")
-        return None
+)
