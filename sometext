@@ -81,3 +81,18 @@ transformed_business_entity_details = transformed_business_entity_details.withCo
         "business_entity_details_id",
         compute_uuid_udf(struct(*transformed_business_entity_details.columns))
     )
+
+**********************************************************************************
+
+# Define a UDF to compute UUID from concatenated column values
+def compute_uuid(*cols):
+    try:
+        # Concatenate all column values into a single string
+        name = ','.join(str(col) if col is not None else '' for col in sorted(cols))
+        # Generate MD5 digest
+        digest = hashlib.md5(name.encode()).digest()
+        # Generate UUID from the digest
+        return str(uuid.UUID(bytes=digest))
+    except Exception as e:
+        print(f"Error in compute_uuid: {e}")
+        return None
