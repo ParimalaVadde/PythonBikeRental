@@ -17,3 +17,9 @@ transformed_melt_industry_classification = transformed_melt_industry_classificat
 	
 	
 transformed_melt_industry_classification = transformed_melt_industry_classification.selectExpr(*ss.industry_classification_schema).distinct()
+
+
+
+transformed_melt_industry_classification = transformed_melt_industry_classification.filter(
+    col("classification_id").isNotNull() & col("stg_business_entity_id").isNotNull()
+).selectExpr(*ss.industry_classification_schema).distinct()
