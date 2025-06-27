@@ -7,3 +7,13 @@ null_conditions = [col(c).isNotNull() for c in columns_to_check]
 transformed_business_entity_details = transformed_business_entity_details.filter(
     reduce(lambda x, y: x & y, null_conditions)
 )
+
+
+
+
+transformed_melt_industry_classification = transformed_melt_industry_classification.filter(
+    col("classification_id").isNotNull() & col("stg_business_entity_id").isNotNull()
+    )
+	
+	
+transformed_melt_industry_classification = transformed_melt_industry_classification.selectExpr(*ss.industry_classification_schema).distinct()
