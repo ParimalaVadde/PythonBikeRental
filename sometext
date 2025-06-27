@@ -1,2 +1,9 @@
 transformed_business_entity_details = transformed_business_entity_details.filter(col("stg_business_entity_id").isNotNull())
 transformed_business_entity_details = transformed_business_entity_details.filter(col("business_entity_details_id").isNotNull())
+
+
+columns_to_check = ["stg_business_entity_id", "business_entity_details_id"]
+null_conditions = [col(c).isNotNull() for c in columns_to_check]
+transformed_business_entity_details = transformed_business_entity_details.filter(
+    reduce(lambda x, y: x & y, null_conditions)
+)
