@@ -1,25 +1,31 @@
-transformed_business_entity_details = transformed_business_entity_details.filter(col("stg_business_entity_id").isNotNull())
-transformed_business_entity_details = transformed_business_entity_details.filter(col("business_entity_details_id").isNotNull())
-
-
-columns_to_check = ["stg_business_entity_id", "business_entity_details_id"]
-null_conditions = [col(c).isNotNull() for c in columns_to_check]
-transformed_business_entity_details = transformed_business_entity_details.filter(
-    reduce(lambda x, y: x & y, null_conditions)
-)
-
-
-
-
-transformed_melt_industry_classification = transformed_melt_industry_classification.filter(
-    col("classification_id").isNotNull() & col("stg_business_entity_id").isNotNull()
+business_entity_details_schema = [
+    "CAST(business_entity_details_id AS STRING) AS business_entity_details_id",  # Cast to STRING
+    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",          # Cast to STRING
+    "CAST(business_entity_name AS STRING) AS business_entity_name",              # Cast to STRING
+    "CAST(company_structure AS STRING) AS company_structure",                    # Cast to STRING
+   # "CAST(market_segment_type AS STRING) AS market_segment_type",                # Cast to STRING
+    "CAST(year_incorporated AS STRING) AS year_incorporated",                    # Cast to STRING
+    "CAST(reported_annual_revenue AS STRING) AS reported_annual_revenue",        # Cast to STRING
+    "CAST(true AS BOOLEAN) AS is_active",
+    "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
+    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
+    ]
+	
+	
+transformed_business_entity_details = transformed_business_entity_details.withColumn(
+        "business_entity_details_id",
+        compute_uuid_udf(struct(*transformed_business_entity_details.columns))
     )
 	
 	
-transformed_melt_industry_classification = transformed_melt_industry_classification.selectExpr(*ss.industry_classification_schema).distinct()
+above is existing code 
 
+now i want to make following changes 
 
+in business_entity_details_schema i want to update from "CAST(true AS BOOLEAN) AS is_active" to "CAST(is_active AS BOOLEAN) AS is_active"
 
-transformed_melt_industry_classification = transformed_melt_industry_classification.filter(
-    col("classification_id").isNotNull() & col("stg_business_entity_id").isNotNull()
-).selectExpr(*ss.industry_classification_schema).distinct()
+and in transformed_business_entity_details df , i want to create a column with name is_active and pupolatevalue as True for all rows
+
+so make these changes and give me
+
+like in df how to add True as value for all rows . will it be asgtring or boolean
