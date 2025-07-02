@@ -1,3 +1,4 @@
+# Updated business_entity_details_schema
 business_entity_details_schema = [
     "CAST(business_entity_details_id AS STRING) AS business_entity_details_id",  # Cast to STRING
     "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",          # Cast to STRING
@@ -6,26 +7,21 @@ business_entity_details_schema = [
    # "CAST(market_segment_type AS STRING) AS market_segment_type",                # Cast to STRING
     "CAST(year_incorporated AS STRING) AS year_incorporated",                    # Cast to STRING
     "CAST(reported_annual_revenue AS STRING) AS reported_annual_revenue",        # Cast to STRING
-    "CAST(true AS BOOLEAN) AS is_active",
+    "CAST(is_active AS BOOLEAN) AS is_active",                                   # Updated: Cast existing column instead of hardcoded true
     "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
     "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
-    ]
-	
-	
+]
+
+# Add is_active column with True values (as Boolean) to the DataFrame
+from pyspark.sql.functions import lit
+
 transformed_business_entity_details = transformed_business_entity_details.withColumn(
-        "business_entity_details_id",
-        compute_uuid_udf(struct(*transformed_business_entity_details.columns))
-    )
-	
-	
-above is existing code 
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
 
-now i want to make following changes 
-
-in business_entity_details_schema i want to update from "CAST(true AS BOOLEAN) AS is_active" to "CAST(is_active AS BOOLEAN) AS is_active"
-
-and in transformed_business_entity_details df , i want to create a column with name is_active and pupolatevalue as True for all rows
-
-so make these changes and give me
-
-like in df how to add True as value for all rows . will it be asgtring or boolean
+# Then apply the UUID computation
+transformed_business_entity_details = transformed_business_entity_details.withColumn(
+    "business_entity_details_id",
+    compute_uuid_udf(struct(*transformed_business_entity_details.columns))
+)
