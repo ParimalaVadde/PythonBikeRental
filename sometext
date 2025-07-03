@@ -18,3 +18,12 @@ transformed_relationship = transformed_relationship.withColumn(
     "business_entity_relationship_id",
     compute_uuid_udf(transformed_relationship_columns)
 )
+
+
+
+from pyspark.sql.functions import struct, col
+
+transformed_relationship = transformed_relationship.withColumn(
+    "business_entity_relationship_id",
+    compute_uuid_udf(struct(*[col(c) for c in transformed_relationship_columns]))
+)
