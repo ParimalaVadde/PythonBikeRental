@@ -1,1 +1,8 @@
 transformed_relationship_columns = transformed_relationship.columns - ['client_ecid', 'client_vendor_id', 'client_vendor_site_id']
+
+
+
+transformed_relationship_columns = [
+    col for col in transformed_relationship.columns 
+    if col not in ['client_ecid', 'client_vendor_id', 'client_vendor_site_id']
+]
