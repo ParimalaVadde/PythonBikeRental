@@ -1,16 +1,18 @@
-transformed_association
+card revenue	dates are not as per the db format
 
-matched_level_2, matched_level_3_summary, matched_level_3_lineitem
+pyspark df name : transformed_revenue
+stg_business_entity_id	end_date	card_revenue__1m__start_date	card_revenue__1m__average_monthly_amount	card_revenue__3m__start_date	card_revenue__3m__average_monthly_amount	card_revenue__12m__start_date	card_revenue__12m__average_monthly_amount	is_active	revenue_id
+6af7db6f-50e6-23bd-f58a-f8a917ad0e71	3/31/2025	3/1/2025	8815233.778	1/1/2025	8310170.771	4/1/2024	7844672.104	TRUE	ebfd5d81-6571-e55a-be78-38ec03ce4478
+0033fea6-45bf-3125-6ec3-983502974b35	3/31/2025	3/1/2025	6767731.412	1/1/2025	5545336.813	4/1/2024	5226886.202	TRUE	b0a278fe-3f2d-b160-9ce6-69e991cefc21
 
 
-# Define the columns to convert
-columns_to_convert = ['matched_level_2', 'matched_level_3_summary', 'matched_level_3_lineitem']
+columns to consider in data frame 
+see for below columns when i download the df in csv format , the date format is 3/31/2025
+card_revenue__1m__start_date
+card_revenue__3m__start_date
+card_revenue__12m__start_date
 
-# Method 1: Using when() function
-for col_name in columns_to_convert:
-    transformed_association = transformed_association.withColumn(
-        col_name,
-        F.when(F.lower(F.col(col_name)) == 'yes', True)
-         .when(F.lower(F.col(col_name)) == 'no', False)
-         .otherwise(None)  # Keep empty/null values as None
-    )
+
+but in db its showing as 2025-03-31
+
+can we fix this in df, df to display in exact format
