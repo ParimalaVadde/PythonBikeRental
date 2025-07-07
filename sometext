@@ -1,54 +1,104 @@
-# Transform `transformed_revenue`
-    transformed_revenue = transformed_json_df.select(*ss.revenue).withColumnRenamed(
-        "card_revenue__end_date", "end_date"
-    )
+decimal_columns = ["reported_annual_revenue","sum_of_payments","chargeback_amount","chargeback_percentage","payment_terms_discount_rate","card_revenue__1m__average_monthly_amount","card_revenue__3m__average_monthly_amount","card_revenue__12m__average_monthly_amount","card_transactions_stability__1m__daily_coverage_ratio","card_transactions_stability__1m__weekly_coverage_ratio","card_transactions_stability__1m__monthly_coverage_ratio","card_transactions_stability__3m__daily_coverage_ratio","card_transactions_stability__3m__weekly_coverage_ratio","card_transactions_stability__3m__monthly_coverage_ratio","card_transactions_stability__12m__daily_coverage_ratio","card_transactions_stability__12m__weekly_coverage_ratio","card_transactions_stability__12m__monthly_coverage_ratio"]
 
-    transformed_revenue = transformed_revenue.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-    )
-    
-    date_columns = [
-    'card_revenue__1m__start_date',
-    'card_revenue__3m__start_date', 
-    'card_revenue__12m__start_date'
-    ]
 
-    # Method 1: Convert using to_date() and date_format()
-    for col_name in date_columns:
-        transformed_revenue = transformed_revenue.withColumn(
-            col_name,
-            F.date_format(
-                F.to_date(F.col(col_name), "M/d/yyyy"),
-                "yyyy-MM-dd"
-            )
-        )
-    
-    print("********************business_entity_card_revenues***************************************")
-    print(sorted(transformed_revenue.columns))
-    print("**********************************************************************************")
-    transformed_revenue = transformed_revenue.withColumn(
-        "revenue_id",
-        compute_uuid_udf(struct(*transformed_revenue.columns))
-    ).dropDuplicates()
-    
-    write_single_csv_to_s3_fixed(
-        transformed_revenue,
+write_single_csv_to_s3_fixed(
+        transformed_spend_analysis,
         s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-        s3_key="upsert/pfd_staging/transformed_revenue.csv",
+        s3_key="upsert/pfd_staging/transformed_spend_analysis_v1.csv",
         temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
     )
 	
-
-transformed_revenue.csv
-stg_business_entity_id	end_date	card_revenue__1m__start_date	card_revenue__1m__average_monthly_amount	card_revenue__3m__start_date	card_revenue__3m__average_monthly_amount	card_revenue__12m__start_date	card_revenue__12m__average_monthly_amount	is_active	revenue_id
-6af7db6f-50e6-23bd-f58a-f8a917ad0e71	3/31/2025		8815233.778		8310170.771		7844672.104	TRUE	db180863-2bda-2f89-cbbc-fe903f520930
-0033fea6-45bf-3125-6ec3-983502974b35	3/31/2025		6767731.412		5545336.813		5226886.202	TRUE	f80129a8-679c-6c1b-0c71-dee898c1388d
-
-
-now i m not getting values for 'card_revenue__1m__start_date',
-    'card_revenue__3m__start_date', 
-    'card_revenue__12m__start_date'
 	
+ss.spend_analysis_schema = [
+    "CAST(spend_analysis_id AS STRING) AS spend_analysis_id",                          # Cast to STRING
+    "CAST(stg_payor_business_entity_id AS STRING) AS stg_payor_business_entity_id",    # Cast to STRING
+    "CAST(stg_payee_business_entity_id AS STRING) AS stg_payee_business_entity_id",    # Cast to STRING
+    "CAST(analysis_conducted_dt AS STRING) AS analysis_conducted_dt",                  # Cast to STRING
+    "CAST(analysis_external_reference_id AS STRING) AS analysis_external_reference_id",# Cast to STRING
+    "CAST(analysis_task_id AS STRING) AS analysis_task_id",                            # Cast to STRING
+    "CAST(analysis_stage AS STRING) AS analysis_stage",                                # Cast to STRING
+    "CAST(count_of_invoices AS NUMERIC) AS count_of_invoices",                         # Cast to NUMERIC
+    "CAST(payment_terms AS STRING) AS payment_terms",                                  # Cast to STRING
+    "CAST(count_of_payments AS NUMERIC) AS count_of_payments",                         # Cast to NUMERIC
+    "CAST(sum_of_payments AS NUMERIC) AS sum_of_payments",                             # Cast to NUMERIC
+    "CAST(period_start_date AS DATE) AS period_start_date",                            # Cast to DATE
+    "CAST(period_end_date AS DATE) AS period_end_date",                                # Cast to DATE
+    "CAST(payment_ccy AS STRING) AS payment_ccy",                                      # Cast to STRING
+   # "CAST(chargeback_amount AS NUMERIC) AS chargeback_amount",                         # Cast to NUMERIC
+    #"CAST(chargeback_percentage AS NUMERIC) AS chargeback_percentage",                 # Cast to NUMERIC
+    "CAST(actual_days_payment_outstanding AS NUMERIC) AS actual_days_payment_outstanding", # Cast to NUMERIC
+    "CAST(payment_mode AS STRING) AS payment_mode",                                    # Cast to STRING
+    "CAST(payment_term_days AS NUMERIC) AS payment_term_days",                         # Cast to NUMERIC
+    "CAST(payment_terms_discount_ind AS STRING) AS payment_terms_discount_ind",        # Cast to STRING
+    "CAST(payment_terms_discount_rate AS NUMERIC) AS payment_terms_discount_rate",     # Cast to NUMERIC
+    "CAST(payment_terms_discount_days AS NUMERIC) AS payment_terms_discount_days",     # Cast to NUMERIC
+    #"CAST(source_system_id AS STRING) AS source_system_id",                            # Cast to STRING
+    #"CAST(source_system_name AS STRING) AS source_system_name",                        # Cast to STRING
+    "CAST(is_active AS BOOLEAN) AS is_active",
+    "CAST('PFD' AS STRING) AS created_by",                                             # Add constant value for created_by
+    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                           # Add current timestamp for created_date
+    ]
+
+transformed_spend_analysis = transformed_spend_analysis.filter(
+    col("spend_analysis_id").isNotNull() & col("stg_payee_business_entity_id").isNotNull()
+).selectExpr(*ss.spend_analysis_schema).distinct()
+
+
+write_single_csv_to_s3_fixed(
+        transformed_spend_analysis,
+        s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+        s3_key="upsert/pfd_staging/transformed_spend_analysis_v2.csv",
+        temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+    )
 	
-	its empty
+schema in postgress db
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_spend_analysis
+(
+    spend_analysis_id character varying COLLATE pg_catalog."default",
+    stg_payor_business_entity_id character varying COLLATE pg_catalog."default",
+    stg_payee_business_entity_id character varying COLLATE pg_catalog."default",
+    analysis_conducted_dt character varying COLLATE pg_catalog."default",
+    analysis_task_id character varying COLLATE pg_catalog."default",
+    analysis_external_reference_id character varying COLLATE pg_catalog."default",
+    analysis_stage character varying COLLATE pg_catalog."default",
+    count_of_invoices integer,
+    payment_terms character varying COLLATE pg_catalog."default",
+    count_of_payments integer,
+    sum_of_payments numeric,
+    period_start_date date,
+    period_end_date date,
+    payment_ccy character varying COLLATE pg_catalog."default",
+    chargeback_amount numeric,
+    chargeback_percentage numeric,
+    actual_days_payment_outstanding integer,
+    payment_mode character varying COLLATE pg_catalog."default",
+    payment_term_days integer,
+    payment_terms_discount_ind character varying COLLATE pg_catalog."default",
+    payment_terms_discount_rate numeric,
+    payment_terms_discount_days integer,
+    source_system_id character varying COLLATE pg_catalog."default",
+    source_system_name character varying COLLATE pg_catalog."default",
+    is_active boolean,
+    created_by character varying COLLATE pg_catalog."default",
+    created_date timestamp without time zone
+)
+
+in transformed_spend_analysis_v1
+sum_of_payments
+0
+0
+2657.46
+498877.54
+3874.44
+60000
+
+
+in transformed_spend_analysis_v2 (no decimal values but i want deciamal values . postgress db schema is correct, any changes required in ss.spend_analysis_schema, seems line numeric in ss.spend_analysis_schema not taking decimal)
+
+sum_of_payments
+0
+0
+2657
+498877
+3874
+60000
