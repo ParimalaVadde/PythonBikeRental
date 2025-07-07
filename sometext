@@ -1,3 +1,16 @@
 transformed_association
 
 matched_level_2, matched_level_3_summary, matched_level_3_lineitem
+
+
+# Define the columns to convert
+columns_to_convert = ['matched_level_2', 'matched_level_3_summary', 'matched_level_3_lineitem']
+
+# Method 1: Using when() function
+for col_name in columns_to_convert:
+    transformed_association = transformed_association.withColumn(
+        col_name,
+        F.when(F.lower(F.col(col_name)) == 'yes', True)
+         .when(F.lower(F.col(col_name)) == 'no', False)
+         .otherwise(None)  # Keep empty/null values as None
+    )
