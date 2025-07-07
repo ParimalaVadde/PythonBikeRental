@@ -72,3 +72,27 @@ write_single_csv_to_s3_fixed(
 	
 i m getting below error
 Error Category: QUERY_ERROR; Failed Line Number: 1071; AnalysisException: CSV data source does not support void data type.
+
+
+
+
+# Check for void data types before proceeding
+print("Data types in transformed_relationship:")
+for col_name, col_type in transformed_relationship.dtypes:
+    print(f"{col_name}: {col_type}")
+
+# Find columns with void data type
+void_columns = [col_name for col_name, col_type in transformed_relationship.dtypes if col_type == 'void']
+print(f"Void columns found: {void_columns}")
+
+# Fix void columns by casting them to string
+from pyspark.sql.functions import col, lit, when, isnan, isnull
+from pyspark.sql.types import StringType
+
+if void_columns:
+    print(f"Fixing void columns: {void_columns}")
+    for void_col in void_columns:
+        transformed_relationship = transformed_relationship.withColumn(
+            void_col, 
+            lit(None).cast(StringType())  # Cast void to nullable string
+        )
