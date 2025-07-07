@@ -102,3 +102,32 @@ sum_of_payments
 498877
 3874
 60000
+
+
+*************************************************************************************************************
+
+ss.spend_analysis_schema = [
+    "CAST(spend_analysis_id AS STRING) AS spend_analysis_id",
+    "CAST(stg_payor_business_entity_id AS STRING) AS stg_payor_business_entity_id",
+    "CAST(stg_payee_business_entity_id AS STRING) AS stg_payee_business_entity_id",
+    "CAST(analysis_conducted_dt AS STRING) AS analysis_conducted_dt",
+    "CAST(analysis_external_reference_id AS STRING) AS analysis_external_reference_id",
+    "CAST(analysis_task_id AS STRING) AS analysis_task_id",
+    "CAST(analysis_stage AS STRING) AS analysis_stage",
+    "CAST(count_of_invoices AS INT) AS count_of_invoices",
+    "CAST(payment_terms AS STRING) AS payment_terms",
+    "CAST(count_of_payments AS INT) AS count_of_payments",
+    "CAST(sum_of_payments AS DECIMAL(18,2)) AS sum_of_payments",  # Use DECIMAL with precision
+    "CAST(period_start_date AS DATE) AS period_start_date",
+    "CAST(period_end_date AS DATE) AS period_end_date",
+    "CAST(payment_ccy AS STRING) AS payment_ccy",
+    "CAST(actual_days_payment_outstanding AS INT) AS actual_days_payment_outstanding",
+    "CAST(payment_mode AS STRING) AS payment_mode",
+    "CAST(payment_term_days AS INT) AS payment_term_days",
+    "CAST(payment_terms_discount_ind AS STRING) AS payment_terms_discount_ind",
+    "CAST(payment_terms_discount_rate AS DECIMAL(10,4)) AS payment_terms_discount_rate",
+    "CAST(payment_terms_discount_days AS INT) AS payment_terms_discount_days",
+    "CAST(is_active AS BOOLEAN) AS is_active",
+    "CAST('PFD' AS STRING) AS created_by",
+    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"
+]
