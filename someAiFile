@@ -1,153 +1,74 @@
-revenue_schema = [
-    "CAST(revenue_id AS STRING) AS revenue_id",                                  # Cast to STRING
-    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",          # Cast to STRING
-    "CAST(end_date AS DATE) AS end_date",                                        # Cast to DATE
-    "CAST(card_revenue__1m__start_date AS DATE) AS card_revenue__1m__start_date", # Cast to DATE
-    "CAST(card_revenue__1m__average_monthly_amount AS NUMERIC) AS card_revenue__1m__average_monthly_amount", # Cast to NUMERIC
-    "CAST(card_revenue__3m__start_date AS DATE) AS card_revenue__3m__start_date", # Cast to DATE
-    "CAST(card_revenue__3m__average_monthly_amount AS NUMERIC) AS card_revenue__3m__average_monthly_amount", # Cast to NUMERIC
-    "CAST(card_revenue__12m__start_date AS DATE) AS card_revenue__12m__start_date", # Cast to DATE
-    "CAST(card_revenue__12m__average_monthly_amount AS NUMERIC) AS card_revenue__12m__average_monthly_amount", # Cast to NUMERIC
-    "CAST(is_active AS BOOLEAN) AS is_active",
-    "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
-    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
-    ]
-    
-transaction_stability_schema = [
-    "CAST(card_transactions_stability_id AS STRING) AS card_transactions_stability_id",  # Cast to STRING
-    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",                  # Cast to STRING
-    "CAST(end_date AS TIMESTAMP) AS end_date",                                           # Cast to TIMESTAMP
-   # "CAST(date_accessible AS DATE) AS date_accessible",                                  # Cast to DATE
-    "CAST(card_transactions_stability__1m__start_date AS DATE) AS card_transactions_stability__1m__start_date",  # Cast to DATE
-    "CAST(card_transactions_stability__1m__days_present AS STRING) AS card_transactions_stability__1m__days_present",  # Cast to STRING
-    "CAST(card_transactions_stability__1m__weeks_present AS STRING) AS card_transactions_stability__1m__weeks_present",  # Cast to STRING
-    "CAST(card_transactions_stability__1m__months_present AS STRING) AS card_transactions_stability__1m__months_present",  # Cast to STRING
-    "CAST(card_transactions_stability__1m__daily_coverage_ratio AS NUMERIC) AS card_transactions_stability__1m__daily_coverage_ratio",  # Cast to NUMERIC
-    "CAST(card_transactions_stability__1m__weekly_coverage_ratio AS NUMERIC) AS card_transactions_stability__1m__weekly_coverage_ratio",  # Cast to NUMERIC
-    "CAST(card_transactions_stability__1m__monthly_coverage_ratio AS NUMERIC) AS card_transactions_stability__1m__monthly_coverage_ratio",  # Cast to NUMERIC
-    "CAST(card_transactions_stability__3m__start_date AS DATE) AS card_transactions_stability__3m__start_date",  # Cast to DATE
-    "CAST(card_transactions_stability__3m__days_present AS STRING) AS card_transactions_stability__3m__days_present",  # Cast to STRING
-    "CAST(card_transactions_stability__3m__weeks_present AS STRING) AS card_transactions_stability__3m__weeks_present",  # Cast to STRING
-    "CAST(card_transactions_stability__3m__months_present AS STRING) AS card_transactions_stability__3m__months_present",  # Cast to STRING
-    "CAST(card_transactions_stability__3m__daily_coverage_ratio AS NUMERIC) AS card_transactions_stability__3m__daily_coverage_ratio",  # Cast to NUMERIC
-    "CAST(card_transactions_stability__3m__weekly_coverage_ratio AS NUMERIC) AS card_transactions_stability__3m__weekly_coverage_ratio",  # Cast to NUMERIC
-    "CAST(card_transactions_stability__3m__monthly_coverage_ratio AS NUMERIC) AS card_transactions_stability__3m__monthly_coverage_ratio",  # Cast to NUMERIC
-    "CAST(card_transactions_stability__12m__start_date AS DATE) AS card_transactions_stability__12m__start_date",  # Cast to DATE
-    "CAST(card_transactions_stability__12m__days_present AS STRING) AS card_transactions_stability__12m__days_present",  # Cast to STRING
-    "CAST(card_transactions_stability__12m__weeks_present AS STRING) AS card_transactions_stability__12m__weeks_present",  # Cast to STRING
-    "CAST(card_transactions_stability__12m__months_present AS STRING) AS card_transactions_stability__12m__months_present",  # Cast to STRING
-    "CAST(card_transactions_stability__12m__daily_coverage_ratio AS NUMERIC) AS card_transactions_stability__12m__daily_coverage_ratio",  # Cast to NUMERIC
-    "CAST(card_transactions_stability__12m__weekly_coverage_ratio AS NUMERIC) AS card_transactions_stability__12m__weekly_coverage_ratio",  # Cast to NUMERIC
-    "CAST(card_transactions_stability__12m__monthly_coverage_ratio AS NUMERIC) AS card_transactions_stability__12m__monthly_coverage_ratio",  # Cast to NUMERIC
-    "CAST(is_active AS BOOLEAN) AS is_active",
-    "CAST('PFD' AS STRING) AS created_by",                                              # Add constant value for created_by
-    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                            # Add current timestamp for created_date
-    ] 
-	
-	
-	
-db schema
+# Call the `relationship` function and assign the result to `transformed_relationship`
+transformed_relationship = relationship(transformed_business_entity, transformed_contacts, transformed_df)
 
-CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_revenues
-(
-    revenue_id character varying COLLATE pg_catalog."default",
-    stg_business_entity_id character varying COLLATE pg_catalog."default",
-    end_date date,
-    card_revenue__1m__start_date date,
-    card_revenue__1m__average_monthly_amount numeric,
-    card_revenue__3m__start_date date,
-    card_revenue__3m__average_monthly_amount numeric,
-    card_revenue__12m__start_date date,
-    card_revenue__12m__average_monthly_amount numeric,
-    is_active boolean,
-    created_by character varying COLLATE pg_catalog."default",
-    created_date timestamp without time zone
+transformed_relationship = transformed_relationship.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
 )
 
+print("********************relationship***************************************")
+print(sorted(transformed_relationship.columns))
+print("**********************************************************************************")
 
-CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_transactions_stability
-(
-    card_transactions_stability_id character varying COLLATE pg_catalog."default",
-    stg_business_entity_id character varying COLLATE pg_catalog."default",
-    end_date date,
-    date_accessible date,
-    card_transactions_stability__1m__start_date date,
-    card_transactions_stability__1m__days_present character varying COLLATE pg_catalog."default",
-    card_transactions_stability__1m__weeks_present character varying COLLATE pg_catalog."default",
-    card_transactions_stability__1m__months_present character varying COLLATE pg_catalog."default",
-    card_transactions_stability__1m__daily_coverage_ratio numeric,
-    card_transactions_stability__1m__weekly_coverage_ratio numeric,
-    card_transactions_stability__1m__monthly_coverage_ratio numeric,
-    card_transactions_stability__3m__start_date date,
-    card_transactions_stability__3m__days_present character varying COLLATE pg_catalog."default",
-    card_transactions_stability__3m__weeks_present character varying COLLATE pg_catalog."default",
-    card_transactions_stability__3m__months_present character varying COLLATE pg_catalog."default",
-    card_transactions_stability__3m__daily_coverage_ratio numeric,
-    card_transactions_stability__3m__weekly_coverage_ratio numeric,
-    card_transactions_stability__3m__monthly_coverage_ratio numeric,
-    card_transactions_stability__12m__start_date date,
-    card_transactions_stability__12m__days_present character varying COLLATE pg_catalog."default",
-    card_transactions_stability__12m__weeks_present character varying COLLATE pg_catalog."default",
-    card_transactions_stability__12m__months_present character varying COLLATE pg_catalog."default",
-    card_transactions_stability__12m__daily_coverage_ratio numeric,
-    card_transactions_stability__12m__weekly_coverage_ratio numeric,
-    card_transactions_stability__12m__monthly_coverage_ratio numeric,
-    is_active boolean,
-    created_by character varying COLLATE pg_catalog."default",
-    created_date timestamp without time zone
+transformed_relationship_columns = [
+    col for col in transformed_relationship.columns 
+    if col not in ['client_ecid', 'client_vendor_id', 'client_vendor_site_id']
+]
+transformed_relationship = transformed_relationship.withColumn(
+    "business_entity_relationship_id",
+    compute_uuid_udf(struct(*[col(c) for c in transformed_relationship_columns]))
 )
+# transformed_relationship = transformed_relationship.withColumn(
+#     "business_entity_relationship_id",
+#     compute_uuid_udf(struct(*transformed_relationship.columns))
+# )
+
+
+# Show distinct rows in the resulting DataFrame
+transformed_relationship.distinct().show(truncate=False)
 
 
 
+def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
+    """
+    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
+    """
+    # Coalesce to one partition and write to temp S3 directory with proper CSV options
+    df.coalesce(1).write.mode("overwrite") \
+        .option("header", True) \
+        .option("quote", '"') \
+        .option("escape", '"') \
+        .option("quoteAll", True) \
+        .option("multiLine", True) \
+        .csv(temp_path)
 
+    # Rest of your S3 copy logic remains the same
+    s3 = boto3.client("s3")
+    temp_bucket = temp_path.replace("s3://", "").split("/")[0]
+    temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
 
+    objects = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
+    part_file = next(
+        obj['Key'] for obj in objects.get('Contents', []) if obj['Key'].endswith(".csv")
+    )
 
+    s3.copy_object(
+        Bucket=s3_bucket,
+        CopySource={'Bucket': temp_bucket, 'Key': part_file},
+        Key=s3_key
+    )
 
+    # Clean up temp files
+    for obj in objects.get('Contents', []):
+        s3.delete_object(Bucket=temp_bucket, Key=obj['Key'])
 
-
-
-revenue_schema = [
-    "CAST(revenue_id AS STRING) AS revenue_id",                                  # Cast to STRING
-    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",          # Cast to STRING
-    "CAST(end_date AS DATE) AS end_date",                                        # Cast to DATE
-    "CAST(card_revenue__1m__start_date AS DATE) AS card_revenue__1m__start_date", # Cast to DATE
-    "CAST(card_revenue__1m__average_monthly_amount AS DECIMAL(18,2)) AS card_revenue__1m__average_monthly_amount", # Cast to DECIMAL with precision
-    "CAST(card_revenue__3m__start_date AS DATE) AS card_revenue__3m__start_date", # Cast to DATE
-    "CAST(card_revenue__3m__average_monthly_amount AS DECIMAL(18,2)) AS card_revenue__3m__average_monthly_amount", # Cast to DECIMAL with precision
-    "CAST(card_revenue__12m__start_date AS DATE) AS card_revenue__12m__start_date", # Cast to DATE
-    "CAST(card_revenue__12m__average_monthly_amount AS DECIMAL(18,2)) AS card_revenue__12m__average_monthly_amount", # Cast to DECIMAL with precision
-    "CAST(is_active AS BOOLEAN) AS is_active",
-    "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
-    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
-]
-    
-transaction_stability_schema = [
-    "CAST(card_transactions_stability_id AS STRING) AS card_transactions_stability_id",  # Cast to STRING
-    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",                  # Cast to STRING
-    "CAST(end_date AS DATE) AS end_date",                                                # Cast to DATE (fixed from TIMESTAMP)
-    "CAST(date_accessible AS DATE) AS date_accessible",                                  # Cast to DATE (uncommented)
-    "CAST(card_transactions_stability__1m__start_date AS DATE) AS card_transactions_stability__1m__start_date",  # Cast to DATE
-    "CAST(card_transactions_stability__1m__days_present AS STRING) AS card_transactions_stability__1m__days_present",  # Cast to STRING
-    "CAST(card_transactions_stability__1m__weeks_present AS STRING) AS card_transactions_stability__1m__weeks_present",  # Cast to STRING
-    "CAST(card_transactions_stability__1m__months_present AS STRING) AS card_transactions_stability__1m__months_present",  # Cast to STRING
-    "CAST(card_transactions_stability__1m__daily_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__1m__daily_coverage_ratio",  # Cast to DECIMAL with precision
-    "CAST(card_transactions_stability__1m__weekly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__1m__weekly_coverage_ratio",  # Cast to DECIMAL with precision
-    "CAST(card_transactions_stability__1m__monthly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__1m__monthly_coverage_ratio",  # Cast to DECIMAL with precision
-    "CAST(card_transactions_stability__3m__start_date AS DATE) AS card_transactions_stability__3m__start_date",  # Cast to DATE
-    "CAST(card_transactions_stability__3m__days_present AS STRING) AS card_transactions_stability__3m__days_present",  # Cast to STRING
-    "CAST(card_transactions_stability__3m__weeks_present AS STRING) AS card_transactions_stability__3m__weeks_present",  # Cast to STRING
-    "CAST(card_transactions_stability__3m__months_present AS STRING) AS card_transactions_stability__3m__months_present",  # Cast to STRING
-    "CAST(card_transactions_stability__3m__daily_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__3m__daily_coverage_ratio",  # Cast to DECIMAL with precision
-    "CAST(card_transactions_stability__3m__weekly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__3m__weekly_coverage_ratio",  # Cast to DECIMAL with precision
-    "CAST(card_transactions_stability__3m__monthly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__3m__monthly_coverage_ratio",  # Cast to DECIMAL with precision
-    "CAST(card_transactions_stability__12m__start_date AS DATE) AS card_transactions_stability__12m__start_date",  # Cast to DATE
-    "CAST(card_transactions_stability__12m__days_present AS STRING) AS card_transactions_stability__12m__days_present",  # Cast to STRING
-    "CAST(card_transactions_stability__12m__weeks_present AS STRING) AS card_transactions_stability__12m__weeks_present",  # Cast to STRING
-    "CAST(card_transactions_stability__12m__months_present AS STRING) AS card_transactions_stability__12m__months_present",  # Cast to STRING
-    "CAST(card_transactions_stability__12m__daily_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__12m__daily_coverage_ratio",  # Cast to DECIMAL with precision
-    "CAST(card_transactions_stability__12m__weekly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__12m__weekly_coverage_ratio",  # Cast to DECIMAL with precision
-    "CAST(card_transactions_stability__12m__monthly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__12m__monthly_coverage_ratio",  # Cast to DECIMAL with precision
-    "CAST(is_active AS BOOLEAN) AS is_active",
-    "CAST('PFD' AS STRING) AS created_by",                                              # Add constant value for created_by
-    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                            # Add current timestamp for created_date
-]
+write_single_csv_to_s3_fixed(
+        transformed_relationship,
+        s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+        s3_key="upsert/pfd_staging/transformed_relationship.csv",
+        temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+    )
+	
+	
+i m getting below error
+Error Category: QUERY_ERROR; Failed Line Number: 1071; AnalysisException: CSV data source does not support void data type.
