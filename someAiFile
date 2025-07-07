@@ -96,3 +96,58 @@ CREATE TABLE IF NOT EXISTS sds_staging.business_entity_card_transactions_stabili
     created_by character varying COLLATE pg_catalog."default",
     created_date timestamp without time zone
 )
+
+
+
+
+
+
+
+
+
+
+revenue_schema = [
+    "CAST(revenue_id AS STRING) AS revenue_id",                                  # Cast to STRING
+    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",          # Cast to STRING
+    "CAST(end_date AS DATE) AS end_date",                                        # Cast to DATE
+    "CAST(card_revenue__1m__start_date AS DATE) AS card_revenue__1m__start_date", # Cast to DATE
+    "CAST(card_revenue__1m__average_monthly_amount AS DECIMAL(18,2)) AS card_revenue__1m__average_monthly_amount", # Cast to DECIMAL with precision
+    "CAST(card_revenue__3m__start_date AS DATE) AS card_revenue__3m__start_date", # Cast to DATE
+    "CAST(card_revenue__3m__average_monthly_amount AS DECIMAL(18,2)) AS card_revenue__3m__average_monthly_amount", # Cast to DECIMAL with precision
+    "CAST(card_revenue__12m__start_date AS DATE) AS card_revenue__12m__start_date", # Cast to DATE
+    "CAST(card_revenue__12m__average_monthly_amount AS DECIMAL(18,2)) AS card_revenue__12m__average_monthly_amount", # Cast to DECIMAL with precision
+    "CAST(is_active AS BOOLEAN) AS is_active",
+    "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
+    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
+]
+    
+transaction_stability_schema = [
+    "CAST(card_transactions_stability_id AS STRING) AS card_transactions_stability_id",  # Cast to STRING
+    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",                  # Cast to STRING
+    "CAST(end_date AS DATE) AS end_date",                                                # Cast to DATE (fixed from TIMESTAMP)
+    "CAST(date_accessible AS DATE) AS date_accessible",                                  # Cast to DATE (uncommented)
+    "CAST(card_transactions_stability__1m__start_date AS DATE) AS card_transactions_stability__1m__start_date",  # Cast to DATE
+    "CAST(card_transactions_stability__1m__days_present AS STRING) AS card_transactions_stability__1m__days_present",  # Cast to STRING
+    "CAST(card_transactions_stability__1m__weeks_present AS STRING) AS card_transactions_stability__1m__weeks_present",  # Cast to STRING
+    "CAST(card_transactions_stability__1m__months_present AS STRING) AS card_transactions_stability__1m__months_present",  # Cast to STRING
+    "CAST(card_transactions_stability__1m__daily_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__1m__daily_coverage_ratio",  # Cast to DECIMAL with precision
+    "CAST(card_transactions_stability__1m__weekly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__1m__weekly_coverage_ratio",  # Cast to DECIMAL with precision
+    "CAST(card_transactions_stability__1m__monthly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__1m__monthly_coverage_ratio",  # Cast to DECIMAL with precision
+    "CAST(card_transactions_stability__3m__start_date AS DATE) AS card_transactions_stability__3m__start_date",  # Cast to DATE
+    "CAST(card_transactions_stability__3m__days_present AS STRING) AS card_transactions_stability__3m__days_present",  # Cast to STRING
+    "CAST(card_transactions_stability__3m__weeks_present AS STRING) AS card_transactions_stability__3m__weeks_present",  # Cast to STRING
+    "CAST(card_transactions_stability__3m__months_present AS STRING) AS card_transactions_stability__3m__months_present",  # Cast to STRING
+    "CAST(card_transactions_stability__3m__daily_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__3m__daily_coverage_ratio",  # Cast to DECIMAL with precision
+    "CAST(card_transactions_stability__3m__weekly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__3m__weekly_coverage_ratio",  # Cast to DECIMAL with precision
+    "CAST(card_transactions_stability__3m__monthly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__3m__monthly_coverage_ratio",  # Cast to DECIMAL with precision
+    "CAST(card_transactions_stability__12m__start_date AS DATE) AS card_transactions_stability__12m__start_date",  # Cast to DATE
+    "CAST(card_transactions_stability__12m__days_present AS STRING) AS card_transactions_stability__12m__days_present",  # Cast to STRING
+    "CAST(card_transactions_stability__12m__weeks_present AS STRING) AS card_transactions_stability__12m__weeks_present",  # Cast to STRING
+    "CAST(card_transactions_stability__12m__months_present AS STRING) AS card_transactions_stability__12m__months_present",  # Cast to STRING
+    "CAST(card_transactions_stability__12m__daily_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__12m__daily_coverage_ratio",  # Cast to DECIMAL with precision
+    "CAST(card_transactions_stability__12m__weekly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__12m__weekly_coverage_ratio",  # Cast to DECIMAL with precision
+    "CAST(card_transactions_stability__12m__monthly_coverage_ratio AS DECIMAL(10,6)) AS card_transactions_stability__12m__monthly_coverage_ratio",  # Cast to DECIMAL with precision
+    "CAST(is_active AS BOOLEAN) AS is_active",
+    "CAST('PFD' AS STRING) AS created_by",                                              # Add constant value for created_by
+    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                            # Add current timestamp for created_date
+]
