@@ -1,22 +1,5 @@
-sub task 1
-Modify UUID computation for uploaded data
-Remove staging data truncate step
-Fix incomplete data loading issues
-
-sub task 2
-Handle decimal columns in UUID creation
-Sort input columns for UUID computation
-Filter null primary key values in staging tables
-Create test cases for UUID functionality
-
-
-*******************************************************************************************************************
-
-
-Here are concise comments to close each sub task:
-
-**Sub task 1:**
-- Modified UUID computation logic for uploaded data and removed staging truncate step to fix incomplete data loading issues.
-
-**Sub task 2:**
-- Implemented decimal column handling and column sorting for UUID computation, added null primary key filtering and comprehensive test coverage.
+Upload functionality works through UI
+UUID computation synced between staging job and API
+Decimal columns handled correctly in UUID creation
+Null primary key values filtered from staging tables
+Complete data loading for contacts, revenues, transaction_stability
