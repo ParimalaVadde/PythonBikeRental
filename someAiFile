@@ -8,3 +8,15 @@ Handle decimal columns in UUID creation
 Sort input columns for UUID computation
 Filter null primary key values in staging tables
 Create test cases for UUID functionality
+
+
+*******************************************************************************************************************
+
+
+Here are concise comments to close each sub task:
+
+**Sub task 1:**
+- Modified UUID computation logic for uploaded data and removed staging truncate step to fix incomplete data loading issues.
+
+**Sub task 2:**
+- Implemented decimal column handling and column sorting for UUID computation, added null primary key filtering and comprehensive test coverage.
