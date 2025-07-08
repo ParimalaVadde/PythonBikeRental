@@ -1,88 +1,91 @@
-decimal_columns = ["reported_annual_revenue","sum_of_payments","chargeback_amount","chargeback_percentage","payment_terms_discount_rate","card_revenue__1m__average_monthly_amount","card_revenue__3m__average_monthly_amount","card_revenue__12m__average_monthly_amount","card_transactions_stability__1m__daily_coverage_ratio","card_transactions_stability__1m__weekly_coverage_ratio","card_transactions_stability__1m__monthly_coverage_ratio","card_transactions_stability__3m__daily_coverage_ratio","card_transactions_stability__3m__weekly_coverage_ratio","card_transactions_stability__3m__monthly_coverage_ratio","card_transactions_stability__12m__daily_coverage_ratio","card_transactions_stability__12m__weekly_coverage_ratio","card_transactions_stability__12m__monthly_coverage_ratio"]
-
-
-this is the pyspark df transformed_revenue
-
-if any columns of transformed_revenue present in decimal_columns
-
-then i need to round off decimal value to 2 points
-
-like 
-from 8815233.7777  to   8815233.78
-
-
-make changes in below code
-
-# Transform `transformed_revenue`
-    transformed_revenue = transformed_json_df.select(*ss.revenue).withColumnRenamed(
-        "card_revenue__end_date", "end_date"
-    )
-
-    transformed_revenue = transformed_revenue.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-    )
+# Define a UDF to compute UUID from concatenated column values
+def compute_uuid(data_row, decimal_columns):
+    values = []
     
-    print("********************business_entity_card_revenues***************************************")
-    print(sorted(transformed_revenue.columns))
-    print("**********************************************************************************")
-    transformed_revenue = transformed_revenue.withColumn(
-        "revenue_id",
-        compute_uuid_udf(struct(*transformed_revenue.columns))
-    ).dropDuplicates()
-	
-	
-	
-the changes shoukd happen after 
-	transformed_revenue = transformed_revenue.withColumn(
+    # Convert Row object to dictionary
+    data = data_row.asDict()
+    # Sort by column names to ensure consistent order
+    for column in sorted(data.keys()):
+        val = data[column]
+        if val is not None and str(val).strip().lower() not in {"", "nan", "null", "none", "nat"}:
+            if column in decimal_columns:
+                val = f"{float(val):.6f}"
+            values.append(str(val).strip().lower())
+    
+    name = ','.join(values)
+    return str(uuid.UUID(bytes=hashlib.md5(name.encode()).digest())) if name else None
+
+
+
+******************************************************************************************************************************************************************************************
+
+
+
+
+
+# Call the `relationship` function and assign the result to `transformed_relationship`
+transformed_relationship = relationship(transformed_business_entity, transformed_contacts, transformed_df)
+
+transformed_relationship = transformed_relationship.withColumn(
     "is_active", 
     lit(True)  # This creates a Boolean column with True values for all rows
-    )
-
-
-
-Here's the modified code with the decimal rounding logic added after the `is_active` column creation:
-
-```python
-# Transform `transformed_revenue`
-transformed_revenue = transformed_json_df.select(*ss.revenue).withColumnRenamed(
-    "card_revenue__end_date", "end_date"
 )
 
-transformed_revenue = transformed_revenue.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-)
-
-# Round decimal columns to 2 decimal places
-decimal_columns = ["reported_annual_revenue","sum_of_payments","chargeback_amount","chargeback_percentage","payment_terms_discount_rate","card_revenue__1m__average_monthly_amount","card_revenue__3m__average_monthly_amount","card_revenue__12m__average_monthly_amount","card_transactions_stability__1m__daily_coverage_ratio","card_transactions_stability__1m__weekly_coverage_ratio","card_transactions_stability__1m__monthly_coverage_ratio","card_transactions_stability__3m__daily_coverage_ratio","card_transactions_stability__3m__weekly_coverage_ratio","card_transactions_stability__3m__monthly_coverage_ratio","card_transactions_stability__12m__daily_coverage_ratio","card_transactions_stability__12m__weekly_coverage_ratio","card_transactions_stability__12m__monthly_coverage_ratio"]
-
-# Get columns present in both transformed_revenue and decimal_columns
-columns_to_round = [col for col in decimal_columns if col in transformed_revenue.columns]
-
-# Apply rounding to decimal columns
-for col_name in columns_to_round:
-    transformed_revenue = transformed_revenue.withColumn(
-        col_name,
-        round(col(col_name), 2)
-    )
-
-print("********************business_entity_card_revenues***************************************")
-print(sorted(transformed_revenue.columns))
+print("********************relationship***************************************")
+print(sorted(transformed_relationship.columns))
 print("**********************************************************************************")
-transformed_revenue = transformed_revenue.withColumn(
-    "revenue_id",
-    compute_uuid_udf(struct(*transformed_revenue.columns))
-).dropDuplicates()
-```
 
-The key changes:
-1. Added the `decimal_columns` list after the `is_active` column creation
-2. Created `columns_to_round` to find intersection of columns present in both the dataframe and the decimal_columns list
-3. Used a loop to apply `round(col(col_name), 2)` to each decimal column that exists in the dataframe
-4. This will round values like `8815233.7777` to `8815233.78` as requested
+# Check for void data types before proceeding
+print("Data types in transformed_relationship:")
+for col_name, col_type in transformed_relationship.dtypes:
+    print(f"{col_name}: {col_type}")
 
-Make sure you have the necessary imports at the top of your file:
-```python
-from pyspark.sql.functions import round, col
-```
+# Find columns with void data type
+void_columns = [col_name for col_name, col_type in transformed_relationship.dtypes if col_type == 'void']
+print(f"Void columns found: {void_columns}")
+
+if void_columns:
+    print(f"Fixing void columns: {void_columns}")
+    for void_col in void_columns:
+        transformed_relationship = transformed_relationship.withColumn(
+            void_col, 
+            lit(None).cast(StringType())  # Cast void to nullable string
+        )
+
+transformed_relationship_columns = [
+    col for col in transformed_relationship.columns 
+    if col not in ['client_ecid', 'client_vendor_id', 'client_vendor_site_id']
+]
+
+transformed_relationship = transformed_relationship.withColumn(
+    "business_entity_relationship_id",
+    compute_uuid_udf(struct(*[col(c) for c in transformed_relationship_columns]))
+)
+# transformed_relationship = transformed_relationship.withColumn(
+#     "business_entity_relationship_id",
+#     compute_uuid_udf(struct(*transformed_relationship.columns))
+# )
+
+
+# Show distinct rows in the resulting DataFrame
+transformed_relationship.distinct().show(truncate=False)
+
+
+
+above code which i have shared is for data team
+
+see now compute_uuid function used by api team and data team
+
+same function being used
+
+business_entity_relationship_id generated by data team is "592283ce-db54-7b02-fce5-926821f6606e" for same values
+
+but for api is 48d38643-c4cd-4f30-4a7b-e4233541127 for same values
+
+business_entity_relationship_id	stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	is_active	created_by	created_date
+592283ce-db54-7b02-fce5-926821f6606e	6af7db6f-50e6-23bd-f58a-f8a917ad0e71	NULL	b3a419c5-8b74-8d05-7e61-dcb1ce6ead33	NULL	Supplier	Client	TRUE	PFD	7/8/2025 0:00
+48d38643-c4cd-4f30-4a7b-e42335411279	6af7db6f-50e6-23bd-f58a-f8a917ad0e71	NULL	b3a419c5-8b74-8d05-7e61-dcb1ce6ead33	NULL	Supplier	Client	TRUE	data_admin	44:22.4
+48d38643-c4cd-4f30-4a7b-e42335411279	6af7db6f-50e6-23bd-f58a-f8a917ad0e71	NULL	b3a419c5-8b74-8d05-7e61-dcb1ce6ead33	NULL	Supplier	Client	TRUE	data_admin	18:12.7
+
+
+y these descrepencies. how it can it be fixed in data end
