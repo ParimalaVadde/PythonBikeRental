@@ -1,5 +1,5 @@
-Upload functionality works through UI
-UUID computation synced between staging job and API
-Decimal columns handled correctly in UUID creation
-Null primary key values filtered from staging tables
-Complete data loading for contacts, revenues, transaction_stability
+Here are closing comments for the story:
+
+**Story Closure:**
+- Upload functionality fully integrated with UI, ensuring seamless data ingestion workflow.
+- UUID computation synchronized between staging job and API with proper decimal handling and null filtering, enabling complete and accurate data loading across contacts, revenues, and transaction_stability tables.
