@@ -1,98 +1,40 @@
-# Call the `relationship` function and assign the result to `transformed_relationship`
-transformed_relationship = relationship(transformed_business_entity, transformed_contacts, transformed_df)
+decimal_columns = ["reported_annual_revenue","sum_of_payments","chargeback_amount","chargeback_percentage","payment_terms_discount_rate","card_revenue__1m__average_monthly_amount","card_revenue__3m__average_monthly_amount","card_revenue__12m__average_monthly_amount","card_transactions_stability__1m__daily_coverage_ratio","card_transactions_stability__1m__weekly_coverage_ratio","card_transactions_stability__1m__monthly_coverage_ratio","card_transactions_stability__3m__daily_coverage_ratio","card_transactions_stability__3m__weekly_coverage_ratio","card_transactions_stability__3m__monthly_coverage_ratio","card_transactions_stability__12m__daily_coverage_ratio","card_transactions_stability__12m__weekly_coverage_ratio","card_transactions_stability__12m__monthly_coverage_ratio"]
 
-transformed_relationship = transformed_relationship.withColumn(
+
+this is the pyspark df transformed_revenue
+
+if any columns of transformed_revenue present in decimal_columns
+
+then i need to round off decimal value to 2 points
+
+like 
+from 8815233.7777  to   8815233.78
+
+
+make changes in below code
+
+# Transform `transformed_revenue`
+    transformed_revenue = transformed_json_df.select(*ss.revenue).withColumnRenamed(
+        "card_revenue__end_date", "end_date"
+    )
+
+    transformed_revenue = transformed_revenue.withColumn(
     "is_active", 
     lit(True)  # This creates a Boolean column with True values for all rows
-)
-
-print("********************relationship***************************************")
-print(sorted(transformed_relationship.columns))
-print("**********************************************************************************")
-
-transformed_relationship_columns = [
-    col for col in transformed_relationship.columns 
-    if col not in ['client_ecid', 'client_vendor_id', 'client_vendor_site_id']
-]
-transformed_relationship = transformed_relationship.withColumn(
-    "business_entity_relationship_id",
-    compute_uuid_udf(struct(*[col(c) for c in transformed_relationship_columns]))
-)
-# transformed_relationship = transformed_relationship.withColumn(
-#     "business_entity_relationship_id",
-#     compute_uuid_udf(struct(*transformed_relationship.columns))
-# )
-
-
-# Show distinct rows in the resulting DataFrame
-transformed_relationship.distinct().show(truncate=False)
-
-
-
-def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
-    """
-    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
-    """
-    # Coalesce to one partition and write to temp S3 directory with proper CSV options
-    df.coalesce(1).write.mode("overwrite") \
-        .option("header", True) \
-        .option("quote", '"') \
-        .option("escape", '"') \
-        .option("quoteAll", True) \
-        .option("multiLine", True) \
-        .csv(temp_path)
-
-    # Rest of your S3 copy logic remains the same
-    s3 = boto3.client("s3")
-    temp_bucket = temp_path.replace("s3://", "").split("/")[0]
-    temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
-
-    objects = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
-    part_file = next(
-        obj['Key'] for obj in objects.get('Contents', []) if obj['Key'].endswith(".csv")
     )
-
-    s3.copy_object(
-        Bucket=s3_bucket,
-        CopySource={'Bucket': temp_bucket, 'Key': part_file},
-        Key=s3_key
-    )
-
-    # Clean up temp files
-    for obj in objects.get('Contents', []):
-        s3.delete_object(Bucket=temp_bucket, Key=obj['Key'])
-
-write_single_csv_to_s3_fixed(
-        transformed_relationship,
-        s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-        s3_key="upsert/pfd_staging/transformed_relationship.csv",
-        temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
-    )
+    
+    print("********************business_entity_card_revenues***************************************")
+    print(sorted(transformed_revenue.columns))
+    print("**********************************************************************************")
+    transformed_revenue = transformed_revenue.withColumn(
+        "revenue_id",
+        compute_uuid_udf(struct(*transformed_revenue.columns))
+    ).dropDuplicates()
 	
 	
-i m getting below error
-Error Category: QUERY_ERROR; Failed Line Number: 1071; AnalysisException: CSV data source does not support void data type.
-
-
-
-
-# Check for void data types before proceeding
-print("Data types in transformed_relationship:")
-for col_name, col_type in transformed_relationship.dtypes:
-    print(f"{col_name}: {col_type}")
-
-# Find columns with void data type
-void_columns = [col_name for col_name, col_type in transformed_relationship.dtypes if col_type == 'void']
-print(f"Void columns found: {void_columns}")
-
-# Fix void columns by casting them to string
-from pyspark.sql.functions import col, lit, when, isnan, isnull
-from pyspark.sql.types import StringType
-
-if void_columns:
-    print(f"Fixing void columns: {void_columns}")
-    for void_col in void_columns:
-        transformed_relationship = transformed_relationship.withColumn(
-            void_col, 
-            lit(None).cast(StringType())  # Cast void to nullable string
-        )
+	
+the changes shoukd happen after 
+	transformed_revenue = transformed_revenue.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
