@@ -2,3 +2,9 @@ transformed_relationship is a pyspark df , i want to rename column from "related
 
 
 transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
+
+
+
+relationship_schema = ["vdvh","related_business_entity_id"]
+
+i want to rename an ele in above list from related_business_entity_id to stg_related_business_entity_id
