@@ -8,3 +8,7 @@ transformed_relationship = transformed_relationship.withColumnRenamed("related_b
 relationship_schema = ["vdvh","related_business_entity_id"]
 
 i want to rename an ele in above list from related_business_entity_id to stg_related_business_entity_id
+
+
+
+relationship_schema = [col if col != "related_business_entity_id" else "stg_related_business_entity_id" for col in relationship_schema]
