@@ -5,3 +5,52 @@ transformed_relationship = transformed_relationship.withColumn(
 
 
 i want to print line by line each row for compute_uuid_udf(struct(*[col(c) for c in transformed_relationship_columns])). how can i do so ?
+
+
+You can print the values that will be passed to `compute_uuid_udf` by showing the struct column before applying the UDF. Here are a few approaches:
+
+**Option 1: Show the struct column directly**
+```python
+# Create a temporary DataFrame with the struct column to see what's being passed
+temp_df = transformed_relationship.withColumn(
+    "uuid_input", 
+    struct(*[col(c) for c in transformed_relationship_columns])
+)
+
+# Show the struct values
+temp_df.select("uuid_input").show(truncate=False)
+```
+
+**Option 2: Show individual columns that make up the struct**
+```python
+# Show the actual column values that will be structured
+transformed_relationship.select(*[col(c) for c in transformed_relationship_columns]).show(truncate=False)
+```
+
+**Option 3: Print each row using collect() (use carefully with large datasets)**
+```python
+# Collect and print each row
+rows = transformed_relationship.select(*[col(c) for c in transformed_relationship_columns]).collect()
+for i, row in enumerate(rows):
+    print(f"Row {i}: {row}")
+```
+
+**Option 4: Create a debug UDF to print values**
+```python
+from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
+
+def debug_print_udf(struct_val):
+    print(f"UDF Input: {struct_val}")
+    return str(struct_val)  # Return something for testing
+
+debug_udf = udf(debug_print_udf, StringType())
+
+# Apply debug UDF to see what's being passed
+transformed_relationship.withColumn(
+    "debug_output",
+    debug_udf(struct(*[col(c) for c in transformed_relationship_columns]))
+).show()
+```
+
+The first option is usually the most practical as it shows you exactly what structure is being passed to your UDF without collecting all data to the driver.
