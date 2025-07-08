@@ -1,14 +1,10 @@
-transformed_relationship is a pyspark df , i want to rename column from "related_business_entity_id" to "stg_related_business_entity_id"
+sub task 1
+Modify UUID computation for uploaded data
+Remove staging data truncate step
+Fix incomplete data loading issues
 
-
-transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
-
-
-
-relationship_schema = ["vdvh","related_business_entity_id"]
-
-i want to rename an ele in above list from related_business_entity_id to stg_related_business_entity_id
-
-
-
-relationship_schema = [col if col != "related_business_entity_id" else "stg_related_business_entity_id" for col in relationship_schema]
+sub task 2
+Handle decimal columns in UUID creation
+Sort input columns for UUID computation
+Filter null primary key values in staging tables
+Create test cases for UUID functionality
