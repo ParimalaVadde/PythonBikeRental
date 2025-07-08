@@ -1,1 +1,4 @@
 transformed_relationship is a pyspark df , i want to rename column from "related_business_entity_id" to "stg_related_business_entity_id"
+
+
+transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
