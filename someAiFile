@@ -1,5 +1,5 @@
-Here are closing comments for the story:
-
-**Story Closure:**
-- Upload functionality fully integrated with UI, ensuring seamless data ingestion workflow.
-- UUID computation synchronized between staging job and API with proper decimal handling and null filtering, enabling complete and accurate data loading across contacts, revenues, and transaction_stability tables.
+1.Compute uuid testing UAT --Parimala 5
+	1. mock the data for all columns in the input file to validate the uuid
+	2. upload the json  from api
+	3. verify the uuid between api and data  both should match
+	4. Identify the columns which we dont have mapping
