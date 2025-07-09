@@ -33,3 +33,8 @@ Create comprehensive mock data covering all input file columns with properly for
 
 **Subtask 2: UUID Comparison and Mapping Analysis**
 Develop validation logic to compare UUIDs between API responses and data files, ensuring matches are identified correctly, and create reporting mechanism to highlight columns with missing or incorrect UUID mappings.
+
+
+
+Subtask 2: Source Landing to Staging Mapping Gap Analysis
+Analyze the data flow from source landing layer to staging layer to identify and document all columns that lack proper mapping configuration. Create a comprehensive report listing unmapped columns between source landing and staging environments with impact assessment and remediation recommendations.
