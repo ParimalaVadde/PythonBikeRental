@@ -38,3 +38,15 @@ Develop validation logic to compare UUIDs between API responses and data files, 
 
 Subtask 2: Source Landing to Staging Mapping Gap Analysis
 Analyze the data flow from source landing layer to staging layer to identify and document all columns that lack proper mapping configuration. Create a comprehensive report listing unmapped columns between source landing and staging environments with impact assessment and remediation recommendations.
+
+
+
+Here's the updated subtasks with the corrected focus:
+
+## Subtasks
+
+**Subtask 1: Mock Data Generation for UUID Validation**
+Create mock data specifically designed for UUID generation testing, covering all input file columns that require UUID assignment, and implement API upload functionality to submit the test data for UUID validation processing.
+
+**Subtask 2: Source Landing to Staging Mapping Gap Analysis**
+Analyze the data flow from source landing layer to staging layer to identify and document all columns that lack proper mapping configuration. Create a comprehensive report listing unmapped columns between source landing and staging environments with impact assessment and remediation recommendations.
