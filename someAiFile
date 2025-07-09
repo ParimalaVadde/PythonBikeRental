@@ -1,3 +1,6 @@
+jira story point : SDS Data Processing : compute uuid validation in uat
+
+
 1.Compute uuid testing UAT --Parimala 5
 	1. mock the data for all columns in the input file to validate the uuid
 	2. upload the json  from api
