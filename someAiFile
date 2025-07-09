@@ -6,3 +6,30 @@ jira story point : SDS Data Processing : compute uuid validation in uat
 	2. upload the json  from api
 	3. verify the uuid between api and data  both should match
 	4. Identify the columns which we dont have mapping
+
+
+Here's the JIRA user story and subtasks based on your requirements:
+
+## User Story
+
+**Story Name:** Compute UUID Validation in UAT Environment
+
+**Description:**
+As a data engineer, I need to validate compute UUIDs in the UAT environment to ensure data integrity and proper mapping between API responses and processed data files. This validation will help identify any discrepancies in UUID generation and mapping across different data columns.
+
+**Acceptance Criteria:**
+- [ ] Mock data is successfully generated for all columns in the input file with valid UUID format
+- [ ] JSON data can be uploaded via API without errors
+- [ ] UUID validation process compares API-generated UUIDs with data file UUIDs and confirms matches
+- [ ] System identifies and reports all columns that lack proper UUID mapping
+- [ ] Validation results are documented with clear pass/fail status
+- [ ] Any UUID mismatches are logged with detailed error information
+- [ ] Process runs successfully in UAT environment without impacting other systems
+
+## Subtasks
+
+**Subtask 1: Mock Data Generation and API Upload**
+Create comprehensive mock data covering all input file columns with properly formatted UUIDs, then implement the API upload functionality to submit JSON data for validation testing.
+
+**Subtask 2: UUID Comparison and Mapping Analysis**
+Develop validation logic to compare UUIDs between API responses and data files, ensuring matches are identified correctly, and create reporting mechanism to highlight columns with missing or incorrect UUID mappings.
