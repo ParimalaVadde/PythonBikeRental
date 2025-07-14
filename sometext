@@ -164,3 +164,11 @@ After Melting:
 stg_business_entity_id	receivables_attribute_type	receivables_attribute_value
 BE123	average_vendor_dso	35.0
 BE123	vc_concierge	Y
+
+
+
+
+
+update sds_landing.analysis_pfd 
+set associated_people = '[{'name': 'VITALY PECHERSKIY', 'titles': ['CHIEF EXECUTIVE', 'DIRECTOR', 'CEO', 'PRESIDENT', 'GOVERNOR', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'YANG HAN', 'titles': ['OTHER OFFICER', 'DIRECTOR', 'GOVERNOR', 'CTO']}, {'name': 'CASSANDRA HUDSON', 'titles': ['CFO', 'TREASURER', 'CHIEF FINANCIAL OFFICER', 'TREASURER CHIE']}, {'name': 'PINAR OZYETIS', 'titles': ['OTHER OFFICER', 'SECRETARY', 'SECRETARY GENE']}, {'name': 'OZYETIS PINAR', 'titles': ['GENERAL COUNSEL', 'EXECUTINGOFFICER', 'SECRETARY', 'GOVERNOR']}, {'name': 'HOPE COCHRAN', 'titles': ['DIRECTOR']}, {'name': 'ILDAR SHARAFUTDINOV', 'titles': ['DIRECTOR']}, {'name': 'LEN FERRINGTON', 'titles': ['DIRECTOR']}, {'name': 'MATTHEW LEIBOWITZ', 'titles': ['DIRECTOR']}, {'name': 'HAN YANG', 'titles': ['CHIEF TECHNOLOGY OFFICER', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'HUDSON CASSANDRA', 'titles': ['TREASURER', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'PECHERSKIY VITALY', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'CHRISTIAN GERRON', 'titles': ['OTHER OFFICER', 'CRO']}, {'name': 'COCHRAN HOPE', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'FERRINGTON LEN', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'GERRON CHRISTIAN', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'LEIBOWITZ MATTHEW', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'MEHMET SHAH', 'titles': ['CHIEF FINANCIAL OFFICER', 'GOVERNOR']}, {'name': 'SHARAFUTDINOV ILDAR', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}]' 
+where enigma_id = 'E002004cfc000230af'
