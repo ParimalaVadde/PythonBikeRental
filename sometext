@@ -1,133 +1,146 @@
-decimal_columns = ["reported_annual_revenue","sum_of_payments","chargeback_amount","chargeback_percentage","payment_terms_discount_rate","card_revenue__1m__average_monthly_amount","card_revenue__3m__average_monthly_amount","card_revenue__12m__average_monthly_amount","card_transactions_stability__1m__daily_coverage_ratio","card_transactions_stability__1m__weekly_coverage_ratio","card_transactions_stability__1m__monthly_coverage_ratio","card_transactions_stability__3m__daily_coverage_ratio","card_transactions_stability__3m__weekly_coverage_ratio","card_transactions_stability__3m__monthly_coverage_ratio","card_transactions_stability__12m__daily_coverage_ratio","card_transactions_stability__12m__weekly_coverage_ratio","card_transactions_stability__12m__monthly_coverage_ratio"]
+**Title:** Landing to Staging Process - KT for B2B Supplier Directory Services
 
+---
 
-write_single_csv_to_s3_fixed(
-        transformed_spend_analysis,
-        s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-        s3_key="upsert/pfd_staging/transformed_spend_analysis_v1.csv",
-        temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
-    )
-	
-	
-ss.spend_analysis_schema = [
-    "CAST(spend_analysis_id AS STRING) AS spend_analysis_id",                          # Cast to STRING
-    "CAST(stg_payor_business_entity_id AS STRING) AS stg_payor_business_entity_id",    # Cast to STRING
-    "CAST(stg_payee_business_entity_id AS STRING) AS stg_payee_business_entity_id",    # Cast to STRING
-    "CAST(analysis_conducted_dt AS STRING) AS analysis_conducted_dt",                  # Cast to STRING
-    "CAST(analysis_external_reference_id AS STRING) AS analysis_external_reference_id",# Cast to STRING
-    "CAST(analysis_task_id AS STRING) AS analysis_task_id",                            # Cast to STRING
-    "CAST(analysis_stage AS STRING) AS analysis_stage",                                # Cast to STRING
-    "CAST(count_of_invoices AS NUMERIC) AS count_of_invoices",                         # Cast to NUMERIC
-    "CAST(payment_terms AS STRING) AS payment_terms",                                  # Cast to STRING
-    "CAST(count_of_payments AS NUMERIC) AS count_of_payments",                         # Cast to NUMERIC
-    "CAST(sum_of_payments AS NUMERIC) AS sum_of_payments",                             # Cast to NUMERIC
-    "CAST(period_start_date AS DATE) AS period_start_date",                            # Cast to DATE
-    "CAST(period_end_date AS DATE) AS period_end_date",                                # Cast to DATE
-    "CAST(payment_ccy AS STRING) AS payment_ccy",                                      # Cast to STRING
-   # "CAST(chargeback_amount AS NUMERIC) AS chargeback_amount",                         # Cast to NUMERIC
-    #"CAST(chargeback_percentage AS NUMERIC) AS chargeback_percentage",                 # Cast to NUMERIC
-    "CAST(actual_days_payment_outstanding AS NUMERIC) AS actual_days_payment_outstanding", # Cast to NUMERIC
-    "CAST(payment_mode AS STRING) AS payment_mode",                                    # Cast to STRING
-    "CAST(payment_term_days AS NUMERIC) AS payment_term_days",                         # Cast to NUMERIC
-    "CAST(payment_terms_discount_ind AS STRING) AS payment_terms_discount_ind",        # Cast to STRING
-    "CAST(payment_terms_discount_rate AS NUMERIC) AS payment_terms_discount_rate",     # Cast to NUMERIC
-    "CAST(payment_terms_discount_days AS NUMERIC) AS payment_terms_discount_days",     # Cast to NUMERIC
-    #"CAST(source_system_id AS STRING) AS source_system_id",                            # Cast to STRING
-    #"CAST(source_system_name AS STRING) AS source_system_name",                        # Cast to STRING
-    "CAST(is_active AS BOOLEAN) AS is_active",
-    "CAST('PFD' AS STRING) AS created_by",                                             # Add constant value for created_by
-    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                           # Add current timestamp for created_date
-    ]
+### Slide 1: Introduction - My Scope in the Project
 
-transformed_spend_analysis = transformed_spend_analysis.filter(
-    col("spend_analysis_id").isNotNull() & col("stg_payee_business_entity_id").isNotNull()
-).selectExpr(*ss.spend_analysis_schema).distinct()
+**Speaking Notes:**
+Hi, I'm currently working on the ETL staging layer of the B2B Supplier Directory Services project for JPMC. Our project focuses on creating a centralized system to manage supplier data. I will be walking you through the staging process, i.e., how data is transformed from the landing schema to the staging schema.
 
+---
 
-write_single_csv_to_s3_fixed(
-        transformed_spend_analysis,
-        s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-        s3_key="upsert/pfd_staging/transformed_spend_analysis_v2.csv",
-        temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
-    )
-	
-schema in postgress db
-CREATE TABLE IF NOT EXISTS sds_staging.business_entity_spend_analysis
-(
-    spend_analysis_id character varying COLLATE pg_catalog."default",
-    stg_payor_business_entity_id character varying COLLATE pg_catalog."default",
-    stg_payee_business_entity_id character varying COLLATE pg_catalog."default",
-    analysis_conducted_dt character varying COLLATE pg_catalog."default",
-    analysis_task_id character varying COLLATE pg_catalog."default",
-    analysis_external_reference_id character varying COLLATE pg_catalog."default",
-    analysis_stage character varying COLLATE pg_catalog."default",
-    count_of_invoices integer,
-    payment_terms character varying COLLATE pg_catalog."default",
-    count_of_payments integer,
-    sum_of_payments numeric,
-    period_start_date date,
-    period_end_date date,
-    payment_ccy character varying COLLATE pg_catalog."default",
-    chargeback_amount numeric,
-    chargeback_percentage numeric,
-    actual_days_payment_outstanding integer,
-    payment_mode character varying COLLATE pg_catalog."default",
-    payment_term_days integer,
-    payment_terms_discount_ind character varying COLLATE pg_catalog."default",
-    payment_terms_discount_rate numeric,
-    payment_terms_discount_days integer,
-    source_system_id character varying COLLATE pg_catalog."default",
-    source_system_name character varying COLLATE pg_catalog."default",
-    is_active boolean,
-    created_by character varying COLLATE pg_catalog."default",
-    created_date timestamp without time zone
-)
+### Slide 2: Project Background
 
-in transformed_spend_analysis_v1
-sum_of_payments
-0
-0
-2657.46
-498877.54
-3874.44
-60000
+**Slide Text:**
 
+* **Client:** JPMorgan Chase (JPMC)
+* **Vendor:** Mphasis
+* **Domain:** Banking / B2B Supplier Management
+* **Goal:** Centralized supplier repository, enhanced supplier profiling, and spend/payment insights
 
-in transformed_spend_analysis_v2 (no decimal values but i want deciamal values . postgress db schema is correct, any changes required in ss.spend_analysis_schema, seems line numeric in ss.spend_analysis_schema not taking decimal)
+---
 
-sum_of_payments
-0
-0
-2657
-498877
-3874
-60000
+### Slide 3: Where I Fit - Landing to Staging
 
+**Slide Text:**
 
-*************************************************************************************************************
+1. **Source:** CSV files arrive in S3 bucket from external sources like Diagnostic
+2. **Landing:** ECS job loads raw CSV into PostgreSQL landing schema
+3. **Staging:** Glue job processes landing data into transformed structured tables
 
-ss.spend_analysis_schema = [
-    "CAST(spend_analysis_id AS STRING) AS spend_analysis_id",
-    "CAST(stg_payor_business_entity_id AS STRING) AS stg_payor_business_entity_id",
-    "CAST(stg_payee_business_entity_id AS STRING) AS stg_payee_business_entity_id",
-    "CAST(analysis_conducted_dt AS STRING) AS analysis_conducted_dt",
-    "CAST(analysis_external_reference_id AS STRING) AS analysis_external_reference_id",
-    "CAST(analysis_task_id AS STRING) AS analysis_task_id",
-    "CAST(analysis_stage AS STRING) AS analysis_stage",
-    "CAST(count_of_invoices AS INT) AS count_of_invoices",
-    "CAST(payment_terms AS STRING) AS payment_terms",
-    "CAST(count_of_payments AS INT) AS count_of_payments",
-    "CAST(sum_of_payments AS DECIMAL(18,2)) AS sum_of_payments",  # Use DECIMAL with precision
-    "CAST(period_start_date AS DATE) AS period_start_date",
-    "CAST(period_end_date AS DATE) AS period_end_date",
-    "CAST(payment_ccy AS STRING) AS payment_ccy",
-    "CAST(actual_days_payment_outstanding AS INT) AS actual_days_payment_outstanding",
-    "CAST(payment_mode AS STRING) AS payment_mode",
-    "CAST(payment_term_days AS INT) AS payment_term_days",
-    "CAST(payment_terms_discount_ind AS STRING) AS payment_terms_discount_ind",
-    "CAST(payment_terms_discount_rate AS DECIMAL(10,4)) AS payment_terms_discount_rate",
-    "CAST(payment_terms_discount_days AS INT) AS payment_terms_discount_days",
-    "CAST(is_active AS BOOLEAN) AS is_active",
-    "CAST('PFD' AS STRING) AS created_by",
-    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"
-]
+**Speaking Notes:**
+My focus is on Step 3. From landing, we apply transformations using PySpark in AWS Glue and load data into normalized staging tables in PostgreSQL.
+
+---
+
+### Slide 4: Source Table - landing.analysis\_pfd
+
+**Slide Text:**
+
+* Flat columns + Nested JSON columns
+* Examples:
+
+  * `vendor_id`, `site_id`, `client_ecid`
+  * `associated_people`, `card_revenues`, `registered_agents`
+
+**Speaking Notes:**
+The landing table holds raw data, including nested structures that must be flattened. This becomes our input.
+
+---
+
+### Slide 5: Staging Tables Created
+
+**Slide Text:**
+We create 16 normalized tables:
+
+* `business_entity`
+* `business_entity_details`
+* `business_entity_contacts`
+* `business_entity_card_revenues`
+* `business_entity_card_transactions_stability`
+* `telecommunication_address`
+* `electronic_address`
+* `business_entity_receivables_attribute`
+* `industry_classification`
+* `characteristics`
+* `physical_address`
+* `restrictions`
+* `relationships`
+* `identifiers`
+* `spend_analysis`
+* `association`
+
+**Speaking Notes:**
+Each table captures one facet of a supplier. For example, `business_entity` acts as the parent entity, while the rest are dimensions providing enrichments.
+
+---
+
+### Slide 6: Primary Key Strategy
+
+**Slide Text:**
+
+* Every staging table uses UUID-based surrogate keys
+* UUIDs are generated using PySpark UDFs (`compute_uuid_udf()`)
+* Keys are deterministic — based on the values in each row
+
+**Speaking Notes:**
+This helps us maintain idempotency, track changes, and support upsert logic at the main layer.
+
+---
+
+### Slide 7: Sample Data Example (business\_entity\_contacts)
+
+| stg\_business\_entity\_id | contact\_name | contact\_title | business\_entity\_contact\_id |
+| ------------------------- | ------------- | -------------- | ----------------------------- |
+| BE123                     | VIRAT KOHLI   | CEO            | UUID1                         |
+| BE123                     | VIRAT KOHLI   | OFFICER        | UUID2                         |
+| BE123                     | JADEJA RAVI   | OFFICER        | UUID3                         |
+
+**Speaking Notes:**
+This sample came from the `associated_people` JSON field, flattened and exploded into separate rows.
+
+---
+
+### Slide 8: What Each Table Holds & Why It Matters
+
+**Slide Text:**
+
+| Table Name                                      | Purpose & Business Relevance                                                                                          |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| business\_entity                                | Represents the core supplier identity, acts as the parent record for linking all other data.                          |
+| business\_entity\_details                       | Contains detailed attributes like tax IDs, incorporation year, etc., to enrich supplier profiles.                     |
+| business\_entity\_contacts                      | Holds key contact persons (like CEO, Officer) for supplier engagement. Useful in communication and campaign outreach. |
+| business\_entity\_card\_revenues                | Captures historical revenue data from card usage. Helps understand supplier’s spend behavior over time.               |
+| business\_entity\_card\_transactions\_stability | Analyzes consistency in transaction patterns to gauge supplier stability.                                             |
+| telecommunication\_address                      | Stores supplier phone numbers. Vital for campaign calls or validation.                                                |
+| electronic\_address                             | Stores supplier email IDs or websites. Important for email communication and verification.                            |
+| business\_entity\_receivables\_attribute        | Risk profile data like DSO, concierge enrollment, VC preference. Used in risk scoring and segmentation.               |
+| industry\_classification                        | Maps the supplier to NAICS or Bloomberg industries for industry-based analysis and targeting.                         |
+| characteristics                                 | Contains attributes like credit ratings (Moody, S\&P) or online payment capability. Enhances supplier qualification.  |
+| physical\_address                               | Captures the billing address/location. Useful for geographic segmentation and validations.                            |
+| restrictions                                    | Flags such as Do-Not-Campaign, Govt entity, etc. Ensures compliance in campaign execution.                            |
+| relationships                                   | Links supplier (entity) to buyer (client). Useful to map supplier-client ecosystem and network graphs.                |
+| identifiers                                     | Central table with vendor\_id, site\_id, ecid and others for ID normalization. Enables accurate joins and reference.  |
+| spend\_analysis                                 | Captures past transactions, amounts, and periods. Useful in financial modeling and opportunity identification.        |
+| association                                     | Holds card network association data, e.g., if a vendor accepts Visa, Mastercard. Supports campaign targeting.         |
+
+**Speaking Notes:**
+Each table answers a key business question. Whether it’s about supplier risk, contact reachability, transaction history, or industry mapping — these tables turn raw CSV into business-ready data.
+
+---
+
+### Slide 9: Summary
+
+**Slide Text:**
+
+* 16 normalized tables derived from complex landing structure
+* Glue job uses PySpark + flatten + melt techniques
+* UUIDs for primary keys ensure reliable upserts
+* Each table supports business logic: recruitment, campaigns, risk, insights
+
+**Speaking Notes:**
+The staging layer is where we standardize and unlock the potential of incoming supplier data. Everything that comes later — trust scoring, campaign targeting, segmentation — relies on this foundation.
+
+---
+
+Let me know if you'd like diagrams or architecture included!
