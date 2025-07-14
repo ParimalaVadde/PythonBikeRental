@@ -144,3 +144,23 @@ The staging layer is where we standardize and unlock the potential of incoming s
 ---
 
 Let me know if you'd like diagrams or architecture included!
+
+
+
+Slide 8: Column Melting Logic (Example)
+Title: Melting Example — Payment Profile Attributes
+
+Columns like average_vendor_dso, vc_concierge, etc.
+
+Transformed into long format:
+
+Before:
+
+stg_business_entity_id	average_vendor_dso	vc_concierge
+BE123	35.0	Y
+
+After Melting:
+
+stg_business_entity_id	receivables_attribute_type	receivables_attribute_value
+BE123	average_vendor_dso	35.0
+BE123	vc_concierge	Y
