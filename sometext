@@ -1,174 +1,73 @@
-**Title:** Landing to Staging Process - KT for B2B Supplier Directory Services
+Error Category: QUERY_ERROR; Failed Line Number: 695; AnalysisException: Reference 'technologies' is ambiguous, could be: technologies, technologies.
 
----
-
-### Slide 1: Introduction - My Scope in the Project
-
-**Speaking Notes:**
-Hi, I'm currently working on the ETL staging layer of the B2B Supplier Directory Services project for JPMC. Our project focuses on creating a centralized system to manage supplier data. I will be walking you through the staging process, i.e., how data is transformed from the landing schema to the staging schema.
-
----
-
-### Slide 2: Project Background
-
-**Slide Text:**
-
-* **Client:** JPMorgan Chase (JPMC)
-* **Vendor:** Mphasis
-* **Domain:** Banking / B2B Supplier Management
-* **Goal:** Centralized supplier repository, enhanced supplier profiling, and spend/payment insights
-
----
-
-### Slide 3: Where I Fit - Landing to Staging
-
-**Slide Text:**
-
-1. **Source:** CSV files arrive in S3 bucket from external sources like Diagnostic
-2. **Landing:** ECS job loads raw CSV into PostgreSQL landing schema
-3. **Staging:** Glue job processes landing data into transformed structured tables
-
-**Speaking Notes:**
-My focus is on Step 3. From landing, we apply transformations using PySpark in AWS Glue and load data into normalized staging tables in PostgreSQL.
-
----
-
-### Slide 4: Source Table - landing.analysis\_pfd
-
-**Slide Text:**
-
-* Flat columns + Nested JSON columns
-* Examples:
-
-  * `vendor_id`, `site_id`, `client_ecid`
-  * `associated_people`, `card_revenues`, `registered_agents`
-
-**Speaking Notes:**
-The landing table holds raw data, including nested structures that must be flattened. This becomes our input.
-
----
-
-### Slide 5: Staging Tables Created
-
-**Slide Text:**
-We create 16 normalized tables:
-
-* `business_entity`
-* `business_entity_details`
-* `business_entity_contacts`
-* `business_entity_card_revenues`
-* `business_entity_card_transactions_stability`
-* `telecommunication_address`
-* `electronic_address`
-* `business_entity_receivables_attribute`
-* `industry_classification`
-* `characteristics`
-* `physical_address`
-* `restrictions`
-* `relationships`
-* `identifiers`
-* `spend_analysis`
-* `association`
-
-**Speaking Notes:**
-Each table captures one facet of a supplier. For example, `business_entity` acts as the parent entity, while the rest are dimensions providing enrichments.
-
----
-
-### Slide 6: Primary Key Strategy
-
-**Slide Text:**
-
-* Every staging table uses UUID-based surrogate keys
-* UUIDs are generated using PySpark UDFs (`compute_uuid_udf()`)
-* Keys are deterministic — based on the values in each row
-
-**Speaking Notes:**
-This helps us maintain idempotency, track changes, and support upsert logic at the main layer.
-
----
-
-### Slide 7: Sample Data Example (business\_entity\_contacts)
-
-| stg\_business\_entity\_id | contact\_name | contact\_title | business\_entity\_contact\_id |
-| ------------------------- | ------------- | -------------- | ----------------------------- |
-| BE123                     | VIRAT KOHLI   | CEO            | UUID1                         |
-| BE123                     | VIRAT KOHLI   | OFFICER        | UUID2                         |
-| BE123                     | JADEJA RAVI   | OFFICER        | UUID3                         |
-
-**Speaking Notes:**
-This sample came from the `associated_people` JSON field, flattened and exploded into separate rows.
-
----
-
-### Slide 8: What Each Table Holds & Why It Matters
-
-**Slide Text:**
-
-| Table Name                                      | Purpose & Business Relevance                                                                                          |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| business\_entity                                | Represents the core supplier identity, acts as the parent record for linking all other data.                          |
-| business\_entity\_details                       | Contains detailed attributes like tax IDs, incorporation year, etc., to enrich supplier profiles.                     |
-| business\_entity\_contacts                      | Holds key contact persons (like CEO, Officer) for supplier engagement. Useful in communication and campaign outreach. |
-| business\_entity\_card\_revenues                | Captures historical revenue data from card usage. Helps understand supplier’s spend behavior over time.               |
-| business\_entity\_card\_transactions\_stability | Analyzes consistency in transaction patterns to gauge supplier stability.                                             |
-| telecommunication\_address                      | Stores supplier phone numbers. Vital for campaign calls or validation.                                                |
-| electronic\_address                             | Stores supplier email IDs or websites. Important for email communication and verification.                            |
-| business\_entity\_receivables\_attribute        | Risk profile data like DSO, concierge enrollment, VC preference. Used in risk scoring and segmentation.               |
-| industry\_classification                        | Maps the supplier to NAICS or Bloomberg industries for industry-based analysis and targeting.                         |
-| characteristics                                 | Contains attributes like credit ratings (Moody, S\&P) or online payment capability. Enhances supplier qualification.  |
-| physical\_address                               | Captures the billing address/location. Useful for geographic segmentation and validations.                            |
-| restrictions                                    | Flags such as Do-Not-Campaign, Govt entity, etc. Ensures compliance in campaign execution.                            |
-| relationships                                   | Links supplier (entity) to buyer (client). Useful to map supplier-client ecosystem and network graphs.                |
-| identifiers                                     | Central table with vendor\_id, site\_id, ecid and others for ID normalization. Enables accurate joins and reference.  |
-| spend\_analysis                                 | Captures past transactions, amounts, and periods. Useful in financial modeling and opportunity identification.        |
-| association                                     | Holds card network association data, e.g., if a vendor accepts Visa, Mastercard. Supports campaign targeting.         |
-
-**Speaking Notes:**
-Each table answers a key business question. Whether it’s about supplier risk, contact reachability, transaction history, or industry mapping — these tables turn raw CSV into business-ready data.
-
----
-
-### Slide 9: Summary
-
-**Slide Text:**
-
-* 16 normalized tables derived from complex landing structure
-* Glue job uses PySpark + flatten + melt techniques
-* UUIDs for primary keys ensure reliable upserts
-* Each table supports business logic: recruitment, campaigns, risk, insights
-
-**Speaking Notes:**
-The staging layer is where we standardize and unlock the potential of incoming supplier data. Everything that comes later — trust scoring, campaign targeting, segmentation — relies on this foundation.
-
----
-
-Let me know if you'd like diagrams or architecture included!
-
-
-
-Slide 8: Column Melting Logic (Example)
-Title: Melting Example — Payment Profile Attributes
-
-Columns like average_vendor_dso, vc_concierge, etc.
-
-Transformed into long format:
-
-Before:
-
-stg_business_entity_id	average_vendor_dso	vc_concierge
-BE123	35.0	Y
-
-After Melting:
-
-stg_business_entity_id	receivables_attribute_type	receivables_attribute_value
-BE123	average_vendor_dso	35.0
-BE123	vc_concierge	Y
-
-
-
-
-
-update sds_landing.analysis_pfd 
-set associated_people = '[{'name': 'VITALY PECHERSKIY', 'titles': ['CHIEF EXECUTIVE', 'DIRECTOR', 'CEO', 'PRESIDENT', 'GOVERNOR', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'YANG HAN', 'titles': ['OTHER OFFICER', 'DIRECTOR', 'GOVERNOR', 'CTO']}, {'name': 'CASSANDRA HUDSON', 'titles': ['CFO', 'TREASURER', 'CHIEF FINANCIAL OFFICER', 'TREASURER CHIE']}, {'name': 'PINAR OZYETIS', 'titles': ['OTHER OFFICER', 'SECRETARY', 'SECRETARY GENE']}, {'name': 'OZYETIS PINAR', 'titles': ['GENERAL COUNSEL', 'EXECUTINGOFFICER', 'SECRETARY', 'GOVERNOR']}, {'name': 'HOPE COCHRAN', 'titles': ['DIRECTOR']}, {'name': 'ILDAR SHARAFUTDINOV', 'titles': ['DIRECTOR']}, {'name': 'LEN FERRINGTON', 'titles': ['DIRECTOR']}, {'name': 'MATTHEW LEIBOWITZ', 'titles': ['DIRECTOR']}, {'name': 'HAN YANG', 'titles': ['CHIEF TECHNOLOGY OFFICER', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'HUDSON CASSANDRA', 'titles': ['TREASURER', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'PECHERSKIY VITALY', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'CHRISTIAN GERRON', 'titles': ['OTHER OFFICER', 'CRO']}, {'name': 'COCHRAN HOPE', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'FERRINGTON LEN', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'GERRON CHRISTIAN', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'LEIBOWITZ MATTHEW', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'MEHMET SHAH', 'titles': ['CHIEF FINANCIAL OFFICER', 'GOVERNOR']}, {'name': 'SHARAFUTDINOV ILDAR', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}]' 
-where enigma_id = 'E002004cfc000230af'
+transformed_json_df = transformed_df.select(*ss.jsoncol)
+ 
+    # Flatten nested JSON columns
+    for column, schema in [
+        ("card_revenue", ss.card_revenue_schema),
+        ("card_transactions_stability", ss.card_transactions_stability),
+        ("associated_people", ss.associated_people_schema),
+        ("industries", ss.industries_schema), 
+        #("company_structure", ss.company_structure_schema),  
+        ("technologies", ss.technologies_schema),
+    ]:
+        transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
+		
+		
+		def flatten_nested_json_column(df, column_name, schema, explode_array=True):
+    """
+    Flattens a nested JSON column in a PySpark DataFrame.
+    
+    Args:
+        df (DataFrame): The input PySpark DataFrame.
+        column_name (str): The name of the JSON column to flatten.
+        schema (StructType): The schema of the JSON column.
+        explode_array (bool): Whether to explode arrays or join with semicolon.
+    
+    Returns:
+        DataFrame: The DataFrame with the flattened JSON column.
+    """
+    try:
+        # NEW: Check if the column exists and has any non-null values
+        if column_name not in df.columns:
+            print(f"Column {column_name} does not exist in DataFrame")
+            return df
+            
+        # NEW: Check if all values in the column are null
+        non_null_count = df.filter(col(column_name).isNotNull()).count()
+        
+        if non_null_count == 0:
+            print(f"Column {column_name} contains only null values, skipping flattening")
+            # Just return the dataframe as-is, keeping the null column
+            return df
+        
+        # Parse the JSON column into structured data
+        df = df.withColumn(column_name, from_json(col(column_name), schema))
+        
+        # If explode_array is False, join array elements with semicolon
+        if not explode_array:
+            df = df.withColumn(column_name, concat_ws(";", col(column_name)))
+            return df
+        
+        # Explode the array to create one row per element
+        df = df.withColumn(column_name, explode(col(column_name)))
+        # Iterate over the fields in the schema
+        for field in schema.elementType.fields:  # Use `elementType` for ArrayType
+            field_name = field.name
+            field_type = field.dataType
+            # If the field is a nested struct, recursively flatten it
+            if isinstance(field_type, StructType):
+                for nested_field in field_type.fields:
+                    nested_field_name = nested_field.name
+                    df = df.withColumn(
+                        f"{column_name}__{field_name}__{nested_field_name}",
+                        col(f"{column_name}.{field_name}.{nested_field_name}")
+                    )
+            else:
+                # If the field is not nested, extract it directly
+                df = df.withColumn(f"{column_name}__{field_name}", col(f"{column_name}.{field_name}"))
+        # Drop the original JSON column
+        df = df.drop(column_name)
+    except Exception as error:
+        print(f"Error flattening column {column_name}: {error}")
+    return df
