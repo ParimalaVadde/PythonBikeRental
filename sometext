@@ -1,150 +1,43 @@
-Certainly! Here's a polished business-style message with **clear examples of data incompleteness** for each affected JSON column, using actual cutoff examples from your data:
+AnalysisException: CSV data source does not support void data type.
 
----
 
-### 📢 **Subject**: Data Incompleteness Identified in Latest Files from PFD Source Team
+def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
+    """
+    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
+    """
+    # Coalesce to one partition and write to temp S3 directory with proper CSV options
+    df.coalesce(1).write.mode("overwrite") \
+        .option("header", True) \
+        .option("quote", '"') \
+        .option("escape", '"') \
+        .option("quoteAll", True) \
+        .option("multiLine", True) \
+        .csv(temp_path)
 
-Dear \[Team/Stakeholders],
+    # Rest of your S3 copy logic remains the same
+    s3 = boto3.client("s3")
+    temp_bucket = temp_path.replace("s3://", "").split("/")[0]
+    temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
 
-We have begun reviewing the latest dataset received from the PFD source team. During the validation process, we observed that several JSON columns contain **incomplete or truncated data**. These issues may affect data reliability and downstream processing.
+    objects = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
+    part_file = next(
+        obj['Key'] for obj in objects.get('Contents', []) if obj['Key'].endswith(".csv")
+    )
 
-### ⚠️ **Impacted JSON Columns & Sample Issues**
+    s3.copy_object(
+        Bucket=s3_bucket,
+        CopySource={'Bucket': temp_bucket, 'Key': part_file},
+        Key=s3_key
+    )
 
-Below is a list of impacted columns, along with representative examples of the incompleteness observed:
+    # Clean up temp files
+    for obj in objects.get('Contents', []):
+        s3.delete_object(Bucket=temp_bucket, Key=obj['Key'])
 
----
-
-#### 1. **`registered_agents`**
-
-* **Expected**: Full list of registered agent names or entities.
-* **Incomplete Example**:
-
-  ```
-  ['C T CORPORATION SYSTEM', '825 8TH AVENUE']
-  ```
-
-  > Only partial address or entity name provided, with missing contextual details.
-
----
-
-#### 2. **`associated_people`**
-
-* **Expected**: Complete records including `name` and `titles`.
-* **Incomplete Example**:
-
-  ```json
-  [{'name': 'JOEL DAVID CHESTERMAN', 'titles': ['SECRETARY', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'CH...
-  ```
-
-  > The second person's name appears truncated (`'CH...`), and the full record is cut off.
-
----
-
-#### 3. **`industries`**
-
-* **Expected**: Full industry classification including both `classification_type` and `description`.
-* **Incomplete Example**:
-
-  ```json
-  {'classification_description': 'corporate office', 'classification_type': 'enigma_description'}
-  ```
-
-  > Some entries appear fine, but others are missing one or both expected keys.
-
----
-
-#### 4. **`corporate_structures`**
-
-* **Expected**: Entity type with consistent formatting (e.g., LLC, Corporation).
-* **Incomplete Example**:
-
-  ```
-  LLC
-  ```
-
-  > While not invalid, certain rows only include entity types without related structure information or links to other fields.
-
----
-
-#### 5. **`eins`**
-
-* **Expected**: Full EIN values (Employer Identification Numbers).
-* **Incomplete Example**:
-
-  ```
-  [Blank or missing in many rows]
-  ```
-
-  > Several entries are either missing or entirely null.
-
----
-
-#### 6. **`technologies_used`**
-
-* **Expected**: List of technologies used with fields like `vendor_name`, `category`, etc.
-* **Incomplete Example**:
-
-  ```json
-  {'vendor_name': 'Shopify', 'category': 'payments'}
-  ```
-
-  > Appears correct, but other rows are missing this field or only partially populated.
-
----
-
-#### 7. **`has_online_payments`**
-
-* **Expected**: Boolean or flag indicating online payment capability.
-* **Incomplete Example**:
-
-  ```
-  [Blank in several entries]
-  ```
-
-  > Not consistently populated across rows.
-
----
-
-#### 8. **`card_revenue`**
-
-* **Expected**: Detailed revenue data with date ranges and nested structures.
-* **Incomplete Example**:
-
-  ```json
-  {'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'aver...
-  ```
-
-  > Data appears cut off at `"aver..."`, likely intended to be `"average"` or another metric field.
-
----
-
-#### 9. **`card_transactions_stability`**
-
-* **Expected**: Similar structure to `card_revenue` with metrics over time.
-* **Incomplete Example**:
-
-  ```json
-  {'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days...
-  ```
-
-  > JSON is cut off mid-field, indicating potential serialization or truncation issues.
-
----
-
-### ✅ **Next Steps**
-
-We recommend the following actions:
-
-1. **Engage with the PFD source team** to confirm if this data is final or if updated files are expected.
-2. **Request re-delivery** of the affected fields with complete records.
-3. **Delay downstream processing** until clean, complete data is available (to avoid misreporting or partial ingestion).
-
-Please let us know how you'd like to proceed, or if you'd prefer us to raise this directly with the source team.
-
-Best regards,
-**\[Your Name]**
-\[Your Team / Role]
-
----
-
-Would you like this in email format or as a slide deck for sharing with stakeholders?
+write_single_csv_to_s3_fixed(
+        transformed_relationship,
+        s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+        s3_key="upsert/pfd_staging/transformed_relationship.csv",
+        temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+    )
+ 
