@@ -1,47 +1,21 @@
-def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
-    """
-    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
-    Handles void data type columns by converting them to string type.
-    """
-    from pyspark.sql.types import VoidType
-    from pyspark.sql.functions import lit
-    
-    # Check for void columns and convert them to string type
-    void_columns = [field.name for field in df.schema.fields if isinstance(field.dataType, VoidType)]
-    
-    if void_columns:
-        print(f"Found void columns: {void_columns}. Converting to string type.")
-        # Convert void columns to string type with null values
-        for col_name in void_columns:
-            df = df.withColumn(col_name, lit(None).cast("string"))
-    
-    # Alternative approach: Drop void columns entirely (uncomment if you prefer this)
-    # if void_columns:
-    #     print(f"Dropping void columns: {void_columns}")
-    #     df = df.drop(*void_columns)
-    
-    # Coalesce to one partition and write to temp S3 directory with proper CSV options
-    df.coalesce(1).write.mode("overwrite") \
-        .option("header", True) \
-        .option("quote", '"') \
-        .option("escape", '"') \
-        .option("quoteAll", True) \
-        .option("multiLine", True) \
-        .csv(temp_path)
-    
-    # Rest of your S3 copy logic remains the same
-    s3 = boto3.client("s3")
-    temp_bucket = temp_path.replace("s3://", "").split("/")[0]
-    temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
-    objects = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
-    part_file = next(
-        obj['Key'] for obj in objects.get('Contents', []) if obj['Key'].endswith(".csv")
-    )
-    s3.copy_object(
-        Bucket=s3_bucket,
-        CopySource={'Bucket': temp_bucket, 'Key': part_file},
-        Key=s3_key
-    )
-    # Clean up temp files
-    for obj in objects.get('Contents', []):
-        s3.delete_object(Bucket=temp_bucket, Key=obj['Key'])
+vendor_name_cleaned
+PANDADOC
+GUARDIAN
+LINKEDIN
+CAFFEINATED
+HARVARD BUSINESS
+FISHER PHILLIPS
+HALO
+FEDEX OFFICE
+DATA AXLE
+FORRESTER RESEARCH
+SHERMAN HOWARD
+EGNYTE
+BDO USA
+AMERICAN AIRLINES
+STACKADAPT
+STACKADAPT
+HARTFORD
+ROCKEFELLER CENTER
+BANK
+AHA LABS
