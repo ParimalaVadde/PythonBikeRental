@@ -1,8 +1,6 @@
-Hi Mohammed,
-
-In the earlier version of the analysis_pfd source file, the column names were technology and corp_structure.
-In the latest file you shared, the column names have changed to technology_used and corporate_structure.
-
-It looks like there have been some naming changes between the v1 file and the latest version for a few columns.
-
-Can we consider the column names in the latest file as final?
+{'classification_description': 'electronics store', 'classification_type': 'enigma_description'}
+{'classification_code': '511210', 'classification_description': 'Software Publishers', 'classification_type': 'NAICS_2017'}
+{'classification_description': 'corporate office', 'classification_type': 'enigma_description'}
+{'classification_code': '541', 'classification_description': 'Professional, Scientific, and Technical Services', 'classification_type': 'NAICS_2017'}
+{'classification_description': 'assisted living facility', 'classification_type': 'enigma_description'}
+{'classification_description': 'internet marketing service', 'classification_type': 'enigma_description'}
