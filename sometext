@@ -1,1 +1,12 @@
-{'vendor_name': 'Paypal', 'category': 'payments'}
+[
+    {'vendor_name': 'Stripe', 'category': 'payments'},
+    {'vendor_name': 'Square', 'category': 'payments'},
+    {'vendor_name': 'Adyen', 'category': 'payments'},
+    {'vendor_name': 'Braintree', 'category': 'payments'},
+    {'vendor_name': 'Authorize.Net', 'category': 'payments'},
+    {'vendor_name': 'Wise', 'category': 'payments'},
+    {'vendor_name': 'Worldpay', 'category': 'payments'},
+    {'vendor_name': 'Payoneer', 'category': 'payments'},
+    {'vendor_name': 'Klarna', 'category': 'payments'},
+    {'vendor_name': 'Revolut Business', 'category': 'payments'}
+]
