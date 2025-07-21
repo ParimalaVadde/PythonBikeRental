@@ -1,12 +1,1 @@
-[
-    {'classification_description': 'business management consultant', 'classification_type': 'enigma_description'},
-    {'classification_code': '621610', 'classification_description': 'Home Health Care Services', 'classification_type': 'NAICS_2017'},
-    {'classification_description': 'commercial printing service', 'classification_type': 'enigma_description'},
-    {'classification_code': '524210', 'classification_description': 'Insurance Agencies and Brokerages', 'classification_type': 'NAICS_2017'},
-    {'classification_description': 'coworking space', 'classification_type': 'enigma_description'},
-    {'classification_code': '611310', 'classification_description': 'Colleges, Universities, and Professional Schools', 'classification_type': 'NAICS_2017'},
-    {'classification_description': 'digital design studio', 'classification_type': 'enigma_description'},
-    {'classification_code': '541513', 'classification_description': 'Computer Facilities Management Services', 'classification_type': 'NAICS_2017'},
-    {'classification_description': 'telecommunications contractor', 'classification_type': 'enigma_description'},
-    {'classification_code': '722320', 'classification_description': 'Caterers', 'classification_type': 'NAICS_2017'}
-]
+263008157
