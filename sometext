@@ -1,12 +1,1 @@
-[
-    {'vendor_name': 'Stripe', 'category': 'payments'},
-    {'vendor_name': 'Square', 'category': 'payments'},
-    {'vendor_name': 'Adyen', 'category': 'payments'},
-    {'vendor_name': 'Braintree', 'category': 'payments'},
-    {'vendor_name': 'Authorize.Net', 'category': 'payments'},
-    {'vendor_name': 'Wise', 'category': 'payments'},
-    {'vendor_name': 'Worldpay', 'category': 'payments'},
-    {'vendor_name': 'Payoneer', 'category': 'payments'},
-    {'vendor_name': 'Klarna', 'category': 'payments'},
-    {'vendor_name': 'Revolut Business', 'category': 'payments'}
-]
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}
