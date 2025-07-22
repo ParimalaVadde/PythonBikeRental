@@ -67,3 +67,344 @@ select * from sds_staging.restrictions where related_identifier in
 
 select * from sds_staging.telecommunication_address where related_identifier in  
 ('9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce','fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57','64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7','2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297','900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1')
+
+
+
+
+
+************************************************************************************************************************************
+
+
+Here is the **joined query version** for each of your listed tables, using the same structure as your original example. Each query joins its respective table with `sds_staging.business_entity_details` using either `stg_business_entity_id` or `related_identifier`, depending on the field used for the relationship.
+
+---
+
+### 🎯 **Common Filters**
+
+All queries will filter:
+
+* By a fixed set of 10 UUIDs (you've provided)
+* By business names (same as your initial query)
+
+I'll define these values once for reuse.
+
+---
+
+### ✅ **UUID List (IDs)**
+
+```sql
+-- Reusable UUID list
+('9ad1b0e1-4bff-1dd2-e642-e5112cefca09',
+ 'e5b749e0-d282-041f-b773-038405c185ce',
+ 'fb98d2ef-5833-2980-d117-eb3e6a5a5300',
+ 'af298829-2630-b81b-3ef7-3b30c24eee57',
+ '64806fac-5f64-987f-7e2e-87597544a7b2',
+ '6710c73c-d6e6-11c0-4023-4e613b7933e7',
+ '2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af',
+ '4d6396ee-7f82-1dde-3100-5087703ef297',
+ '900bd37b-30b0-d1ab-c74d-ce10cab93377',
+ 'ace784ae-7c5e-7e61-a373-940d517594a1')
+```
+
+---
+
+### ✅ **Business Name Filter**
+
+```sql
+-- Reusable name list
+('QUANTIVISTA','NIMBLEWORKS','TERRAQUOTE','ZENVERITY','AURUM CIPHER',
+ 'VANTYX LABS','CIRRUSWELL','MODULOQ','STRATEGIX CORE','LUMINOVA PARTNERS')
+```
+
+---
+
+### 🔄 **JOIN Query Templates (One per Table)**
+
+Each query follows the pattern:
+
+```sql
+SELECT 
+    d.business_entity_name,
+    t.*
+FROM 
+    sds_staging.<table> t
+JOIN 
+    sds_staging.business_entity_details d 
+    ON t.<join_column> = d.stg_business_entity_id OR t.<join_column> = d.related_identifier
+WHERE 
+    t.<join_column> IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+Now, let’s apply that to each table:
+
+---
+
+#### 1. `business_entity_card_association`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    c.*
+FROM 
+    sds_staging.business_entity_card_association c
+JOIN 
+    sds_staging.business_entity_details d 
+    ON c.stg_business_entity_id = d.stg_business_entity_id
+WHERE 
+    c.stg_business_entity_id IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 2. `business_entity_card_revenues`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    r.*
+FROM 
+    sds_staging.business_entity_card_revenues r
+JOIN 
+    sds_staging.business_entity_details d 
+    ON r.stg_business_entity_id = d.stg_business_entity_id
+WHERE 
+    r.stg_business_entity_id IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 3. `business_entity_card_transactions_stability`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    ts.*
+FROM 
+    sds_staging.business_entity_card_transactions_stability ts
+JOIN 
+    sds_staging.business_entity_details d 
+    ON ts.stg_business_entity_id = d.stg_business_entity_id
+WHERE 
+    ts.stg_business_entity_id IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 4. `business_entity_characteristics`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    ch.*
+FROM 
+    sds_staging.business_entity_characteristics ch
+JOIN 
+    sds_staging.business_entity_details d 
+    ON ch.stg_business_entity_id = d.stg_business_entity_id
+WHERE 
+    ch.stg_business_entity_id IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 5. `business_entity_contacts`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    ct.*
+FROM 
+    sds_staging.business_entity_contacts ct
+JOIN 
+    sds_staging.business_entity_details d 
+    ON ct.stg_business_entity_id = d.stg_business_entity_id
+WHERE 
+    ct.stg_business_entity_id IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 6. `business_entity_identifiers`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    i.*
+FROM 
+    sds_staging.business_entity_identifiers i
+JOIN 
+    sds_staging.business_entity_details d 
+    ON i.related_identifier = d.stg_business_entity_id
+WHERE 
+    i.related_identifier IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 7. `business_entity_industry_classification`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    ic.*
+FROM 
+    sds_staging.business_entity_industry_classification ic
+JOIN 
+    sds_staging.business_entity_details d 
+    ON ic.stg_business_entity_id = d.stg_business_entity_id
+WHERE 
+    ic.stg_business_entity_id IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 8. `business_entity_receivables_attribute`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    ra.*
+FROM 
+    sds_staging.business_entity_receivables_attribute ra
+JOIN 
+    sds_staging.business_entity_details d 
+    ON ra.stg_business_entity_id = d.stg_business_entity_id
+WHERE 
+    ra.stg_business_entity_id IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 9. `business_entity_relationships`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    rl.*
+FROM 
+    sds_staging.business_entity_relationships rl
+JOIN 
+    sds_staging.business_entity_details d 
+    ON rl.stg_business_entity_id = d.stg_business_entity_id
+WHERE 
+    rl.stg_business_entity_id IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 10. `business_entity_spend_analysis`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    sa.*
+FROM 
+    sds_staging.business_entity_spend_analysis sa
+JOIN 
+    sds_staging.business_entity_details d 
+    ON sa.stg_payee_business_entity_id = d.stg_business_entity_id
+WHERE 
+    sa.stg_payee_business_entity_id IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 11. `electronic_address`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    ea.*
+FROM 
+    sds_staging.electronic_address ea
+JOIN 
+    sds_staging.business_entity_details d 
+    ON ea.related_identifier = d.stg_business_entity_id
+WHERE 
+    ea.related_identifier IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 12. `physical_address`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    pa.*
+FROM 
+    sds_staging.physical_address pa
+JOIN 
+    sds_staging.business_entity_details d 
+    ON pa.related_identifier = d.stg_business_entity_id
+WHERE 
+    pa.related_identifier IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 13. `restrictions`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    rs.*
+FROM 
+    sds_staging.restrictions rs
+JOIN 
+    sds_staging.business_entity_details d 
+    ON rs.related_identifier = d.stg_business_entity_id
+WHERE 
+    rs.related_identifier IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+#### 14. `telecommunication_address`
+
+```sql
+SELECT 
+    d.business_entity_name,
+    ta.*
+FROM 
+    sds_staging.telecommunication_address ta
+JOIN 
+    sds_staging.business_entity_details d 
+    ON ta.related_identifier = d.stg_business_entity_id
+WHERE 
+    ta.related_identifier IN (<UUID_LIST>)
+AND 
+    d.business_entity_name IN (<NAME_LIST>);
+```
+
+---
+
+Would you like these wrapped as a script or formatted into a single unioned result set (e.g., for audit or export)?
