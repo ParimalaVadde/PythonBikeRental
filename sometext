@@ -5,3 +5,31 @@ a. Handle NULL values in JSON columns so that staging job doesn't fail
 	b. column name mismatch b/w source file and staging code
 	c. Partial data load
 	d. Compute uuid
+
+
+
+*****************************************************************************************************************************************
+user story:
+SDS Data Processing : compute uuid validation in uat
+
+
+description :
+Validate compute UUIDs in the UAT environment to ensure data integrity and proper mapping between API responses and processed data files. This validation will help identify any discrepancies in UUID generation and mapping across different data columns.
+
+Acceptance Criteria:
+Mock data is successfully generated for all columns in the input file with valid UUID format.
+UUID validation process compares API-generated UUIDs with data file UUIDs and confirms matches
+
+
+sub stories
+
+sub story 1
+Mock Data Generation for UUID Validation:
+description:
+Create mock data for UUID generation testing, covering all input file columns that require UUID generation, and compares API-generated UUIDs with data file UUIDs
+
+
+sub story 2:
+Source Landing to Staging Mapping Gap Analysis:
+description:
+Analyze the data flow from source landing layer to staging layer to identify and document all columns that lack proper mapping configuration. Create a comprehensive report listing unmapped columns between source landing and staging environments with impact assessment and remediation recommendations.
