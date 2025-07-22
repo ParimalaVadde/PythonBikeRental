@@ -12,3 +12,31 @@ select * from sds_staging.restrictions where related_identifier in
 
 select * from sds_staging.telecommunication_address where related_identifier in  
 ('9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce','fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57','64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7','2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297','900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1')
+
+
+
+**********************************************************************************************************************************
+
+
+
+SELECT 
+    d.business_entity_name,
+    b.*
+FROM 
+    sds_staging.business_entity_spend_analysis b
+JOIN 
+    sds_staging.business_entity_details d 
+    ON b.stg_payee_business_entity_id = d.stg_business_entity_id
+WHERE 
+    b.stg_payee_business_entity_id IN (
+        '9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce',
+        'fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57',
+        '64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7',
+        '2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297',
+        '900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1'
+    )
+AND 
+    d.business_entity_name IN (
+        'QUANTIVISTA','NIMBLEWORKS','TERRAQUOTE','ZENVERITY','AURUM CIPHER',
+        'VANTYX LABS','CIRRUSWELL','MODULOQ','STRATEGIX CORE','LUMINOVA PARTNERS'
+    );
