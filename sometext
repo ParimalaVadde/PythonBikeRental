@@ -33,3 +33,22 @@ sub story 2:
 Source Landing to Staging Mapping Gap Analysis:
 description:
 Analyze the data flow from source landing layer to staging layer to identify and document all columns that lack proper mapping configuration. Create a comprehensive report listing unmapped columns between source landing and staging environments with impact assessment and remediation recommendations.
+
+
+
+******************************************************************************************************************************************
+
+✅ User Story
+SDS Data Processing: compute uuid validation in UAT
+Closing Comment:
+Validation completed in UAT. UUIDs were successfully matched between API responses and data files with no discrepancies observed.
+
+🧩 Sub-Story 1
+Mock Data Generation for UUID Validation
+Closing Comment:
+Mock data was generated for all required columns. UUIDs were validated successfully against the API-generated values.
+
+🧩 Sub-Story 2
+Source Landing to Staging Mapping Gap Analysis
+Closing Comment:
+Mapping gaps between source landing and staging layers were identified and documented. A remediation plan has been shared for the unmapped fields.
