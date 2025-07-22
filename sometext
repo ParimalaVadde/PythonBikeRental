@@ -1,14 +1,7 @@
-Thanks for the context! For a banking project with suppliers being onboarded, here are 10 **two-word** values for the **sds notes** column that could fit supplier-related notes:
+jira user story name : SDS Data Processing : Fixing issues in staging job identified during previous deployment
 
-1. Approved vendor
-2. Risk assessed
-3. Compliance verified
-4. Contract pending
-5. Payment terms
-6. Document submitted
-7. Background check
-8. Credit approved
-9. KYC completed
-10. Active supplier
 
-Would you like me to add short explanations or expand these?
+a. Handle NULL values in JSON columns so that staging job doesn't fail
+	b. column name mismatch b/w source file and staging code
+	c. Partial data load
+	d. Compute uuid
