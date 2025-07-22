@@ -52,3 +52,50 @@ Mock data was generated for all required columns. UUIDs were validated successfu
 Source Landing to Staging Mapping Gap Analysis
 Closing Comment:
 Mapping gaps between source landing and staging layers were identified and documented. A remediation plan has been shared for the unmapped fields.
+
+
+*************************************************************************************************************************************
+
+Here’s a complete breakdown for your **JIRA User Story** and two well-defined **Sub-Tasks**, based on the items you listed:
+
+---
+
+### 📝 **User Story**
+
+**Name:**
+**SDS Data Processing: Fixing issues in staging job identified during previous deployment**
+
+**Description:**
+Resolve data processing issues in the SDS staging job that were identified during the previous deployment. These include handling null JSON values, resolving column mismatches between the source file and staging logic, ensuring complete data load, and computing UUIDs consistently. The goal is to stabilize the staging job for reliable processing and data consistency.
+
+**Acceptance Criteria:**
+
+* JSON columns with NULL values are handled gracefully without job failure.
+* Column names are correctly aligned between source files and staging job schema.
+* Staging job successfully loads all intended data without partial loads.
+* UUIDs are computed and populated accurately for relevant records.
+* Job completes without error and passes validation checks in UAT.
+
+---
+
+### ✅ **Sub-Task 1**
+
+**Name:**
+**Handle JSON NULLs and Column Mismatches**
+
+**Description:**
+Update the staging job logic to properly handle NULL values in JSON-type columns, preventing job failures. Additionally, align staging code column references to match the source file structure, fixing any mismatches that caused mapping issues.
+
+---
+
+### ✅ **Sub-Task 2**
+
+**Name:**
+**Fix Partial Load and UUID Computation**
+
+**Description:**
+Investigate and resolve the issue of partial data loads during staging processing. Ensure complete records are ingested. Also, implement or correct UUID computation to consistently generate and store valid UUIDs for all necessary fields.
+
+---
+
+Let me know if you want this formatted as a JIRA Markdown card or for Confluence!
