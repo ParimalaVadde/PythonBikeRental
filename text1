@@ -10,3 +10,52 @@ FROM
 JOIN 
     sds_staging.business_entity_details d 
     ON b.stg_business_entity_id = d.stg_business_entity_id
+
+
+*******************************************************************************************
+
+1)
+SELECT business_entity_name,* FROM sds_staging.business_entity_details
+
+
+2)
+SELECT
+    d.business_entity_name,
+    b.*
+FROM 
+    sds_staging.business_entity_card_association b
+JOIN 
+    sds_staging.business_entity_details d 
+    ON b.stg_business_entity_id = d.stg_business_entity_id
+	
+	
+	
+there are 126 distinct records in sds_staging.business_entity_details. (it has 'jpmc' , 'Coca Cola' as 2 of business_entity_name among 126)
+
+but when i run below query i m getting only 125 records
+SELECT
+    d.business_entity_name,
+    b.*
+FROM 
+    sds_staging.business_entity_card_association b
+JOIN 
+    sds_staging.business_entity_details d 
+    ON b.stg_business_entity_id = d.stg_business_entity_id
+	
+	
+also when i run below query i m getting only 1 record i.e for 'HALO'
+
+SELECT
+    d.business_entity_name,
+    b.*
+FROM 
+    sds_staging.business_entity_card_association b
+JOIN 
+    sds_staging.business_entity_details d 
+    ON b.stg_business_entity_id = d.stg_business_entity_id
+where d.business_entity_name in ('jpmc','Coca Cola','HALO')
+
+see my concern over here is, totally there are 126 records but it has 125 records but these 'jpmc','Coca Cola' are missing. it should be 124 . how come it has 125
+i want to identify which business_entity_name in business_entity_card_association is missing from sds_staging.business_entity_details
+
+like already i know it doesn't have records for 'jpmc','Coca Cola'. then it should have 124 records. how come it has 125 records
