@@ -1,61 +1,75 @@
-select count(distinct vendor_name_cleaned) from sds_landing.analysis_pfd
-
-SELECT * FROM sds_staging.business_entity
-
+-- 1. Check for duplicates in business_entity_details
 SELECT 
-    d.business_entity_name,
-    b.*
-FROM 
-    sds_staging.business_entity b
-JOIN 
-    sds_staging.business_entity_details d 
+    stg_business_entity_id,
+    business_entity_name,
+    COUNT(*) as record_count
+FROM sds_staging.business_entity_details
+GROUP BY stg_business_entity_id, business_entity_name
+HAVING COUNT(*) > 1;
+
+-- 2. Check for duplicates in business_entity_card_association
+SELECT 
+    stg_business_entity_id,
+    COUNT(*) as record_count
+FROM sds_staging.business_entity_card_association
+GROUP BY stg_business_entity_id
+HAVING COUNT(*) > 1;
+
+-- 3. Find business entities that exist in card_association but NOT in details
+-- (These would explain the "extra" record)
+SELECT DISTINCT
+    b.stg_business_entity_id,
+    'Missing from business_entity_details' as status
+FROM sds_staging.business_entity_card_association b
+LEFT JOIN sds_staging.business_entity_details d 
     ON b.stg_business_entity_id = d.stg_business_entity_id
+WHERE d.stg_business_entity_id IS NULL;
 
-
-*******************************************************************************************
-
-1)
-SELECT business_entity_name,* FROM sds_staging.business_entity_details
-
-
-2)
-SELECT
+-- 4. Find business entities that exist in details but NOT in card_association  
+-- (These should include 'jpmc' and 'Coca Cola')
+SELECT DISTINCT
+    d.stg_business_entity_id,
     d.business_entity_name,
-    b.*
-FROM 
-    sds_staging.business_entity_card_association b
-JOIN 
-    sds_staging.business_entity_details d 
-    ON b.stg_business_entity_id = d.stg_business_entity_id
-	
-	
-	
-there are 126 distinct records in sds_staging.business_entity_details. (it has 'jpmc' , 'Coca Cola' as 2 of business_entity_name among 126)
+    'Missing from business_entity_card_association' as status
+FROM sds_staging.business_entity_details d
+LEFT JOIN sds_staging.business_entity_card_association b 
+    ON d.stg_business_entity_id = b.stg_business_entity_id
+WHERE b.stg_business_entity_id IS NULL;
 
-but when i run below query i m getting only 125 records
-SELECT
+-- 5. Get exact counts for verification
+SELECT 
+    'business_entity_details' as table_name,
+    COUNT(DISTINCT stg_business_entity_id) as distinct_ids,
+    COUNT(*) as total_records
+FROM sds_staging.business_entity_details
+UNION ALL
+SELECT 
+    'business_entity_card_association' as table_name,
+    COUNT(DISTINCT stg_business_entity_id) as distinct_ids,
+    COUNT(*) as total_records
+FROM sds_staging.business_entity_card_association;
+
+-- 6. Check for case sensitivity or whitespace issues with your specific entities
+SELECT 
+    stg_business_entity_id,
+    business_entity_name,
+    LENGTH(business_entity_name) as name_length,
+    ASCII(SUBSTRING(business_entity_name, 1, 1)) as first_char_ascii
+FROM sds_staging.business_entity_details
+WHERE UPPER(TRIM(business_entity_name)) IN ('JPMC', 'COCA COLA', 'HALO');
+
+-- 7. Full outer join to see all mismatches
+SELECT 
+    COALESCE(d.stg_business_entity_id, b.stg_business_entity_id) as entity_id,
     d.business_entity_name,
-    b.*
-FROM 
-    sds_staging.business_entity_card_association b
-JOIN 
-    sds_staging.business_entity_details d 
-    ON b.stg_business_entity_id = d.stg_business_entity_id
-	
-	
-also when i run below query i m getting only 1 record i.e for 'HALO'
-
-SELECT
-    d.business_entity_name,
-    b.*
-FROM 
-    sds_staging.business_entity_card_association b
-JOIN 
-    sds_staging.business_entity_details d 
-    ON b.stg_business_entity_id = d.stg_business_entity_id
-where d.business_entity_name in ('jpmc','Coca Cola','HALO')
-
-see my concern over here is, totally there are 126 records but it has 125 records but these 'jpmc','Coca Cola' are missing. it should be 124 . how come it has 125
-i want to identify which business_entity_name in business_entity_card_association is missing from sds_staging.business_entity_details
-
-like already i know it doesn't have records for 'jpmc','Coca Cola'. then it should have 124 records. how come it has 125 records
+    CASE 
+        WHEN d.stg_business_entity_id IS NULL THEN 'Only in card_association'
+        WHEN b.stg_business_entity_id IS NULL THEN 'Only in business_entity_details'
+        ELSE 'In both tables'
+    END as status
+FROM sds_staging.business_entity_details d
+FULL OUTER JOIN sds_staging.business_entity_card_association b
+    ON d.stg_business_entity_id = b.stg_business_entity_id
+WHERE d.stg_business_entity_id IS NULL 
+   OR b.stg_business_entity_id IS NULL
+ORDER BY status, entity_id;
