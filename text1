@@ -1,12 +1,12 @@
-| Test Case Name                   | Description                                                        | Expected Output                                                   | Actual Output                                                     |
-| -------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------- |
-| All Columns Present in Landing   | When all expected columns are present in the landing table         | Entire data gets loaded successfully                              | Entire data gets loaded successfully                              |
-| Missing Optional Columns         | Some non-critical columns are missing in the landing data          | Those column values are NULL or ignored; job runs without failure | Those column values are NULL or ignored; job runs without failure |
-| Missing Critical Columns         | Critical columns like `client_name`, `sds_supplier_id` are missing | Job fails or those columns are excluded from transformation       | Job fails or those columns are excluded from transformation       |
-| Schema Change in JSON Column     | JSON field structure changes (e.g., `card_revenue`) in landing     | Flattening logic fails or outputs incomplete/null data            | Flattening logic fails or outputs incomplete/null data            |
-| Unexpected Data Format           | Input contains wrong data types (e.g., strings in integer fields)  | Those rows are skipped or columns defaulted to NULL               | Those rows are skipped or columns defaulted to NULL               |
-| Duplicate Source Rows            | Landing table has duplicate records                                | Duplicates are removed using `.dropDuplicates()` where applicable | Duplicates are removed using `.dropDuplicates()` where applicable |
-| Null Handling in Explode Columns | Exploding arrays like `associated_people__titles` with all NULLs   | Creates NULL row or handles gracefully without failure            | Creates NULL row or handles gracefully without failure            |
-| UUID Generation Check            | UDF `compute_uuid_udf` generates ID from non-null inputs           | UUID generated for each row as per expected logic                 | UUID generated for each row as per expected logic                 |
-| Identifier Anti-Join Logic       | `client_ecid` already exists in relationship table                 | Excluded from business\_entity identifier table                   | Excluded from business\_entity identifier table                   |
-| Load to RDS Tables               | Final transformed data is loaded to all staging schema tables      | All records inserted correctly in respective RDS staging tables   | All records inserted correctly in respective RDS staging tables   |
+select count(distinct vendor_name_cleaned) from sds_landing.analysis_pfd
+
+SELECT * FROM sds_staging.business_entity
+
+SELECT 
+    d.business_entity_name,
+    b.*
+FROM 
+    sds_staging.business_entity b
+JOIN 
+    sds_staging.business_entity_details d 
+    ON b.stg_business_entity_id = d.stg_business_entity_id
