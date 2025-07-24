@@ -1,3 +1,7 @@
+from pyspark.sql.types import VoidType
+Error Category: IMPORT_ERROR; Failed Line Number: 26; ImportError: cannot import name 'VoidType' from 'pyspark.sql.types' (/opt/amazon/spark/python/lib/pyspark.zip/pyspark/sql/types.py)
+
+
 # Add the missing import at the top of your file
 from pyspark.sql import DataFrame
 import boto3
