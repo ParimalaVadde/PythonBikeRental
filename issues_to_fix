@@ -1,16 +1,90 @@
-card_revenue
+import sys
+import boto3
+import json
+import pandas as pd
+# from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
 
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 8815233.7777}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 8310170.7713}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 7844672.1036}}
-{'end_date': '2025-08-31', 'date_accessible': '2025-11-01', '1m': {'start_date': '2025-08-01', 'average_monthly_amount': 112394.5386}, '3m': {'start_date': '2025-06-01', 'average_monthly_amount': 128765.0021}, '12m': {'start_date': '2024-09-01', 'average_monthly_amount': 142387.9932}}
-{'end_date': '2025-11-30', 'date_accessible': '2026-02-01', '1m': {'start_date': '2025-11-01', 'average_monthly_amount': 97824.0031}, '3m': {'start_date': '2025-09-01', 'average_monthly_amount': 109223.5571}, '12m': {'start_date': '2024-12-01', 'average_monthly_amount': 128364.0094}}
-{'end_date': '2025-12-31', 'date_accessible': '2026-03-01', '1m': {'start_date': '2025-12-01', 'average_monthly_amount': 92375.7736}, '3m': {'start_date': '2025-10-01', 'average_monthly_amount': 104391.4456}, '12m': {'start_date': '2025-01-01', 'average_monthly_amount': 121490.8432}}
-{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'average_monthly_amount': 131204.1134}, '3m': {'start_date': '2025-03-01', 'average_monthly_amount': 147382.9451}, '12m': {'start_date': '2024-06-01', 'average_monthly_amount': 158603.7317}}
-{'end_date': '2025-09-30', 'date_accessible': '2025-12-01', '1m': {'start_date': '2025-09-01', 'average_monthly_amount': 109248.9013}, '3m': {'start_date': '2025-07-01', 'average_monthly_amount': 123690.7285}, '12m': {'start_date': '2024-10-01', 'average_monthly_amount': 139874.5519}}
-{'end_date': '2025-04-30', 'date_accessible': '2025-07-10', '1m': {'start_date': '2025-04-01', 'average_monthly_amount': 140982.0023}, '3m': {'start_date': '2025-02-01', 'average_monthly_amount': 153498.6409}, '12m': {'start_date': '2024-05-01', 'average_monthly_amount': 165432.8542}}
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 6767731.4118}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 5545336.8131}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 5226886.2024}}
-{'end_date': '2025-10-31', 'date_accessible': '2026-01-01', '1m': {'start_date': '2025-10-01', 'average_monthly_amount': 101394.2244}, '3m': {'start_date': '2025-08-01', 'average_monthly_amount': 117382.6139}, '12m': {'start_date': '2024-11-01', 'average_monthly_amount': 132480.2203}}
-{'end_date': '2025-06-30', 'date_accessible': '2025-09-10', '1m': {'start_date': '2025-06-01', 'average_monthly_amount': 123987.4562}, '3m': {'start_date': '2025-04-01', 'average_monthly_amount': 138764.2213}, '12m': {'start_date': '2024-07-01', 'average_monthly_amount': 151239.8874}}
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 152430.8712}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 164789.2304}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 178902.1107}}
-{'end_date': '2025-07-31', 'date_accessible': '2025-10-05', '1m': {'start_date': '2025-07-01', 'average_monthly_amount': 119384.6725}, '3m': {'start_date': '2025-05-01', 'average_monthly_amount': 135002.3342}, '12m': {'start_date': '2024-08-01', 'average_monthly_amount': 147810.5543}}
+
+def flatten_nested_json_column(df, column_name, schema, explode_array=True):
+    """
+    Flattens a nested JSON column in a PySpark DataFrame.
+    
+    Args:
+        df (DataFrame): The input PySpark DataFrame.
+        column_name (str): The name of the JSON column to flatten.
+        schema (StructType): The schema of the JSON column.
+        explode_array (bool): Whether to explode arrays or join with semicolon.
+    
+    Returns:
+        DataFrame: The DataFrame with the flattened JSON column.
+    """
+    try:
+        # NEW: Check if the column exists and has any non-null values
+        if column_name not in df.columns:
+            print(f"Column {column_name} does not exist in DataFrame")
+            return df
+            
+        # NEW: Check if all values in the column are null
+        non_null_count = df.filter(col(column_name).isNotNull()).count()
+        
+        if non_null_count == 0:
+            print(f"Column {column_name} contains only null values, skipping flattening")
+            # Just return the dataframe as-is, keeping the null column
+            return df
+        
+        # Parse the JSON column into structured data
+        df = df.withColumn(column_name, from_json(col(column_name), schema))
+        
+        # If explode_array is False, join array elements with semicolon
+        if not explode_array:
+            df = df.withColumn(column_name, concat_ws(";", col(column_name)))
+            return df
+        
+        # Explode the array to create one row per element
+        df = df.withColumn(column_name, explode(col(column_name)))
+        # Iterate over the fields in the schema
+        for field in schema.elementType.fields:  # Use `elementType` for ArrayType
+            field_name = field.name
+            field_type = field.dataType
+            # If the field is a nested struct, recursively flatten it
+            if isinstance(field_type, StructType):
+                for nested_field in field_type.fields:
+                    nested_field_name = nested_field.name
+                    df = df.withColumn(
+                        f"{column_name}__{field_name}__{nested_field_name}",
+                        col(f"{column_name}.{field_name}.{nested_field_name}")
+                    )
+            else:
+                # If the field is not nested, extract it directly
+                df = df.withColumn(f"{column_name}__{field_name}", col(f"{column_name}.{field_name}"))
+        # Drop the original JSON column
+        df = df.drop(column_name)
+    except Exception as error:
+        print(f"Error flattening column {column_name}: {error}")
+    return df
+
+
+
+card_revenue_schema = ArrayType(StructType([
+StructField("end_date", StringType(), True),
+StructField("1m", StructType([
+    StructField("start_date", StringType(), True),
+    StructField("average_monthly_amount", DoubleType(), True)
+])),
+StructField("3m", StructType([
+    StructField("start_date", StringType(), True),
+    StructField("average_monthly_amount", DoubleType(), True)
+])),
+StructField("12m", StructType([
+    StructField("start_date", StringType(), True),
+    StructField("average_monthly_amount", DoubleType(), True)
+]))
+]))
+
+
+column_name = "card_revenue"
+
+
+df = pd.read_csv(r"C:/Users/W619378/Downloads/sprints/sprint 254 - SDS Data Processing Fixing issues in staging job identified during previous deploymen/transformed_df_local.csv")
+
+print(df.head())
