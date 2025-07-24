@@ -1,88 +1,16 @@
-def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
-    """
-    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
-    Handles void data type columns by converting them to string type.
-    """
-    
-    # Check for void columns and convert them to string type
-    void_columns = [field.name for field in df.schema.fields if isinstance(field.dataType, NullType)]
-    
-    if void_columns:
-        print(f"Found void columns: {void_columns}. Converting to string type.")
-        # Convert void columns to string type with null values
-        for col_name in void_columns:
-            df = df.withColumn(col_name, lit(None).cast("string"))
-    
-    # Alternative approach: Drop void columns entirely (uncomment if you prefer this)
-    # if void_columns:
-    #     print(f"Dropping void columns: {void_columns}")
-    #     df = df.drop(*void_columns)
-    
-    try:
-        # Ensure temp_path ends with a trailing slash
-        if not temp_path.endswith('/'):
-            temp_path += '/'
-        
-        # Coalesce to one partition and write to temp S3 directory with proper CSV options
-        df.coalesce(1).write.mode("overwrite") \
-            .option("header", "true") \
-            .option("quote", '"') \
-            .option("escape", '"') \
-            .option("quoteAll", "true") \
-            .option("multiLine", "true") \
-            .option("timestampFormat", "yyyy-MM-dd HH:mm:ss") \
-            .option("dateFormat", "yyyy-MM-dd") \
-            .csv(temp_path)
-        
-        # Initialize S3 client
-        s3 = boto3.client("s3")
-        
-        # Parse temp path
-        temp_bucket = temp_path.replace("s3://", "").split("/")[0]
-        temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
-        
-        # Remove trailing slash from prefix if present
-        if temp_prefix.endswith('/'):
-            temp_prefix = temp_prefix[:-1]
-        
-        # List objects in temp directory
-        response = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
-        
-        if 'Contents' not in response:
-            raise Exception(f"No files found in temp path: {temp_path}")
-        
-        objects = response['Contents']
-        
-        # Find the CSV part file, excluding _SUCCESS and other metadata files
-        csv_files = [
-            obj['Key'] for obj in objects 
-            if obj['Key'].endswith(".csv") and not obj['Key'].endswith("_SUCCESS")
-        ]
-        
-        if not csv_files:
-            raise Exception(f"No CSV files found in temp directory: {temp_path}")
-        
-        # Use the first (and should be only) CSV file
-        part_file = csv_files[0]
-        
-        # Copy the CSV file to the target location
-        s3.copy_object(
-            Bucket=s3_bucket,
-            CopySource={'Bucket': temp_bucket, 'Key': part_file},
-            Key=s3_key
-        )
-        
-        print(f"Successfully copied CSV to s3://{s3_bucket}/{s3_key}")
-        
-        # Clean up temp files - delete all objects in the temp directory
-        delete_objects = [{'Key': obj['Key']} for obj in objects]
-        if delete_objects:
-            s3.delete_objects(
-                Bucket=temp_bucket,
-                Delete={'Objects': delete_objects}
-            )
-            print(f"Cleaned up {len(delete_objects)} temp files")
-            
-    except Exception as e:
-        print(f"Error in write_single_csv_to_s3_fixed: {str(e)}")
-        raise
+card_revenue
+
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 8815233.7777}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 8310170.7713}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 7844672.1036}}
+{'end_date': '2025-08-31', 'date_accessible': '2025-11-01', '1m': {'start_date': '2025-08-01', 'average_monthly_amount': 112394.5386}, '3m': {'start_date': '2025-06-01', 'average_monthly_amount': 128765.0021}, '12m': {'start_date': '2024-09-01', 'average_monthly_amount': 142387.9932}}
+{'end_date': '2025-11-30', 'date_accessible': '2026-02-01', '1m': {'start_date': '2025-11-01', 'average_monthly_amount': 97824.0031}, '3m': {'start_date': '2025-09-01', 'average_monthly_amount': 109223.5571}, '12m': {'start_date': '2024-12-01', 'average_monthly_amount': 128364.0094}}
+{'end_date': '2025-12-31', 'date_accessible': '2026-03-01', '1m': {'start_date': '2025-12-01', 'average_monthly_amount': 92375.7736}, '3m': {'start_date': '2025-10-01', 'average_monthly_amount': 104391.4456}, '12m': {'start_date': '2025-01-01', 'average_monthly_amount': 121490.8432}}
+{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'average_monthly_amount': 131204.1134}, '3m': {'start_date': '2025-03-01', 'average_monthly_amount': 147382.9451}, '12m': {'start_date': '2024-06-01', 'average_monthly_amount': 158603.7317}}
+{'end_date': '2025-09-30', 'date_accessible': '2025-12-01', '1m': {'start_date': '2025-09-01', 'average_monthly_amount': 109248.9013}, '3m': {'start_date': '2025-07-01', 'average_monthly_amount': 123690.7285}, '12m': {'start_date': '2024-10-01', 'average_monthly_amount': 139874.5519}}
+{'end_date': '2025-04-30', 'date_accessible': '2025-07-10', '1m': {'start_date': '2025-04-01', 'average_monthly_amount': 140982.0023}, '3m': {'start_date': '2025-02-01', 'average_monthly_amount': 153498.6409}, '12m': {'start_date': '2024-05-01', 'average_monthly_amount': 165432.8542}}
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 6767731.4118}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 5545336.8131}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 5226886.2024}}
+{'end_date': '2025-10-31', 'date_accessible': '2026-01-01', '1m': {'start_date': '2025-10-01', 'average_monthly_amount': 101394.2244}, '3m': {'start_date': '2025-08-01', 'average_monthly_amount': 117382.6139}, '12m': {'start_date': '2024-11-01', 'average_monthly_amount': 132480.2203}}
+{'end_date': '2025-06-30', 'date_accessible': '2025-09-10', '1m': {'start_date': '2025-06-01', 'average_monthly_amount': 123987.4562}, '3m': {'start_date': '2025-04-01', 'average_monthly_amount': 138764.2213}, '12m': {'start_date': '2024-07-01', 'average_monthly_amount': 151239.8874}}
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 152430.8712}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 164789.2304}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 178902.1107}}
+{'end_date': '2025-07-31', 'date_accessible': '2025-10-05', '1m': {'start_date': '2025-07-01', 'average_monthly_amount': 119384.6725}, '3m': {'start_date': '2025-05-01', 'average_monthly_amount': 135002.3342}, '12m': {'start_date': '2024-08-01', 'average_monthly_amount': 147810.5543}}
