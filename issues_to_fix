@@ -1,18 +1,23 @@
-from pyspark.sql.types import VoidType
-Error Category: IMPORT_ERROR; Failed Line Number: 26; ImportError: cannot import name 'VoidType' from 'pyspark.sql.types' (/opt/amazon/spark/python/lib/pyspark.zip/pyspark/sql/types.py)
-
-
-# Add the missing import at the top of your file
-from pyspark.sql import DataFrame
-import boto3
-from pyspark.sql.functions import col, when, concat_ws
-
-# Add these CSV writing options to handle special characters properly
-
 def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
     """
     Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
+    Handles void data type columns by converting them to string type.
     """
+    
+    # Check for void columns and convert them to string type
+    void_columns = [field.name for field in df.schema.fields if isinstance(field.dataType, NullType)]
+    
+    if void_columns:
+        print(f"Found void columns: {void_columns}. Converting to string type.")
+        # Convert void columns to string type with null values
+        for col_name in void_columns:
+            df = df.withColumn(col_name, lit(None).cast("string"))
+    
+    # Alternative approach: Drop void columns entirely (uncomment if you prefer this)
+    # if void_columns:
+    #     print(f"Dropping void columns: {void_columns}")
+    #     df = df.drop(*void_columns)
+    
     # Coalesce to one partition and write to temp S3 directory with proper CSV options
     df.coalesce(1).write.mode("overwrite") \
         .option("header", True) \
@@ -21,40 +26,20 @@ def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, tem
         .option("quoteAll", True) \
         .option("multiLine", True) \
         .csv(temp_path)
-
+    
     # Rest of your S3 copy logic remains the same
     s3 = boto3.client("s3")
     temp_bucket = temp_path.replace("s3://", "").split("/")[0]
     temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
-
     objects = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
     part_file = next(
         obj['Key'] for obj in objects.get('Contents', []) if obj['Key'].endswith(".csv")
     )
-
     s3.copy_object(
         Bucket=s3_bucket,
         CopySource={'Bucket': temp_bucket, 'Key': part_file},
         Key=s3_key
     )
-
     # Clean up temp files
     for obj in objects.get('Contents', []):
         s3.delete_object(Bucket=temp_bucket, Key=obj['Key'])
-
-
-# Replace your existing function calls with:
-landing_tables = get_landing_data_fixed()
-transformed_df = process_mapping_and_transform_data(landing_tables, ss.mapping_file_path, ss.output_data_path)
-
-# Use the fixed CSV writing function
-write_single_csv_to_s3_fixed(
-    transformed_df,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-by081rbjj1vo",
-    s3_key="upsert/pfd_staging/transformed_df.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/pfd_staging/_tmp"
-)
-
-
-
-i m getting below error how to fix it.
