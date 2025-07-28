@@ -1,42 +1,41 @@
 # Flatten nested JSON columns
-for column, schema in [
-    ("card_revenue", ss.card_revenue_schema),
-    ("card_transactions_stability", ss.card_transactions_stability),
-    ("associated_people", ss.associated_people_schema),
-    ("industries", ss.industries_schema), 
-    #("company_structure", ss.company_structure_schema),  
-    ("technologies", ss.technologies_schema),
-]:
-    transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
+    for column, schema in [
+        ("card_revenue", ss.card_revenue_schema),
+        ("card_transactions_stability", ss.card_transactions_stability),
+        ("associated_people", ss.associated_people_schema),
+        ("industries", ss.industries_schema), 
+        #("company_structure", ss.company_structure_schema),  
+        ("technologies", ss.technologies_schema),
+    ]:
+        transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
+		
+#at this point if transformed_json_df doesn't contain card_revenue . scenario is like this if card_revenuecolumn is completely null then flatten_nested_json_column function will not do anything , it just ruturn column with null values
+suppose if card_revenue had values then it return following columns '"card_revenue__1m__start_date", "card_revenue__1m__average_monthly_amount", "card_revenue__3m__start_date", "card_revenue__3m__average_monthly_amount", "card_revenue__12m__start_date", "card_revenue__12m__average_monthly_amount"'
+so in case if wont return this columns in below operation job will fail . so i want check condition like if transformed_revenue doesn't contain following columns then i need create these columns with null values. to avoid job failure . can you write initial check n logic over here at thia point
 
-# NEW: Explode and process specific columns with null safety
-# Check if the column exists and has non-null values before exploding
-if "associated_people__titles" in transformed_json_df.columns:
-    # Check if there are any non-null values in the titles column
-    non_null_titles = transformed_json_df.filter(col("associated_people__titles").isNotNull()).count()
-    if non_null_titles > 0:
-        transformed_json_df = transformed_json_df.withColumn(
-            "associated_people__title", 
-            explode(col("associated_people__titles"))
-        ).drop("associated_people__titles")
-    else:
-        # If all titles are null, create a null title column and drop titles
-        transformed_json_df = transformed_json_df.withColumn(
-            "associated_people__title", 
-            lit(None).cast("string")
-        ).drop("associated_people__titles")
-else:
-    print("Warning: associated_people__titles column not found")
-    # Create associated_people__title column with null values
-    transformed_json_df = transformed_json_df.withColumn(
-        "associated_people__title", 
-        lit(None).cast("string")
+revenue = ["stg_business_entity_id", "card_revenue__end_date", "card_revenue__1m__start_date", "card_revenue__1m__average_monthly_amount", "card_revenue__3m__start_date", "card_revenue__3m__average_monthly_amount", "card_revenue__12m__start_date", "card_revenue__12m__average_monthly_amount"]
+
+# Transform `transformed_revenue`
+    transformed_revenue = transformed_json_df.select(*ss.revenue).withColumnRenamed(
+        "card_revenue__end_date", "end_date"
     )
 
-# Check and create associated_people__name if it doesn't exist
-if "associated_people__name" not in transformed_json_df.columns:
-    print("Warning: associated_people__name column not found, creating with null values")
-    transformed_json_df = transformed_json_df.withColumn(
-        "associated_people__name", 
-        lit(None).cast("string")
+    transformed_revenue = transformed_revenue.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
     )
+    
+    # Get columns present in both transformed_revenue and decimal_columns
+    columns_to_round = [col for col in ss.decimal_columns if col in transformed_revenue.columns]
+    
+    # Apply rounding to decimal columns
+    for col_name in columns_to_round:
+        transformed_revenue = transformed_revenue.withColumn(
+            col_name,
+            round(col(col_name), 2)
+        )
+    
+    transformed_revenue = transformed_revenue.withColumn(
+        "revenue_id",
+        compute_uuid_udf(struct(*transformed_revenue.columns))
+    ).dropDuplicates()
