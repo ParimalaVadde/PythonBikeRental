@@ -1,46 +1,42 @@
 # Flatten nested JSON columns
-    for column, schema in [
-        ("card_revenue", ss.card_revenue_schema),
-        ("card_transactions_stability", ss.card_transactions_stability),
-        ("associated_people", ss.associated_people_schema),
-        ("industries", ss.industries_schema), 
-        #("company_structure", ss.company_structure_schema),  
-        ("technologies", ss.technologies_schema),
-    ]:
-        transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
-		
-		
+for column, schema in [
+    ("card_revenue", ss.card_revenue_schema),
+    ("card_transactions_stability", ss.card_transactions_stability),
+    ("associated_people", ss.associated_people_schema),
+    ("industries", ss.industries_schema), 
+    #("company_structure", ss.company_structure_schema),  
+    ("technologies", ss.technologies_schema),
+]:
+    transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
 
 # NEW: Explode and process specific columns with null safety
-    # Check if the column exists and has non-null values before exploding
-    if "associated_people__titles" in transformed_json_df.columns:
-        # Check if there are any non-null values in the titles column
-        non_null_titles = transformed_json_df.filter(col("associated_people__titles").isNotNull()).count()
-        if non_null_titles > 0:
-            transformed_json_df = transformed_json_df.withColumn(
-                "associated_people__title", 
-                explode(col("associated_people__titles"))
-            ).drop("associated_people__titles")
-        else:
-            # If all titles are null, create a null title column and drop titles
-            transformed_json_df = transformed_json_df.withColumn(
-                "associated_people__title", 
-                lit(None).cast("string")
-            ).drop("associated_people__titles")
+# Check if the column exists and has non-null values before exploding
+if "associated_people__titles" in transformed_json_df.columns:
+    # Check if there are any non-null values in the titles column
+    non_null_titles = transformed_json_df.filter(col("associated_people__titles").isNotNull()).count()
+    if non_null_titles > 0:
+        transformed_json_df = transformed_json_df.withColumn(
+            "associated_people__title", 
+            explode(col("associated_people__titles"))
+        ).drop("associated_people__titles")
     else:
-        print("Warning: associated_people__titles column not found")
-		
-		#here i want to add column associated_people__titles in transformed_json_df with null values
-		
-	
-	if "associated_people__name" not in transformed_json_df.columns:
-		simillarly i want to add column associated_people__name in transformed_json_df with null values
-	
-		
-		
+        # If all titles are null, create a null title column and drop titles
+        transformed_json_df = transformed_json_df.withColumn(
+            "associated_people__title", 
+            lit(None).cast("string")
+        ).drop("associated_people__titles")
+else:
+    print("Warning: associated_people__titles column not found")
+    # Create associated_people__title column with null values
+    transformed_json_df = transformed_json_df.withColumn(
+        "associated_people__title", 
+        lit(None).cast("string")
+    )
 
-# Transform contacts from associated_people data
-    people_contacts = transformed_json_df.select(*ss.contacts).distinct().withColumnRenamed(
-    "associated_people__name", "contact_name"
-    ).withColumnRenamed(
-    "associated_people__title", "contact_title")
+# Check and create associated_people__name if it doesn't exist
+if "associated_people__name" not in transformed_json_df.columns:
+    print("Warning: associated_people__name column not found, creating with null values")
+    transformed_json_df = transformed_json_df.withColumn(
+        "associated_people__name", 
+        lit(None).cast("string")
+    )
