@@ -1,41 +1,57 @@
-# Flatten nested JSON columns
-    for column, schema in [
-        ("card_revenue", ss.card_revenue_schema),
-        ("card_transactions_stability", ss.card_transactions_stability),
-        ("associated_people", ss.associated_people_schema),
-        ("industries", ss.industries_schema), 
-        #("company_structure", ss.company_structure_schema),  
-        ("technologies", ss.technologies_schema),
-    ]:
-        transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
-		
-#at this point if transformed_json_df doesn't contain card_revenue . scenario is like this if card_revenuecolumn is completely null then flatten_nested_json_column function will not do anything , it just ruturn column with null values
-suppose if card_revenue had values then it return following columns '"card_revenue__1m__start_date", "card_revenue__1m__average_monthly_amount", "card_revenue__3m__start_date", "card_revenue__3m__average_monthly_amount", "card_revenue__12m__start_date", "card_revenue__12m__average_monthly_amount"'
-so in case if wont return this columns in below operation job will fail . so i want check condition like if transformed_revenue doesn't contain following columns then i need create these columns with null values. to avoid job failure . can you write initial check n logic over here at thia point
+# Method 1: Using list comprehension (recommended)
+# Read from config file (assuming ss.revenue contains your config list)
+expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
 
-revenue = ["stg_business_entity_id", "card_revenue__end_date", "card_revenue__1m__start_date", "card_revenue__1m__average_monthly_amount", "card_revenue__3m__start_date", "card_revenue__3m__average_monthly_amount", "card_revenue__12m__start_date", "card_revenue__12m__average_monthly_amount"]
+# Method 2: Using filter() function
+expected_revenue_columns = list(filter(lambda x: x != "stg_business_entity_id", ss.revenue))
 
-# Transform `transformed_revenue`
-    transformed_revenue = transformed_json_df.select(*ss.revenue).withColumnRenamed(
-        "card_revenue__end_date", "end_date"
-    )
+# Method 3: Create a copy and remove (if you want to preserve original)
+expected_revenue_columns = ss.revenue.copy()
+if "stg_business_entity_id" in expected_revenue_columns:
+    expected_revenue_columns.remove("stg_business_entity_id")
 
-    transformed_revenue = transformed_revenue.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-    )
-    
-    # Get columns present in both transformed_revenue and decimal_columns
-    columns_to_round = [col for col in ss.decimal_columns if col in transformed_revenue.columns]
-    
-    # Apply rounding to decimal columns
-    for col_name in columns_to_round:
-        transformed_revenue = transformed_revenue.withColumn(
-            col_name,
-            round(col(col_name), 2)
-        )
-    
-    transformed_revenue = transformed_revenue.withColumn(
-        "revenue_id",
-        compute_uuid_udf(struct(*transformed_revenue.columns))
-    ).dropDuplicates()
+# Method 4: Using set difference (if order doesn't matter)
+expected_revenue_columns = list(set(ss.revenue) - {"stg_business_entity_id"})
+
+# Method 5: Remove multiple columns if needed
+columns_to_exclude = ["stg_business_entity_id", "some_other_column"]
+expected_revenue_columns = [col for col in ss.revenue if col not in columns_to_exclude]
+
+# Method 6: More explicit approach with error handling
+expected_revenue_columns = ss.revenue.copy()
+try:
+    expected_revenue_columns.remove("stg_business_entity_id")
+    print("Removed stg_business_entity_id from expected columns")
+except ValueError:
+    print("stg_business_entity_id not found in config list")
+
+# Example usage in your context:
+print("Original config columns:", ss.revenue)
+
+# Remove stg_business_entity_id since it's not created by flattening
+expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+
+print("Expected columns after flattening:", expected_revenue_columns)
+
+# Check and create missing revenue columns with appropriate data types
+print("Checking for missing revenue columns...")
+for col_name in expected_revenue_columns:
+    if col_name not in transformed_json_df.columns:
+        print(f"Creating {col_name} column with null values")
+        
+        # Determine appropriate data type based on column name
+        if "date" in col_name:
+            transformed_json_df = transformed_json_df.withColumn(
+                col_name, 
+                lit(None).cast("date")
+            )
+        elif "amount" in col_name:
+            transformed_json_df = transformed_json_df.withColumn(
+                col_name, 
+                lit(None).cast("double")
+            )
+        else:
+            transformed_json_df = transformed_json_df.withColumn(
+                col_name, 
+                lit(None).cast("string")
+            )
