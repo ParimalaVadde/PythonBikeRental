@@ -1,19 +1,4 @@
-def transform_dataframes(transformed_df, ss, glueContext, compute_uuid_udf, utl):
-    """
-    Function to transform multiple DataFrames based on the provided schemas and logic.
-    Args:
-        transformed_df (DataFrame): The input PySpark DataFrame.
-        ss (object): An object containing schema definitions and column mappings.
-        glueContext (GlueContext): The AWS Glue context.
-        compute_uuid_udf (UDF): A UDF to compute UUIDs.
-        utl (module): A utility module containing helper functions like `flatten_nested_json_column` and `melt_dataframe`.
-    Returns:
-        dict: A dictionary of transformed DataFrames.
-    """
-    # Flatten the JSON columns
-    transformed_json_df = transformed_df.select(*ss.jsoncol)
- 
-    # Flatten nested JSON columns
+# Flatten nested JSON columns
     for column, schema in [
         ("card_revenue", ss.card_revenue_schema),
         ("card_transactions_stability", ss.card_transactions_stability),
@@ -23,10 +8,10 @@ def transform_dataframes(transformed_df, ss, glueContext, compute_uuid_udf, utl)
         ("technologies", ss.technologies_schema),
     ]:
         transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
-            
-            
-    
-    # NEW: Explode and process specific columns with null safety
+		
+		
+
+# NEW: Explode and process specific columns with null safety
     # Check if the column exists and has non-null values before exploding
     if "associated_people__titles" in transformed_json_df.columns:
         # Check if there are any non-null values in the titles column
@@ -44,28 +29,18 @@ def transform_dataframes(transformed_df, ss, glueContext, compute_uuid_udf, utl)
             ).drop("associated_people__titles")
     else:
         print("Warning: associated_people__titles column not found")
-    
-    # NEW: Process registered_agents with null handling
-    if "registered_agents" in transformed_json_df.columns:
-        transformed_json_df = utl.flatten_nested_json_column(
-            transformed_json_df,
-            "registered_agents",
-            ss.registered_agents_schema,
-            explode_array=False
-        )
-    else:
-        print("Warning: registered_agents column not found")
-
-    #transformed_json_df = transformed_json_df.withColumn("associated_tax_ids", from_json(col("associated_tax_ids"), ss.associated_tax_ids_schema))
-    #transformed_json_df = transformed_json_df.withColumn("associated_tax_id", explode(col("associated_tax_ids"))).drop("associated_tax_ids")
-    #transformed_json_df = transformed_json_df.withColumn("registered_agents", from_json(col("registered_agents"), ss.registered_agents_schema))
-    #transformed_json_df = transformed_json_df.withColumn("registered_agents", explode(col("registered_agents")))
-
-    transformed_json_df.show()
+		
+		#here i want to add column associated_people__titles in transformed_json_df with null values
+		
 	
+	if "associated_people__name" not in transformed_json_df.columns:
+		simillarly i want to add column associated_people__name in transformed_json_df with null values
 	
-	transformed_characteristics = transformed_characteristics.join(
-    transformed_json_df.select("stg_business_entity_id", "registered_agents"),
-    on="stg_business_entity_id",
-    how="left"
-    )
+		
+		
+
+# Transform contacts from associated_people data
+    people_contacts = transformed_json_df.select(*ss.contacts).distinct().withColumnRenamed(
+    "associated_people__name", "contact_name"
+    ).withColumnRenamed(
+    "associated_people__title", "contact_title")
