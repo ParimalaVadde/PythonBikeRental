@@ -1,8 +1,6 @@
-# Before flattening, convert string arrays to actual arrays
-transformed_json_df = transformed_json_df.withColumn(
-    "registered_agents",
-    F.when(
-        F.col("registered_agents").isNotNull() & (F.col("registered_agents") != "[]"),
-        F.from_json(F.col("registered_agents"), ArrayType(StringType()))
-    ).otherwise(F.array())  # Use empty array instead of null
-)
+# Check all column types
+print(transformed_json_df.dtypes)
+
+# Check specific column type
+registered_agents_type = dict(transformed_json_df.dtypes)['registered_agents']
+print(f"registered_agents column type: {registered_agents_type}")
