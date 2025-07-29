@@ -17,3 +17,6 @@ transformed_json_df = transformed_json_df.withColumn(
         concat_ws(";", col("registered_agents"))
     ).otherwise(lit(""))
 )
+
+
+Error Category: QUERY_ERROR; Failed Line Number: 864; AnalysisException: Union can only be performed on tables with the compatible column types. The third column of the second table is string type which is not compatible with array<string> at same column of first table;
