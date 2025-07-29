@@ -1,16 +1,6 @@
-    # Update the `characteristic_type` column based on the condition
-    transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
-		"characteristic_type",
-		F.when(
-			F.col("characteristic_type").isin("moody"),
-			F.lit("credit_rating_moody")
-		).otherwise(F.col("characteristic_type"))
-	)
-	
-	transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
-		"characteristic_type",
-		F.when(
-			F.col("characteristic_type").isin("sp"),
-			F.lit("credit_rating_sp")
-		).otherwise(F.col("characteristic_type"))
-	)
+transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+    "characteristic_type",
+    F.when(F.col("characteristic_type") == "moody", F.lit("credit_rating_moody"))
+     .when(F.col("characteristic_type") == "sp", F.lit("credit_rating_sp"))
+     .otherwise(F.col("characteristic_type"))
+)
