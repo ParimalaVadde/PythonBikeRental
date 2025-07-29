@@ -1,6 +1,19 @@
-# Check all column types
-print(transformed_json_df.dtypes)
+# Step 1: Convert string representation of list to actual array
+transformed_json_df = transformed_json_df.withColumn(
+    "registered_agents",
+    when(
+        (col("registered_agents").isNotNull()) & 
+        (col("registered_agents") != "[]") & 
+        (col("registered_agents") != ""),
+        from_json(col("registered_agents"), ArrayType(StringType()))
+    ).otherwise(lit(None))
+)
 
-# Check specific column type
-registered_agents_type = dict(transformed_json_df.dtypes)['registered_agents']
-print(f"registered_agents column type: {registered_agents_type}")
+# Step 2: Convert array to semicolon-separated string
+transformed_json_df = transformed_json_df.withColumn(
+    "registered_agents",
+    when(
+        (col("registered_agents").isNotNull()) & (size(col("registered_agents")) > 0),
+        concat_ws(";", col("registered_agents"))
+    ).otherwise(lit(""))
+)
