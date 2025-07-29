@@ -1,57 +1,99 @@
-# Method 1: Using list comprehension (recommended)
-# Read from config file (assuming ss.revenue contains your config list)
-expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+I can see two values in staging for same business_entity and characteristic_type
 
-# Method 2: Using filter() function
-expected_revenue_columns = list(filter(lambda x: x != "stg_business_entity_id", ss.revenue))
+select * from sds_staging.business_entity_characteristics where characteristic_type = 'credit_rating_provider_date' 
+and stg_business_entity_id = '6710c73c-d6e6-11c0-4023-4e613b7933e7'
 
-# Method 3: Create a copy and remove (if you want to preserve original)
-expected_revenue_columns = ss.revenue.copy()
-if "stg_business_entity_id" in expected_revenue_columns:
-    expected_revenue_columns.remove("stg_business_entity_id")
 
-# Method 4: Using set difference (if order doesn't matter)
-expected_revenue_columns = list(set(ss.revenue) - {"stg_business_entity_id"})
+"characteristics_id","stg_business_entity_id","characteristic_type","characteristic_value","is_active","created_by","created_date"
+"8889e552-6196-9c0c-5b32-6e0a96f3a374","6710c73c-d6e6-11c0-4023-4e613b7933e7","credit_rating_provider_date","sp;B+;2025-07-29",True,"PFD","2025-07-29 09:50:32.278"
+"cf9b4c8b-15e5-197e-d414-27ac21fe6c0b","6710c73c-d6e6-11c0-4023-4e613b7933e7","credit_rating_provider_date","moody;BBB;2025-07-29",True,"PFD","2025-07-29 09:50:32.278"
 
-# Method 5: Remove multiple columns if needed
-columns_to_exclude = ["stg_business_entity_id", "some_other_column"]
-expected_revenue_columns = [col for col in ss.revenue if col not in columns_to_exclude]
 
-# Method 6: More explicit approach with error handling
-expected_revenue_columns = ss.revenue.copy()
-try:
-    expected_revenue_columns.remove("stg_business_entity_id")
-    print("Removed stg_business_entity_id from expected columns")
-except ValueError:
-    print("stg_business_entity_id not found in config list")
 
-# Example usage in your context:
-print("Original config columns:", ss.revenue)
+characteristics = ["stg_business_entity_id", "scf_industry_sector_dso_25", "scf_industry_sector_dso_50", "scf_industry_sector_dso_75", "scf_industry_group_dso_25", "scf_industry_group_dso_50", "scf_industry_group_dso_75", "moody", "sp", "credit_revolver_rate", "cost_of_goods_sold", "vc_campaigned_previously", "vc_acceptance_tier_legacy", "vc_acceptance_tier_model", "vc_acceptance_tier_userdefined", "vc_campaign_count", "vc_campaign_accepts"]
 
-# Remove stg_business_entity_id since it's not created by flattening
-expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+def melt_dataframe(df, id_column, columns_to_melt, melted_column_names) :
+    """
+    Melts a PySpark DataFrame by unpivoting specified columns into key-value pairs.
 
-print("Expected columns after flattening:", expected_revenue_columns)
+    Args:
+        df (DataFrame): The input PySpark DataFrame.
+        id_column (str): The column to retain as the identifier.
+        columns_to_melt (list): The list of columns to melt.
+        melted_column_names (tuple): A tuple containing the names of the new columns 
+                                     (e.g., ("melted_column_name", "melted_value_name")).
 
-# Check and create missing revenue columns with appropriate data types
-print("Checking for missing revenue columns...")
-for col_name in expected_revenue_columns:
-    if col_name not in transformed_json_df.columns:
-        print(f"Creating {col_name} column with null values")
-        
-        # Determine appropriate data type based on column name
-        if "date" in col_name:
-            transformed_json_df = transformed_json_df.withColumn(
-                col_name, 
-                lit(None).cast("date")
-            )
-        elif "amount" in col_name:
-            transformed_json_df = transformed_json_df.withColumn(
-                col_name, 
-                lit(None).cast("double")
-            )
-        else:
-            transformed_json_df = transformed_json_df.withColumn(
-                col_name, 
-                lit(None).cast("string")
-            )
+    Returns:
+        DataFrame: The melted PySpark DataFrame.
+    """
+    melted_dfs = []
+    melted_column_name, melted_value_name = melted_column_names
+
+    for col_name in columns_to_melt:
+        melted_df = df.select(
+            col(id_column),
+            lit(col_name).alias(melted_column_name),  # Add the column name as the melted column
+            col(col_name).alias(melted_value_name)   # Add the column value as the melted value
+        )
+        melted_dfs.append(melted_df)
+
+    # Combine all the melted DataFrames using `unionByName`
+    melted_df = melted_dfs[0]
+    for df in melted_dfs[1:]:
+        melted_df = melted_df.unionByName(df)
+
+    # Drop duplicates and filter out rows with null values in the melted value column
+    melted_df = melted_df.dropDuplicates().filter(col(melted_value_name).isNotNull())
+
+    return melted_df
+
+
+transformed_characteristics = transformed_df.select(*ss.characteristics)
+    
+    
+    transformed_characteristics = transformed_characteristics.join(
+    transformed_json_df.select("stg_business_entity_id", "registered_agents"),
+    on="stg_business_entity_id",
+    how="left"
+    )
+
+    # Perform a left join between `transformed_characteristics` and `transformed_json_df`
+    transformed_melt_characteristics = utl.melt_dataframe(
+    transformed_characteristics,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.characteristics_columns,
+    melted_column_names=("characteristic_type", "characteristic_value"))
+
+    # Get the current date
+    current_date = datetime.today().strftime("%Y-%m-%d")
+
+    # Update the `characteristic_value` column based on the condition
+    transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+		"characteristic_value",
+		F.when(
+			F.col("characteristic_type").isin("moody", "sp"),
+			F.concat_ws(";", F.col("characteristic_type"), F.col("characteristic_value"), F.lit(current_date))
+		).otherwise(F.col("characteristic_value"))
+	)
+
+    # Update the `characteristic_type` column based on the condition
+    transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+		"characteristic_type",
+		F.when(
+			F.col("characteristic_type").isin("moody", "sp"),
+			F.lit("credit_rating_provider_date")
+		).otherwise(F.col("characteristic_type"))
+	)
+    transformed_melt_characteristics = transformed_melt_characteristics.filter(
+		col("characteristic_value").isNotNull()
+	)
+
+    transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+
+    transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+		"characteristics_id",
+        compute_uuid_udf(struct(*transformed_melt_characteristics.columns))
+	)
