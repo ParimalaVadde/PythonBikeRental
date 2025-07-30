@@ -28,3 +28,12 @@ Error Category: INVALID_ARGUMENT_ERROR; Failed Line Number: 875; NameError: name
 CASSIE WHITLOCK;INCORP SERVICES INC;JESSICA BJORLING;TODD GRIERSON
 C T CORPORATION SYSTEM;CT CORPORATION SYSTEM;THE CORPORATION TRUST INCORPORATED
 
+
+from pyspark.sql.functions import size, concat_ws, when, col, lit, from_json, regexp_replace
+from pyspark.sql.types import ArrayType, StringType
+
+# First, convert Python string representation to JSON format
+transformed_json_df = transformed_json_df.withColumn(
+    "registered_agents_json",
+    regexp_replace(col("registered_agents"), "'", "\"")
+)
