@@ -232,3 +232,39 @@ for column, schema in [
 # Special handling for associated_people due to nested arrays
 transformed_json_df = flatten_associated_people_with_titles(transformed_json_df, "associated_people")
 """
+
+
+*************************************************
+
+
+from pyspark.sql.functions import size, concat_ws, when, col, lit, from_json, regexp_replace
+from pyspark.sql.types import ArrayType, StringType
+
+# First, convert Python string representation to JSON format
+transformed_json_df = transformed_json_df.withColumn(
+    "registered_agents_json",
+    regexp_replace(col("registered_agents"), "'", "\"")
+)
+
+# Convert JSON string to actual array
+transformed_json_df = transformed_json_df.withColumn(
+    "registered_agents",
+    when(
+        (col("registered_agents_json").isNotNull()) & 
+        (col("registered_agents_json") != "[]") & 
+        (col("registered_agents_json") != ""),
+        from_json(col("registered_agents_json"), ArrayType(StringType()))
+    ).otherwise(lit(None))
+)
+
+# Convert array to semicolon-separated string
+transformed_json_df = transformed_json_df.withColumn(
+    "registered_agents",
+    when(
+        (col("registered_agents").isNotNull()) & (size(col("registered_agents")) > 0),
+        concat_ws(";", col("registered_agents"))
+    ).otherwise(lit(""))
+)
+
+# Drop the temporary column
+transformed_json_df = transformed_json_df.drop("registered_agents_json")
