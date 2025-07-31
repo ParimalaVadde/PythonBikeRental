@@ -136,3 +136,14 @@ else:
     print("8. ERROR: card_revenue not found in flattened_dataframes!")
 
 print("=== END DEBUG ===")
+
+
+
+
+classification table
+levels to lower case
+indivisual to internal changes
+
+receivable attribute type
+
+technology used 
