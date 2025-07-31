@@ -1,14 +1,101 @@
-sds_staging.business_entity
-stg_business_entity_id	source_system_id	source_system_name	hierarchy_identifier	hierarchy_level	hierarchy_role	parent_id	created_by	created_date
-21b12e21-5d50-bdd6-7603-be18b846f93e	NULL	NULL	NULL	NULL	NULL	NULL	PFD	59:51.3
-2d35a04a-5fdf-50d5-7750-c1c7621ddc33	NULL	NULL	NULL	NULL	NULL	NULL	PFD	59:51.3
-cf49fb42-dd63-1eae-454f-6be3d14c2bbe	NULL	NULL	NULL	NULL	NULL	NULL	PFD	59:51.3
-08a27d25-2cd7-3709-2ebd-31fd5ccdce5f	NULL	NULL	NULL	NULL	NULL	NULL	PFD	59:51.3
+# staging_schema.py - CORRECTED SCHEMAS
+from pyspark.sql.types import *
 
+# CORRECTED: card_revenue is a single object, not an array
+card_revenue_schema = StructType([
+    StructField("end_date", StringType(), True),
+    StructField("date_accessible", StringType(), True),  # MISSING FIELD ADDED
+    StructField("1m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]), True),
+    StructField("3m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]), True),
+    StructField("12m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]), True)
+])
 
-sds_staging.business_entity_details
-business_entity_details_id	stg_business_entity_id	business_entity_name	company_structure	market_segment_type	year_incorporated	reported_annual_revenue	created_by	created_date
-eace09c9-eca5-6005-4774-c54e326a65dd	21b12e21-5d50-bdd6-7603-be18b846f93e	ACADIA HEALTHCARE COMPANY INC		NULL			PFD	59:55.5
-0d3407ef-4ead-ef26-a2d1-4100cbd2e567	2d35a04a-5fdf-50d5-7750-c1c7621ddc33	jpmc		NULL			PFD	59:55.5
-9ba97d3f-3d87-913b-2e2e-93d7a30ad1c0	08a27d25-2cd7-3709-2ebd-31fd5ccdce5f	ADVANCED WINDOWS LLC	CORPORATION	NULL	2005	150000000	PFD	59:55.5
-59f40c85-6a64-0b73-82ae-9bb460057ca5	cf49fb42-dd63-1eae-454f-6be3d14c2bbe	WASTE SERVICES INC	NULL	NULL	NULL	25000000	PFD	59:55.5
+# CORRECTED: card_transactions_stability is a single object, not an array
+card_transactions_stability_schema = StructType([
+    StructField("end_date", StringType(), True),
+    StructField("date_accessible", StringType(), True),
+    StructField("1m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("days_present", IntegerType(), True),
+        StructField("weeks_present", IntegerType(), True),
+        StructField("months_present", IntegerType(), True),
+        StructField("daily_coverage_ratio", DoubleType(), True),
+        StructField("weekly_coverage_ratio", DoubleType(), True),
+        StructField("monthly_coverage_ratio", DoubleType(), True)
+    ]), True),
+    StructField("3m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("days_present", IntegerType(), True),
+        StructField("weeks_present", IntegerType(), True),
+        StructField("months_present", IntegerType(), True),
+        StructField("daily_coverage_ratio", DoubleType(), True),
+        StructField("weekly_coverage_ratio", DoubleType(), True),
+        StructField("monthly_coverage_ratio", DoubleType(), True)
+    ]), True),
+    StructField("12m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("days_present", IntegerType(), True),
+        StructField("weeks_present", IntegerType(), True),
+        StructField("months_present", IntegerType(), True),
+        StructField("daily_coverage_ratio", DoubleType(), True),
+        StructField("weekly_coverage_ratio", DoubleType(), True),
+        StructField("monthly_coverage_ratio", DoubleType(), True)
+    ]), True)
+])
+
+# CORRECT: associated_people is an array
+associated_people_schema = ArrayType(StructType([
+    StructField("name", StringType(), True),
+    StructField("titles", ArrayType(StringType()), True)
+]))
+
+# CORRECTED: industries is a single object, not an array
+industries_schema = StructType([
+    StructField("classification_type", StringType(), True),
+    StructField("classification_code", StringType(), True),
+    StructField("classification_description", StringType(), True)
+])
+
+# CORRECTED: technologies is a single object, not an array  
+technologies_schema = StructType([
+    StructField("vendor_name", StringType(), True),
+    StructField("category", StringType(), True)
+])
+
+# Configuration mapping
+JSON_FIELD_CONFIGS = {
+    'card_revenue': {
+        'schema': card_revenue_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_revenue'
+    },
+    'card_transactions_stability': {
+        'schema': card_transactions_stability_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_transactions_stability'
+    },
+    'associated_people': {
+        'schema': associated_people_schema,
+        'flatten_type': 'array_double_explode',  # Array with nested array (titles)
+        'prefix': 'associated_people'
+    },
+    'industries': {
+        'schema': industries_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'industries'
+    },
+    'technologies': {
+        'schema': technologies_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'technologies'
+    }
+}
