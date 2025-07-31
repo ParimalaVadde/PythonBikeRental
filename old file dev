@@ -18,3 +18,121 @@ SALESFORCE INC,SALESFORCE,204,,US,,US,CA,94105,415 MISSION ST,,SAN FRANCISCO,"{'
 "stg_business_entity_id","card_revenue__end_date","card_revenue__date_accessible","card_revenue__1m__start_date","card_revenue__1m__average_monthly_amount","card_revenue__3m__start_date","card_revenue__3m__average_monthly_amount","card_revenue__12m__start_date","card_revenue__12m__average_monthly_amount"
 "22709ffe-f6f9-0b28-2e80-d33cc9b2ae36","2025-03-31","2025-06-15","2025-03-01","8815233.7777","2025-01-01","8310170.7713","2024-04-01","7844672.1036"
 "ced89840-b900-6650-40e9-b8110f100632","2025-03-31","2025-06-15","2025-03-01","167570.2109","2025-01-01","179786.4464","2024-04-01","194118.9216"
+
+
+
+# DEBUG VERSION - Add this to your existing code to find the missing record
+
+# After reading the CSV, add this debug section:
+print("=== DEBUGGING CARD_REVENUE PROCESSING ===")
+
+# Check original data
+print("1. Original DataFrame count:", transformed_df.count())
+print("2. Checking card_revenue values:")
+
+# Show all records with card_revenue data
+card_revenue_data = transformed_df.select("stg_business_entity_id", "vendor_name", "card_revenue")
+card_revenue_data.show(20, truncate=False)
+
+# Count non-null card_revenue records
+non_null_card_revenue = transformed_df.filter(
+    col("card_revenue").isNotNull() & 
+    (col("card_revenue") != "") &
+    (col("card_revenue") != "null") &
+    (col("card_revenue") != "{}")
+).count()
+print(f"3. Non-null card_revenue records: {non_null_card_revenue}")
+
+# Your existing processing
+jsoncol = ['stg_business_entity_id', 'card_revenue']
+transformed_json_df = transformed_df.select(jsoncol)
+
+print("4. After selecting jsoncol:", transformed_json_df.count())
+
+# Check the specific records we expect
+expected_records = [
+    "8815233.7777",  # BAMBOOHR
+    "6767731.4118",  # ZOOMINFO - This is missing!
+    "167570.2109"    # LOS GATOS
+]
+
+print("5. Checking for expected amounts in original data:")
+for amount in expected_records:
+    count = transformed_df.filter(col("card_revenue").contains(amount)).count()
+    if count > 0:
+        print(f"   ✓ Found amount {amount}")
+        transformed_df.filter(col("card_revenue").contains(amount)).select("vendor_name", "stg_business_entity_id").show()
+    else:
+        print(f"   ✗ Missing amount {amount}")
+
+# Process using your utility function
+print("6. Processing with utility function...")
+flattened_dataframes = utl.process_all_json_columns(transformed_json_df)
+
+print("7. Flattened dataframes keys:", flattened_dataframes.keys())
+
+if 'card_revenue' in flattened_dataframes:
+    flattened_card_revenue = flattened_dataframes['card_revenue']
+    print("8. Flattened card_revenue count:", flattened_card_revenue.count())
+    
+    # Show the flattened data BEFORE filtering
+    print("9. Flattened data (before filtering):")
+    flattened_card_revenue.show(10, truncate=False)
+    
+    # Check for the missing amounts in flattened data
+    print("10. Checking for expected amounts in flattened data:")
+    for amount in expected_records:
+        count = flattened_card_revenue.filter(
+            col("card_revenue__1m__average_monthly_amount") == float(amount)
+        ).count()
+        if count > 0:
+            print(f"    ✓ Found amount {amount} in flattened data")
+        else:
+            print(f"    ✗ Missing amount {amount} in flattened data")
+    
+    # Your combine logic
+    final_df = utl.combine_flattened_results(
+        transformed_json_df.select("stg_business_entity_id"), 
+        flattened_dataframes
+    )
+    
+    print("11. After combine_flattened_results:", final_df.count())
+    
+    # Show data before null filtering
+    print("12. Data before null filtering:")
+    final_df.show(10, truncate=False)
+    
+    # Your null filtering logic
+    card_revenue_columns = [col for col in final_df.columns if col.startswith('card_revenue__')]
+    print("13. Card revenue columns found:", card_revenue_columns)
+    
+    if card_revenue_columns:
+        # Check each record against the filter condition
+        print("14. Checking filter condition for each record:")
+        
+        # Show which records pass the filter
+        filter_condition = col(card_revenue_columns[0]).isNotNull()
+        for card_col in card_revenue_columns[1:]:
+            filter_condition = filter_condition | col(card_col).isNotNull()
+        
+        # Apply filter
+        final_filtered_df = final_df.filter(filter_condition)
+        print("15. After filtering nulls:", final_filtered_df.count())
+        
+        print("16. Final filtered data:")
+        final_filtered_df.show(10, truncate=False)
+        
+        # Check for missing amounts in final data
+        print("17. Final check for expected amounts:")
+        for amount in expected_records:
+            count = final_filtered_df.filter(
+                col("card_revenue__1m__average_monthly_amount") == float(amount)
+            ).count()
+            if count > 0:
+                print(f"    ✓ Found amount {amount} in final data")
+            else:
+                print(f"    ✗ Missing amount {amount} in final data")
+else:
+    print("8. ERROR: card_revenue not found in flattened_dataframes!")
+
+print("=== END DEBUG ===")
