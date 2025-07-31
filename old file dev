@@ -13,3 +13,8 @@ ZOOMINFO TECHNOLOGIES LLC,ZOOMINFO TECH,196,,US,,US,WA,98660,805 BROADWAY ST,STE
 LOS GATOS,LOS GATOS,711,,US,,,CA,95030,23 N SANTA CRUZ AVE,,LOS GATOS,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}"
 FISHER & PHILLIPS LLP,FISHER PHILLIPS,231,,US,,US,CO,80202,1125 17TH ST,STE 2400,DENVER,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}"
 SALESFORCE INC,SALESFORCE,204,,US,,US,CA,94105,415 MISSION ST,,SAN FRANCISCO,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}"
+
+
+"stg_business_entity_id","card_revenue__end_date","card_revenue__date_accessible","card_revenue__1m__start_date","card_revenue__1m__average_monthly_amount","card_revenue__3m__start_date","card_revenue__3m__average_monthly_amount","card_revenue__12m__start_date","card_revenue__12m__average_monthly_amount"
+"22709ffe-f6f9-0b28-2e80-d33cc9b2ae36","2025-03-31","2025-06-15","2025-03-01","8815233.7777","2025-01-01","8310170.7713","2024-04-01","7844672.1036"
+"ced89840-b900-6650-40e9-b8110f100632","2025-03-31","2025-06-15","2025-03-01","167570.2109","2025-01-01","179786.4464","2024-04-01","194118.9216"
