@@ -1,10 +1,11 @@
-# staging_schema.py - CORRECTED SCHEMAS
+# Method 1: Test with just card_revenue using the original function
+from pyspark.sql.functions import *
 from pyspark.sql.types import *
 
-# CORRECTED: card_revenue is a single object, not an array
-card_revenue_schema = StructType([
+# CORRECTED card_revenue schema (StructType, not ArrayType)
+card_revenue_schema_corrected = StructType([
     StructField("end_date", StringType(), True),
-    StructField("date_accessible", StringType(), True),  # MISSING FIELD ADDED
+    StructField("date_accessible", StringType(), True),  # Added missing field
     StructField("1m", StructType([
         StructField("start_date", StringType(), True),
         StructField("average_monthly_amount", DoubleType(), True)
@@ -19,83 +20,79 @@ card_revenue_schema = StructType([
     ]), True)
 ])
 
-# CORRECTED: card_transactions_stability is a single object, not an array
-card_transactions_stability_schema = StructType([
+# Method 1: Test with minimal DataFrame
+print("=== Method 1: Testing with minimal DataFrame ===")
+test_df = transformed_json_df.select("stg_business_entity_id", "card_revenue")
+
+# Show sample data first
+print("Sample data:")
+test_df.filter(col("card_revenue").isNotNull()).show(3, truncate=False)
+
+# Test the flattening
+result_df = flatten_nested_json_column_fixed(test_df, "card_revenue", card_revenue_schema_corrected)
+print("Result after flattening:")
+result_df.show(5, truncate=False)
+print(f"Original count: {test_df.count()}")
+print(f"Result count: {result_df.count()}")
+
+# Method 2: Quick inline test
+print("\n=== Method 2: Quick inline test ===")
+test_inline = test_df.withColumn("card_revenue_parsed", from_json(col("card_revenue"), card_revenue_schema_corrected))
+
+print("After JSON parsing:")
+test_inline.select("stg_business_entity_id", "card_revenue_parsed.*").show(5, truncate=False)
+
+# Method 3: Manual flattening test
+print("\n=== Method 3: Manual flattening test ===")
+manual_flatten = test_inline.select(
+    "stg_business_entity_id",
+    col("card_revenue_parsed.end_date").alias("card_revenue__end_date"),
+    col("card_revenue_parsed.date_accessible").alias("card_revenue__date_accessible"),
+    col("card_revenue_parsed.1m.start_date").alias("card_revenue__1m__start_date"),
+    col("card_revenue_parsed.1m.average_monthly_amount").alias("card_revenue__1m__average_monthly_amount"),
+    col("card_revenue_parsed.3m.start_date").alias("card_revenue__3m__start_date"),
+    col("card_revenue_parsed.3m.average_monthly_amount").alias("card_revenue__3m__average_monthly_amount"),
+    col("card_revenue_parsed.12m.start_date").alias("card_revenue__12m__start_date"),
+    col("card_revenue_parsed.12m.average_monthly_amount").alias("card_revenue__12m__average_monthly_amount")
+)
+
+print("Manual flattening result:")
+manual_flatten.show(5, truncate=False)
+
+# Method 4: Compare with your old schema
+print("\n=== Method 4: Compare old vs new schema ===")
+old_schema = ArrayType(StructType([
     StructField("end_date", StringType(), True),
-    StructField("date_accessible", StringType(), True),
     StructField("1m", StructType([
         StructField("start_date", StringType(), True),
-        StructField("days_present", IntegerType(), True),
-        StructField("weeks_present", IntegerType(), True),
-        StructField("months_present", IntegerType(), True),
-        StructField("daily_coverage_ratio", DoubleType(), True),
-        StructField("weekly_coverage_ratio", DoubleType(), True),
-        StructField("monthly_coverage_ratio", DoubleType(), True)
-    ]), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ])),
     StructField("3m", StructType([
         StructField("start_date", StringType(), True),
-        StructField("days_present", IntegerType(), True),
-        StructField("weeks_present", IntegerType(), True),
-        StructField("months_present", IntegerType(), True),
-        StructField("daily_coverage_ratio", DoubleType(), True),
-        StructField("weekly_coverage_ratio", DoubleType(), True),
-        StructField("monthly_coverage_ratio", DoubleType(), True)
-    ]), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ])),
     StructField("12m", StructType([
         StructField("start_date", StringType(), True),
-        StructField("days_present", IntegerType(), True),
-        StructField("weeks_present", IntegerType(), True),
-        StructField("months_present", IntegerType(), True),
-        StructField("daily_coverage_ratio", DoubleType(), True),
-        StructField("weekly_coverage_ratio", DoubleType(), True),
-        StructField("monthly_coverage_ratio", DoubleType(), True)
-    ]), True)
-])
-
-# CORRECT: associated_people is an array
-associated_people_schema = ArrayType(StructType([
-    StructField("name", StringType(), True),
-    StructField("titles", ArrayType(StringType()), True)
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]))
 ]))
 
-# CORRECTED: industries is a single object, not an array
-industries_schema = StructType([
-    StructField("classification_type", StringType(), True),
-    StructField("classification_code", StringType(), True),
-    StructField("classification_description", StringType(), True)
-])
+old_test = test_df.withColumn("old_parsed", from_json(col("card_revenue"), old_schema))
+new_test = test_df.withColumn("new_parsed", from_json(col("card_revenue"), card_revenue_schema_corrected))
 
-# CORRECTED: technologies is a single object, not an array  
-technologies_schema = StructType([
-    StructField("vendor_name", StringType(), True),
-    StructField("category", StringType(), True)
-])
+print("Old schema result (should be mostly null):")
+old_test.select("stg_business_entity_id", "old_parsed").show(5, truncate=False)
 
-# Configuration mapping
-JSON_FIELD_CONFIGS = {
-    'card_revenue': {
-        'schema': card_revenue_schema,
-        'flatten_type': 'struct',  # Single nested object
-        'prefix': 'card_revenue'
-    },
-    'card_transactions_stability': {
-        'schema': card_transactions_stability_schema,
-        'flatten_type': 'struct',  # Single nested object
-        'prefix': 'card_transactions_stability'
-    },
-    'associated_people': {
-        'schema': associated_people_schema,
-        'flatten_type': 'array_double_explode',  # Array with nested array (titles)
-        'prefix': 'associated_people'
-    },
-    'industries': {
-        'schema': industries_schema,
-        'flatten_type': 'struct',  # Single nested object
-        'prefix': 'industries'
-    },
-    'technologies': {
-        'schema': technologies_schema,
-        'flatten_type': 'struct',  # Single nested object
-        'prefix': 'technologies'
-    }
-}
+print("New schema result (should have data):")
+new_test.select("stg_business_entity_id", "new_parsed").show(5, truncate=False)
+
+# Method 5: Count comparison
+print("\n=== Method 5: Count comparison ===")
+old_count = old_test.filter(col("old_parsed").isNotNull()).count()
+new_count = new_test.filter(col("new_parsed").isNotNull()).count()
+total_count = test_df.filter(col("card_revenue").isNotNull()).count()
+
+print(f"Total card_revenue records: {total_count}")
+print(f"Old schema parsed successfully: {old_count}")
+print(f"New schema parsed successfully: {new_count}")
+print(f"Missing records with old schema: {total_count - old_count}")
