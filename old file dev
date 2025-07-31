@@ -163,3 +163,33 @@ receivables_attribute_type = payment_tech_used, value(fetch vendor_name from jso
 
 3)change stp_ind_declined in type table 
 4)telecommunication address type from mobile to personal
+
+
+*****************************************************************
+
+Sure! Here’s a cleaned-up, clearer version of your lines:
+
+---
+
+1. Classification table:
+
+* Convert levels to lowercase
+* Change “indivisual” to “internal changes”
+
+2. Receivable attribute type:
+
+Technology used example:
+
+```json
+{'vendor_name': 'Paypal', 'category': 'payments'}
+```
+
+Define `receivables_attribute_type` as `payment_tech_used`, and set the value by fetching `vendor_name` from the JSON.
+
+3. Change `stp_ind_declined` in the type table.
+
+4. Change telecommunication address type from `mobile` to `personal`.
+
+---
+
+If you want, I can also help rewrite it more formally or in code/comments!
