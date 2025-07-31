@@ -1,341 +1,179 @@
-jsoncol = ["stg_business_entity_id", "registered_agents", "associated_people", "industries", "technologies", "card_revenue", "card_transactions_stability", "associated_tax_ids"]
+# utils.py - IMPROVED FUNCTIONS
+from pyspark.sql import DataFrame
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+import staging_schema as ss
 
+def is_empty_or_null(column_value):
+    """Helper function to check if a value is empty, null, or contains only empty structures"""
+    return (
+        col(column_value).isNull() | 
+        (col(column_value) == "") |
+        (col(column_value) == "[]") |
+        (col(column_value) == "{}") |
+        (col(column_value) == "null")
+    )
 
-# Flatten the JSON columns
-transformed_json_df = transformed_df.select(*ss.jsoncol)
-
-def flatten_nested_json_column(df, column_name, schema, explode_array=True):
+def flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns):
     """
-    Flattens a nested JSON column in a PySpark DataFrame.
+    Flatten a struct type into individual columns
+    """
+    select_expressions = list(base_columns)
     
-    Args:
-        df (DataFrame): The input PySpark DataFrame.
-        column_name (str): The name of the JSON column to flatten.
-        schema (StructType): The schema of the JSON column.
-        explode_array (bool): Whether to explode arrays or join with semicolon.
+    def add_struct_fields(struct_schema, current_path, current_prefix):
+        for field in struct_schema.fields:
+            field_path = f"{current_path}.{field.name}"
+            
+            if isinstance(field.dataType, StructType):
+                # Nested struct - recurse
+                add_struct_fields(field.dataType, field_path, f"{current_prefix}__{field.name}")
+            else:
+                # Primitive field
+                alias_name = f"{current_prefix}__{field.name}"
+                select_expressions.append(col(field_path).alias(alias_name))
     
-    Returns:
-        DataFrame: The DataFrame with the flattened JSON column.
+    add_struct_fields(schema, parsed_col_name, prefix)
+    return df.select(*select_expressions)
+
+def flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns):
+    """
+    Handle arrays with nested arrays (like associated_people with titles)
+    """
+    # First explode the main array
+    df_exploded = df.select(*base_columns, explode(col(parsed_col_name)).alias("person"))
+    
+    # Now explode the nested titles array
+    df_final = df_exploded.select(
+        *base_columns,
+        col("person.name").alias(f"{prefix}__name"),
+        explode(col("person.titles")).alias(f"{prefix}__title")
+    )
+    
+    return df_final
+
+def flatten_simple_array(df, parsed_col_name, prefix, base_columns):
+    """
+    Handle simple arrays (convert to semicolon-separated string)
+    """
+    return df.select(
+        *base_columns,
+        concat_ws(";", col(parsed_col_name)).alias(prefix)
+    )
+
+def flatten_json_column_improved(df, column_name, config, base_columns=None):
+    """
+    Improved JSON flattening function that handles different data types correctly
     """
     try:
-        # NEW: Check if the column exists and has any non-null values
+        if base_columns is None:
+            base_columns = ["stg_business_entity_id"]
+        
+        # Check if column exists
         if column_name not in df.columns:
             print(f"Column {column_name} does not exist in DataFrame")
             return df
-            
-        # NEW: Check if all values in the column are null
-        non_null_count = df.filter(col(column_name).isNotNull()).count()
+        
+        # Check if column has any non-null values
+        non_null_count = df.filter(col(column_name).isNotNull() & ~is_empty_or_null(column_name)).count()
         
         if non_null_count == 0:
-            print(f"Column {column_name} contains only null values, skipping flattening")
-            # Just return the dataframe as-is, keeping the null column
+            print(f"Column {column_name} contains only null/empty values, skipping flattening")
             return df
         
-        # Parse the JSON column into structured data
-        df = df.withColumn(column_name, from_json(col(column_name), schema))
+        schema = config['schema']
+        flatten_type = config['flatten_type']
+        prefix = config['prefix']
         
-        # If explode_array is False, join array elements with semicolon
-        if not explode_array:
-            df = df.withColumn(column_name, concat_ws(";", col(column_name)))
+        # Parse JSON
+        parsed_col_name = f"{column_name}_parsed"
+        df = df.withColumn(parsed_col_name, from_json(col(column_name), schema))
+        
+        # Filter out rows where parsing failed
+        df = df.filter(col(parsed_col_name).isNotNull())
+        
+        # Handle different flatten types
+        if flatten_type == 'struct':
+            # Single nested object - flatten to columns
+            result_df = flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns)
+            
+        elif flatten_type == 'array_double_explode':
+            # Array with nested arrays (like associated_people)
+            result_df = flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns)
+            
+        elif flatten_type == 'simple_array':
+            # Simple array - join with semicolon
+            result_df = flatten_simple_array(df, parsed_col_name, prefix, base_columns)
+            
+        else:
+            print(f"Unknown flatten_type: {flatten_type}")
             return df
         
-        # Explode the array to create one row per element
-        df = df.withColumn(column_name, explode(col(column_name)))
-        # Iterate over the fields in the schema
-        for field in schema.elementType.fields:  # Use `elementType` for ArrayType
-            field_name = field.name
-            field_type = field.dataType
-            # If the field is a nested struct, recursively flatten it
-            if isinstance(field_type, StructType):
-                for nested_field in field_type.fields:
-                    nested_field_name = nested_field.name
-                    df = df.withColumn(
-                        f"{column_name}__{field_name}__{nested_field_name}",
-                        col(f"{column_name}.{field_name}.{nested_field_name}")
-                    )
-            else:
-                # If the field is not nested, extract it directly
-                df = df.withColumn(f"{column_name}__{field_name}", col(f"{column_name}.{field_name}"))
-        # Drop the original JSON column
-        df = df.drop(column_name)
+        return result_df
+        
     except Exception as error:
         print(f"Error flattening column {column_name}: {error}")
-    return df
+        import traceback
+        traceback.print_exc()
+        return df
 
- #Flatten nested JSON columns
-    for column, schema in [
-        ("card_revenue", ss.card_revenue_schema),
-        ("card_transactions_stability", ss.card_transactions_stability),
-        ("associated_people", ss.associated_people_schema),
-        ("industries", ss.industries_schema), 
-        #("company_structure", ss.company_structure_schema),  
-        ("technologies", ss.technologies_schema),
-    ]:
-        transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
-
-
-# Define the schema for the `card_revenue` column
-card_revenue_schema = ArrayType(StructType([
-    StructField("end_date", StringType(), True),
-    StructField("1m", StructType([
-        StructField("start_date", StringType(), True),
-        StructField("average_monthly_amount", DoubleType(), True)
-    ])),
-    StructField("3m", StructType([
-        StructField("start_date", StringType(), True),
-        StructField("average_monthly_amount", DoubleType(), True)
-    ])),
-    StructField("12m", StructType([
-        StructField("start_date", StringType(), True),
-        StructField("average_monthly_amount", DoubleType(), True)
-    ]))
-]))
-
-card_transactions_stability =  ArrayType(StructType([
-                StructField("end_date", StringType(), True),
-                StructField("date_accessible", StringType(), True),
-                StructField("1m", StructType([
-                    StructField("start_date", StringType(), True),
-                    StructField("days_present", IntegerType(), True),
-                    StructField("weeks_present", IntegerType(), True),
-                    StructField("months_present", IntegerType(), True),
-                    StructField("daily_coverage_ratio", DoubleType(), True),
-                    StructField("weekly_coverage_ratio", DoubleType(), True),
-                    StructField("monthly_coverage_ratio", DoubleType(), True)
-                ])),
-                StructField("3m", StructType([
-                    StructField("start_date", StringType(), True),
-                    StructField("days_present", IntegerType(), True),
-                    StructField("weeks_present", IntegerType(), True),
-                    StructField("months_present", IntegerType(), True),
-                    StructField("daily_coverage_ratio", DoubleType(), True),
-                    StructField("weekly_coverage_ratio", DoubleType(), True),
-                    StructField("monthly_coverage_ratio", DoubleType(), True)
-                ])),
-                StructField("12m", StructType([
-                    StructField("start_date", StringType(), True),
-                    StructField("days_present", IntegerType(), True),
-                    StructField("weeks_present", IntegerType(), True),
-                    StructField("months_present", IntegerType(), True),
-                    StructField("daily_coverage_ratio", DoubleType(), True),
-                    StructField("weekly_coverage_ratio", DoubleType(), True),
-                    StructField("monthly_coverage_ratio", DoubleType(), True)
-                ]))
-            ]))
-			
-			
-
-associated_people_schema =  ArrayType(StructType([
-                StructField("name", StringType(), True),
-                StructField("titles", ArrayType(StringType()), True)
-            ]))
-			
-
-            
-industries_schema =  ArrayType(StructType([
-                StructField("classification_type", StringType(), True),
-                StructField("classification_code", StringType(), True),
-                StructField("classification_description", StringType(), True)
-            ]))
-			
-			
-
-technologies_schema = ArrayType(StructType([
-    StructField("vendor_name", StringType(), True),
-    StructField("category", StringType(), True)
-]))
-
-
-
-sample values:
-
-card_revenue
-
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}
-
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}
-
-
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 8815233.7777}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 8310170.7713}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 7844672.1036}}
-
-
-card_transactions_stability
-
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}, '12m': {'start_date': '2024-04-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}}
-
-
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 31, 'weeks_present': 6, 'months_present': 1, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '3m': {'start_date': '2025-01-01', 'days_present': 90, 'weeks_present': 14, 'months_present': 3, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '12m': {'start_date': '2024-04-01', 'days_present': 365, 'weeks_present': 53, 'months_present': 12, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}}
-
-
-
-associated_people
-
-[{'name': 'CHRIS LEWIS', 'titles': ['DIRECTOR', 'CHIEF FINANCIAL OFFICER', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'NOAH DYE', 'titles': ['DIRECTOR', 'SECRETARY', 'OFFICER']}, {'name': 'BRIAN MUNDEN', 'titles': ['TREASURER', 'FINANCIAL CONTROLLER']}, {'name': 'STEPHEN CORSI', 'titles': ['MANAGER', 'SECRETARY']}, {'name': 'CHRISTOPHER LEWIS', 'titles': ['CFO']}, {'name': 'MORGAN MCCINTIC', 'titles': ['CHIEF EXECUTIVE OFFICER']}]
-
-
-[{'name': 'CHRISTOPHER RACK', 'titles': ['MANAGER']}]
-
-[]
-
-[{'name': 'CYRUS DEYHIMI', 'titles': ['DIRECTOR', 'CHIEF FINANCIAL OFFICER', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'ROBERT GRAY', 'titles': ['MANAGER', 'SECRETARY']}, {'name': 'SIMA VASA', 'titles': ['CHIEF EXECUTIVE OFFICER']}, {'name': 'FIELDSTONE EQUITY PS HOLDING LLC', 'titles': ['MANAGER']}, {'name': 'FIELDSTONE EQUITY PS HOLDINGS LLC', 'titles': ['OFFICER']}, {'name': 'KOOROSH CYRUS DEYHIMI', 'titles': ['MANAGER']}, {'name': 'PARADIGM PRECISION SAMPLE', 'titles': ['MANAGER']}, {'name': 'PARADIGM PRECISION SAMPLE INC', 'titles': ['OFFICER']}, {'name': 'SIMA VISA', 'titles': ['REAL PROPERTY']}]
-
-
-industries
-
-{'classification_description': 'internet marketing service', 'classification_type': 'enigma_description'}
-
-
-{'classification_description': 'legal services', 'classification_type': 'enigma_description'}
-
-
-
-technologies
-
-{'vendor_name': 'Stripe', 'category': 'payments'}
-
-
-{'vendor_name': 'Paypal', 'category': 'payments'}
-
-
-above flatten_nested_json_column is not working as expected
-
-like for example , for card_revenue has following values in input file
-
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 8815233.7777}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 8310170.7713}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 7844672.1036}}
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 6767731.4118}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 5545336.8131}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 5226886.2024}}
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}
-
-
-but flatten_nested_json_column is not loading below record in tgt table, first up all flatten_nested_json_column is not returning below row
-
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}
-
-
-simillarlly for contacts too
-
-in input file
-
-[{'name': 'VITALY PECHERSKIY', 'titles': ['CHIEF EXECUTIVE', 'DIRECTOR', 'CEO', 'PRESIDENT', 'GOVERNOR', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'YANG HAN', 'titles': ['OTHER OFFICER', 'DIRECTOR', 'GOVERNOR', 'CTO']}, {'name': 'CASSANDRA HUDSON', 'titles': ['CFO', 'TREASURER', 'CHIEF FINANCIAL OFFICER', 'TREASURER CHIE']}, {'name': 'PINAR OZYETIS', 'titles': ['OTHER OFFICER', 'SECRETARY', 'SECRETARY GENE']}, {'name': 'OZYETIS PINAR', 'titles': ['GENERAL COUNSEL', 'EXECUTINGOFFICER', 'SECRETARY', 'GOVERNOR']}, {'name': 'HOPE COCHRAN', 'titles': ['DIRECTOR']}, {'name': 'ILDAR SHARAFUTDINOV', 'titles': ['DIRECTOR']}, {'name': 'LEN FERRINGTON', 'titles': ['DIRECTOR']}, {'name': 'MATTHEW LEIBOWITZ', 'titles': ['DIRECTOR']}, {'name': 'HAN YANG', 'titles': ['CHIEF TECHNOLOGY OFFICER', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'HUDSON CASSANDRA', 'titles': ['TREASURER', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'PECHERSKIY VITALY', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'CHRISTIAN GERRON', 'titles': ['OTHER OFFICER', 'CRO']}, {'name': 'COCHRAN HOPE', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'FERRINGTON LEN', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'GERRON CHRISTIAN', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'LEIBOWITZ MATTHEW', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'MEHMET SHAH', 'titles': ['CHIEF FINANCIAL OFFICER', 'GOVERNOR']}, {'name': 'SHARAFUTDINOV ILDAR', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}]
-[{'name': 'SARAH DODS', 'titles': ['ASSISTANT SECRETARY', 'MANAGER', 'SECRETARY', 'PRESIDENT', 'GOVERNOR', 'PRESIDENT SECRETARY', 'CHIEF COMPLIANCE OFFICER AND SECRETARY', 'OTHER OFFICER', 'DIRECTOR', 'TREASURER', 'CEO', 'CHIEF COMPLIANCE OFFICER', 'CCO', 'DIRECTOR PRESIDENT', 'EXECUTIVE VICE', 'PRESIDENT SECR', 'OFFICER', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'MARC BENIOFF', 'titles': ['CHIEF EXECUTIVE', 'CHAIRMAN', 'CO-CHIEF EXECUTIVE OFFICER', 'DIRECTOR', 'CEO', 'OTHER', 'CHAIR OF THE BOARD', 'PRESIDENT', 'GOVERNOR', 'CO-CEO', 'OFFICER', 'CHIEF EXECUTIVE OFFICER', 'CHAIRMAN OF THE BOARD']}, {'name': 'AMY WEAVER', 'titles': ['ASSISTANT SECRETARY', 'CFO', 'CHIEF FINANCIAL', 'TREASURER', 'CHAIRMAN', 'SECRETARY', 'PRESIDENT', 'CHIEF FINANCIAL OFFICER', 'GOVERNOR', 'OFFICER', 'PRESIDENT AND CHIEF FINANCIAL OFFICER']}, {'name': 'HAKAN JOACHIM WETTERMARK', 'titles': ['OTHER OFFICER', 'EXECUTIVE VICE PRESIDENT AND TREASURER', 'TREASURER', 'EXECUTIVE VICE PRESIDENT', 'OTHER', 'GOVERNOR', 'OFFICER']}, {'name': 'SRINIVAS TALLAPRAGADA', 'titles': ['CHIEF ENGINEERING OFFICER', 'OTHER OFFICER', 'OTHER', 'PRESIDENT AND CHIEF ENGINEERING OFFICER', 'PRESIDENT', 'CHIEF ENGINEERI', 'GOVERNOR', 'OFFICER']}, {'name': 'NEELIE KROES', 'titles': ['DIRECTOR', 'OTHER', 'GOVERNOR']}, {'name': 'SCOTT SIAMAS', 'titles': ['SENIOR VICE PRE', 'ASSISTANT SECRETARY', 'ASST SECRETARY', 'ASST SEC', 'ASSOCIATE GENER', 'OTHER', 'GOVERNOR', 'VICE-PRESIDENT', 'REAL PROPERTY', 'OFFICER']}, {'name': 'LAURA ALBER', 'titles': ['DIRECTOR', 'OTHER', 'PRESIDENT', 'GOVERNOR']}, {'name': 'CRAIG A CONWAY', 'titles': ['DIRECTOR', 'OTHER', 'GOVERNOR']}, {'name': 'JOHN V ROOS', 'titles': ['DIRECTOR', 'OTHER', 'GOVERNOR']}, {'name': 'ROBIN L WASHINGTON', 'titles': ['DIRECTOR', 'OTHER', 'GOVERNOR']}, {'name': 'PARKER HARRIS', 'titles': ['CO-FOUNDER AND CHIEF TECHNOLOGY OFFICER', 'OTHER OFFICER', 'CHIEF TECHNOLOG', 'DIRECTOR', 'CO-FOUNDER', 'OTHER', 'GOVERNOR', 'OFFICER']}, {'name': 'MAYNARD G WEBB', 'titles': ['DIRECTOR', 'OTHER', 'GOVERNOR']}, {'name': 'OSCAR MUNOZ', 'titles': ['DIRECTOR', 'OTHER', 'GOVERNOR']}, {'name': 'MASON MORFIT', 'titles': ['DIRECTOR', 'OTHER', 'GOVERNOR']}, {'name': 'SACHIN MEHRA', 'titles': ['DIRECTOR', 'OTHER', 'GOVERNOR']}, {'name': 'BRENT HYDER', 'titles': ['PRESIDENT AND CHIEF PEOPLE OFFICER', 'CHAIRMAN', 'OTHER', 'CHIEF PEOPLE OF', 'PRESIDENT', 'GOVERNOR', 'OFFICER']}, {'name': 'EBONY BECKWITH', 'titles': ['VICE PRESIDENT CMO', 'VICE PRESIDENT', 'GOVERNOR', 'CHIEF EXECUTIVE OFFICER', 'OFFICER']}, {'name': 'ARNOLD DONALD', 'titles': ['DIRECTOR', 'OTHER', 'GOVERNOR']}, {'name': 'IAN LEWIS', 'titles': ['VICE PRESIDENT', 'GOVERNOR', 'OFFICER']}, {'name': 'DARRYL YEE', 'titles': ['VICE PRESIDENT', 'VICE-PRESIDENT', 'OFFICER']}, {'name': 'SCOTT CHRISTOPHER SIAMAS', 'titles': ['ASSISTANT SECRETARY', 'SENIOR VP ASSOCIATE GENERAL COUNSEL ASSISTANT SECRETARY', 'OTHER OFFICER', 'OTHER', 'OFFICER']}, {'name': 'SUNDEEP REDDY', 'titles': ['OTHER OFFICER', 'OTHER', 'EXECUTIVE VICE PRESIDENT AND CHIEF ACCOUNTING OFFICER', 'OFFICER']}, {'name': 'JOACHIM WETTERMARK', 'titles': ['TREASURER', 'OTHER', 'OFFICER']}, {'name': 'SAMUEL CHUNG', 'titles': ['VICE PRESIDENT', 'CHIEF FINANCIAL OFFICER', 'GOVERNOR']}, {'name': 'SAMUEL VALLOTTON', 'titles': ['ASSISTANT TREASURER', 'ASST TREASURER', 'SECRETARY', 'ASST TREAS', 'GOVERNOR', 'SENIOR DIRECTOR']}, {'name': 'DODS SARAH', 'titles': ['DIRECTOR', 'EXECUTINGOFFICER', 'SECRETARY', 'PRESIDENT', 'GOVERNOR']}, {'name': 'MIGUEL MILANO', 'titles': ['OTHER OFFICER', 'CHIEF REVENUE OFFICER', 'OTHER', 'CHIEF LEGAL OFFICER', 'OFFICER']}, {'name': 'SEBASTIAN NILES', 'titles': ['OTHER OFFICER', 'CHIEF LEGAL OFFICER', 'OFFICER']}, {'name': 'SUSAN D WOJCICKI', 'titles': ['DIRECTOR']}, {'name': 'WASHINGTON ROBIN L', 'titles': ['DIRECTOR', 'EXECUTINGOFFICER', 'PRESIDENT', 'CHIEF FINANCIAL OFFICER', 'GOVERNOR', 'COO']}, {'name': 'BRET TAYLOR', 'titles': ['CHAIRMAN', 'DIRECTOR', 'CHIEF OPERATING', 'PRESIDENT', 'GOVERNOR']}, {'name': 'ROBERT ACKER', 'titles': ['CEO', 'GOVERNOR', 'CHIEF EXECUTIVE OFFICER', 'OFFICER']}, {'name': 'WETTERMARK HAKAN JOACHIM', 'titles': ['EXECUTIVE VICE PRESIDENT', 'TREASURER', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'SALESFORCE HOLDINGS LLC', 'titles': ['MANAGER', 'MEMBER']}, {'name': 'SANFORD R ROBERTSON', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'AMBER CHI', 'titles': ['SENIOR VICE PRE', 'ASSISTANT TREASURER', 'ASST TREASURER', 'ASST TREAS', 'GOVERNOR']}, {'name': 'ROBERT DAVID SCHMAIER', 'titles': ['CHIEF PRODUCT OFFICER', 'OTHER OFFICER', 'OTHER', 'OFFICER']}, {'name': 'TALLAPRAGADA SRINIVAS', 'titles': ['EXECUTINGOFFICER', 'PRESIDENT', 'GOVERNOR']}, {'name': 'NASI JAZAYERI', 'titles': ['PRESIDENT', 'GOVERNOR', 'OFFICER', 'PRESIDENT CPO CTO']}, {'name': 'VACANT VACANT', 'titles': ['CFO', 'SECRETARY', 'CHIEF FINANCIAL OFFICER', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'ALEXANDRE DAYON', 'titles': ['PRESIDENT', 'GOVERNOR', 'CHIEF STRATEGY']}, {'name': 'CONWAY CRAIG A', 'titles': ['DIRECTOR', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'HAKAN J WETTERMARK', 'titles': ['TREASURER', 'EXECUTIVE VICE', 'GOVERNOR']}, {'name': 'HYDER BRENT', 'titles': ['EXECUTINGOFFICER', 'PRESIDENT', 'GOVERNOR']}, {'name': 'KROES NEELIE', 'titles': ['DIRECTOR', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'COLIN POWELL', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'ROBIN WASHINGTON', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'ALAN G HASSENFELD', 'titles': ['DIRECTOR']}, {'name': 'SALESFORCE COM INC', 'titles': ['MANAGER']}, {'name': 'BENIOFF MARC', 'titles': ['CHAIRMAN WOMAN OF THE BOARD', 'GOVERNOR', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'GAVIN PATTERSON', 'titles': ['PRESIDENT CHIE', 'PRESIDENT', 'GOVERNOR']}, {'name': 'JOSEPH CARLOS ALLANSON', 'titles': ['EXECUTIVE VICE', 'GOVERNOR', 'CHIEF ACCOUNTIN']}, {'name': 'MUNOZ OSCAR', 'titles': ['DIRECTOR', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'NILES SABASTIAN', 'titles': ['CLO', 'SECRETARY', 'PRESIDENT']}, {'name': 'ROOS JOHN V', 'titles': ['DIRECTOR', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'TAYLOR BRET', 'titles': ['EXECUTINGOFFICER', 'PRESIDENT', 'GOVERNOR']}, {'name': 'WEBB MAYNARD G', 'titles': ['DIRECTOR', 'EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'YEE DARRYL', 'titles': ['PRESIDENT', 'VICE PRESIDENT', 'VICE-PRESIDENT']}, {'name': 'ALAN HASSENFELD', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'CRAIG CONWAY', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'MAYNARD WEBB', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'SUSAN WOJCICKI', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'WEAVER AMY', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'HASSAN A ESSALIH', 'titles': ['DIRECTOR']}, {'name': 'ALBER LAURA', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'ALLYSON FRYHOFF', 'titles': ['CSO', 'OFFICER']}, {'name': 'BRET HYDER', 'titles': ['CPO', 'PRESIDENT']}, {'name': 'BURKE NORTON', 'titles': ['EXECUTIVE VICE PRESIDENT', 'SECRETARY']}, {'name': 'DONALD ARNOLD', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'HAKAN JO WETTERMARK', 'titles': ['TREASURER', 'OFFICER']}, {'name': 'JOSUE ESTRADA', 'titles': ['OFFICER', 'COO']}, {'name': 'KEITH BLOCK', 'titles': ['DIRECTOR', 'PRESIDENT']}, {'name': 'KEITH G BLOCK', 'titles': ['DIRECTOR', 'PRESIDENT']}, {'name': 'MARK FISCHER', 'titles': ['OFFICER', 'CTO']}, {'name': 'MARK HAWKINS', 'titles': ['TREASURER', 'PRESIDENT']}, {'name': 'MEHRA SACHIN', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'MORFIT MASON', 'titles': ['DIRECTOR', 'GOVERNOR']}, {'name': 'PATTERSON GAVIN', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'ROBERTSON SANFORD R', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'SAM CHUNG', 'titles': ['VICE PRESIDENT', 'OFFICER']}, {'name': 'SRINIV TALLAPRAGADA', 'titles': ['PRESIDENT', 'OFFICER']}, {'name': 'WOJCICKI SUSAN D', 'titles': ['EXECUTINGOFFICER', 'GOVERNOR']}, {'name': 'AMBER TINA CHI', 'titles': ['ASSISTANT TREASURER']}, {'name': 'AVIN PATTERSON G', 'titles': ['PRESIDENT']}, {'name': 'DAVID ADELMAN', 'titles': ['DIRECTOR']}, {'name': 'GEOFFREY J GONELLA', 'titles': ['PRESIDENT']}, {'name': 'JOHN SOMORJAI', 'titles': ['MANAGER']}, {'name': 'MARK MIODUSKI', 'titles': ['DIRECTOR']}, {'name': 'RICARDO BEAUSOLEIL', 'titles': ['MANAGER']}, {'name': 'STEVE P ZIMMER', 'titles': ['MANAGER']}, {'name': 'SUZANNE BATTISTA', 'titles': ['DIRECTOR']}, {'name': 'WETTERMARK JOACHIM', 'titles': ['TREASURER']}, {'name': 'WILLIAM C KAUFMAN', 'titles': ['DIRECTOR']}, {'name': 'ALEXANDR DAYON', 'titles': ['CHIEF EXECUTIVE OFFICER']}, {'name': 'BECKWITH EBONY', 'titles': ['VICE-PRESIDENT']}, {'name': 'BERNARD TYSON', 'titles': ['DIRECTOR']}, {'name': 'BRIAN MILLHAM', 'titles': ['OTHER']}, {'name': 'CHUNG SAM', 'titles': ['VICE-PRESIDENT']}, {'name': 'FISHER STEVE', 'titles': ['PRESIDENT']}, {'name': 'HARRIS PARKER', 'titles': ['GOVERNOR']}, {'name': 'HASSENFELD ALAN', 'titles': ['GOVERNOR']}, {'name': 'JOHN ROOS', 'titles': ['GOVERNOR']}, {'name': 'LAWRENCE TOMLINSON', 'titles': ['DIRECTOR']}, {'name': 'LEWIS IAN', 'titles': ['VICE-PRESIDENT']}, {'name': 'MILANO MIGUEL', 'titles': ['PRESIDENT']}, {'name': 'REDDY SUNDEEP', 'titles': ['VICE-PRESIDENT']}, {'name': 'SABASTIAN NILES', 'titles': ['OTHER']}, {'name': 'SALESFORCE INC', 'titles': ['MANAGER']}, {'name': 'SCOTT CHRIST SIAMAS', 'titles': ['OFFICER']}, {'name': 'SHANTI ARIKER', 'titles': ['OFFICER']}, {'name': 'SIAMAS SCOTT CHRISTOPHER', 'titles': ['ASSISTANT SECRETARY']}, {'name': 'STEVE FISHER', 'titles': ['OTHER']}]
-[{'name': 'RYAN DAVID SANDERS', 'titles': ['MANAGER']}, {'name': 'BRAD RENCHER', 'titles': ['CEO']}, {'name': 'JOHN BENJAMIN PETERSON', 'titles': ['CHIEF EXECUTIVE OFFICER']}, {'name': 'PETERSON FAMILY IRREVOCABLE', 'titles': ['GOVERNING PERSON']}, {'name': 'THE RLS TRUST', 'titles': ['GOVERNING PERSON']}]
-[{'name': 'SHAH RAHUL', 'titles': ['ATTORNEY']}, {'name': 'MARY BETH HANSS', 'titles': ['CORPORATE SECRETARY', 'DIRECTOR', 'CHAIRMAN', 'SECRETARY', 'CORPORATE SECRE', 'GOVERNOR', 'OFFICER']}, {'name': 'MUHAMMAD ALAM', 'titles': ['CEO', 'PRESIDENT', 'OFFICER', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'JOHN DIPLACIDO', 'titles': ['CFO', 'CHIEF FINANCIAL', 'CHIEF FINANCIAL OFFICER', 'OFFICER']}, {'name': 'CYNTHIA ANN HIRSCHFELD', 'titles': ['TREASURER', 'OFFICER']}, {'name': 'ROB LAUDEMAN', 'titles': ['ASSISTANT SECRETARY', 'ASSISTANT SECRE', 'OFFICER']}, {'name': 'FREDERIC ARROUAYS', 'titles': ['CHAIRMAN', 'CHIEF FINANCIAL OFFICER']}, {'name': 'GERARD BERNARD', 'titles': ['TREASURER', 'OFFICER']}, {'name': 'LUKA MUCIC', 'titles': ['DIRECTOR']}, {'name': 'ALAM MUHAMMAD', 'titles': ['PRESIDENT', 'GOVERNOR']}, {'name': 'HANSS MARY BETH', 'titles': ['SECRETARY', 'GOVERNOR']}, {'name': 'BARRY PADGETT', 'titles': ['CHIEF EXECUTIVE OFFICER']}, {'name': 'BERNARD GERARD', 'titles': ['GOVERNOR']}, {'name': 'DIPLACIDO JOHN', 'titles': ['CHIEF FINANCIAL OFFICER']}, {'name': 'GREG TOMB', 'titles': ['CHIEF EXECUTIVE OFFICER']}, {'name': 'HIRSCHFELD CYNTHIA ANN', 'titles': ['TREASURER']}, {'name': 'KE-DE-22002 LLC', 'titles': ['APPLICANT']}, {'name': 'LAUDEMAN ROB', 'titles': ['ASSISTANT SECRETARY']}, {'name': 'MUCIC LUKA', 'titles': ['GOVERNOR']}, {'name': 'VACANT VACANT', 'titles': ['DIRECTOR']}]
-[{'name': 'REBECCA MARIE BODONY ESQ', 'titles': ['MANAGER']}]
-[{'name': 'JOEL DAVID CHESTERMAN', 'titles': ['SECRETARY', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'CHRISTAL JANET CHESTERMAN', 'titles': ['DIRECTOR']}, {'name': 'ERIC ANDREW CHESTERMAN', 'titles': ['CHIEF FINANCIAL OFFICER']}, {'name': 'RHYTHMICAL MIRACLES', 'titles': ['APPLICANT']}]
-[{'name': 'ELLIOT MARKOWITZ', 'titles': ['CONTACT NAME', 'OWNER']}]
-[{'name': 'CHRIS LEWIS', 'titles': ['DIRECTOR', 'CHIEF FINANCIAL OFFICER', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'NOAH DYE', 'titles': ['DIRECTOR', 'SECRETARY', 'OFFICER']}, {'name': 'BRIAN MUNDEN', 'titles': ['TREASURER', 'FINANCIAL CONTROLLER']}, {'name': 'STEPHEN CORSI', 'titles': ['MANAGER', 'SECRETARY']}, {'name': 'CHRISTOPHER LEWIS', 'titles': ['CFO']}, {'name': 'MORGAN MCCINTIC', 'titles': ['CHIEF EXECUTIVE OFFICER']}]
-[{'name': 'CHRISTOPHER RACK', 'titles': ['MANAGER']}]
-[{'name': 'BARRY SCOTT GOLD', 'titles': ['SOC SIGNATORY', 'REAL PROPERTY']}]
-[{'name': 'CYRUS DEYHIMI', 'titles': ['DIRECTOR', 'CHIEF FINANCIAL OFFICER', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'ROBERT GRAY', 'titles': ['MANAGER', 'SECRETARY']}, {'name': 'SIMA VASA', 'titles': ['CHIEF EXECUTIVE OFFICER']}, {'name': 'FIELDSTONE EQUITY PS HOLDING LLC', 'titles': ['MANAGER']}, {'name': 'FIELDSTONE EQUITY PS HOLDINGS LLC', 'titles': ['OFFICER']}, {'name': 'KOOROSH CYRUS DEYHIMI', 'titles': ['MANAGER']}, {'name': 'PARADIGM PRECISION SAMPLE', 'titles': ['MANAGER']}, {'name': 'PARADIGM PRECISION SAMPLE INC', 'titles': ['OFFICER']}, {'name': 'SIMA VISA', 'titles': ['REAL PROPERTY']}]
-[{'name': 'JULIETTE MORRIS', 'titles': ['MANAGER', 'REAL PROPERTY', 'OFFICER']}, {'name': 'ERIK SHAKUN', 'titles': ['MANAGER']}, {'name': 'ERIC HAYDEN SHAKUN', 'titles': ['OFFICER']}, {'name': 'ERIC HAYDENSHAKUN', 'titles': ['OFFICER']}, {'name': 'ERIC SHAKUN', 'titles': ['REAL PROPERTY']}, {'name': 'MATTHEW PASS', 'titles': ['OFFICER']}]
-[{'name': 'HENRY SCHUCK', 'titles': ['MANAGER', 'DIRECTOR', 'CEO', 'GOVERNOR', 'MEMBER', 'REAL PROPERTY', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'ASHLEY MCGRANE', 'titles': ['MANAGER', 'SECRETARY', 'VICE PRESIDENT', 'REAL PROPERTY']}, {'name': "GRAHAM O'BRIEN", 'titles': ['MANAGER', 'OTHER OFFICER', 'REAL PROPERTY', 'MEMBER']}, {'name': "M GRAHAM O'BRIEN", 'titles': ['MANAGER', 'REAL PROPERTY']}, {'name': 'ANTHONY STARK', 'titles': ['SECRETARY']}, {'name': 'CAMERON HYZER', 'titles': ['CFO']}, {'name': 'MEREDITH WEISSHAAR', 'titles': ['MEMBER']}, {'name': 'MICHAEL G O APOS BRIEN', 'titles': ['CFO']}, {'name': 'ZOOMINFO INTERMEDIATE INC', 'titles': ['GOVERNOR']}, {'name': 'ZOOMINFO LLC', 'titles': ['MANAGER']}]
-[{'name': 'RACHEL MORRIS', 'titles': ['MANAGER', 'REAL PROPERTY', 'OFFICER']}]
-[{'name': 'MOUNICA SHAKUN', 'titles': ['MANAGER']}, {'name': 'CHIP HAYDEN SHAKUN', 'titles': ['OFFICER']}, {'name': 'JOEY HAYDENSHAKUN', 'titles': ['OFFICER']}]
-[{'name': 'DOMINIC SHAKUN', 'titles': ['REAL PROPERTY']}, {'name': 'VERONICA GREEN', 'titles': ['OFFICER']}]
-[{'name': 'SUZY BAE', 'titles': ['OFFICER']}]
-[{'name': 'LEE MIN HO', 'titles': ['MANAGER']}]
-[{'name': 'PARK SHIN HYE', 'titles': ['REAL PROPERTY']}]
-[{'name': 'SONG HYE KYO', 'titles': ['OFFICER']}]
-[{'name': 'ANNA GELLER', 'titles': ['MANAGER']}]
-[{'name': 'STEVE MATTEW', 'titles': ['REAL PROPERTY']}]
-[{'name': 'JAMES DEVERA', 'titles': ['OFFICER']}]
-
-
-in tgt table
-
-"business_entity_contact_id","stg_business_entity_id","source_system_contact_id","source_system_name","contact_type","contact_name","contact_title","contact_active_indicator","contact_deactivated_date","decision_maker_indicator","decision_maker_type","is_active","created_by","created_date"
-"ba0c5635-0063-ae1b-4076-2db4bcfe7399","22709ffe-f6f9-0b28-2e80-d33cc9b2ae36",NULL,NULL,NULL,"BRAD RENCHER","CEO",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"33579c78-da78-a263-bb6f-5be3bc9f34fa","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"HENRY SCHUCK","CEO",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"c0f98406-14f8-b4f1-c692-9edce02e66d5","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"HENRY SCHUCK","GOVERNOR",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"3b60ba2f-cf2d-5e74-3689-4164a640b443","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"MEREDITH WEISSHAAR","MEMBER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"752bba65-9b56-a465-38a2-eba58cdcff47","d6970a62-61da-a2c7-96c1-e2448fb5d662",NULL,NULL,NULL,"ELLIOT MARKOWITZ",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"81ef2f83-3979-2bfe-9138-ef5330e802a2","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"GRAHAM O'BRIEN","MEMBER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"cfb6c6fc-fa84-5ba1-55eb-2398dc499159","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"HENRY SCHUCK","CHIEF EXECUTIVE OFFICER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"1da04130-8832-0536-cf4c-31142a8534b3","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"ASHLEY MCGRANE","SECRETARY",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"b5e2f6ed-fc5c-3c21-0926-8f2998ba869a","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"CAMERON HYZER","CFO",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"6b7a46d6-f799-3c0b-7fc3-4307407022f8","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"HENRY SCHUCK","DIRECTOR",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"5f1bf464-eec4-e444-2150-d3b6e17012bf","9dd3f862-62a8-0210-c549-17ea0fbfc1d2",NULL,NULL,NULL,"Sonjoy Ganguly",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"c9f3010a-92fe-420b-7a3c-852939b3d7a1","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"HENRY SCHUCK","MANAGER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"ff16ae41-2a5b-1f15-2948-dfbf9b076a6e","22709ffe-f6f9-0b28-2e80-d33cc9b2ae36",NULL,NULL,NULL,"PETERSON FAMILY IRREVOCABLE","GOVERNING PERSON",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"92eb0dc9-c9e7-0ed3-9601-2895d8762a05","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"GRAHAM O'BRIEN","REAL PROPERTY",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"1f000a94-7de7-f5b4-3893-cf366185441a","8222b391-d8fd-a36c-92c1-39f7a4f7e596",NULL,NULL,NULL,"robert",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"f66d0973-5a9a-64d4-94d5-2b45310fde51","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"ZOOMINFO LLC","MANAGER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"5c84c5eb-81ec-4315-ea6f-83b296b5bf16","39faa58d-0b70-bc1e-c445-5a9bb7c53e39",NULL,NULL,NULL,"Jeena",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"99dfa547-3cf7-24d9-ba6a-112376672e65","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"ASHLEY MCGRANE","VICE PRESIDENT",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"18480dd6-f4c0-72c4-7deb-80450188e1a0","22709ffe-f6f9-0b28-2e80-d33cc9b2ae36",NULL,NULL,NULL,"JOHN BENJAMIN PETERSON","CHIEF EXECUTIVE OFFICER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"03534dd4-a221-6040-fdc1-795643ef84c7","8431f152-0026-a388-d289-353432f6dc84",NULL,NULL,NULL,"th",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"b7c75e43-eaf1-38da-ca12-559cb63e91ad","8c005e08-482b-2484-1186-c2faea6eaff2",NULL,NULL,NULL,"giftpack",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"0b81689b-ae68-0240-10f6-87c9fad87e42","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"ASHLEY MCGRANE","REAL PROPERTY",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"c70d35e0-3ac9-7962-b186-7a4e3addb3a9","5396c750-de84-579e-f0f8-195fae7aa746",NULL,NULL,NULL,"para",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"da4c3bec-a10b-b1c5-0259-cab2a294715a","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"GRAHAM O'BRIEN","MANAGER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"5ef57d4c-67cf-ddf1-1c28-538304b12e44","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"GRAHAM O'BRIEN","OTHER OFFICER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"5bb73643-db98-6cdb-099a-4a8ff2fbc9ca","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"M GRAHAM O'BRIEN","MANAGER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"b333a7e9-4ff6-844a-258a-3817fc70dcdc","1e80e0cc-066c-6ecd-5af7-8ddd8bcfbf55",NULL,NULL,NULL,"paul papa",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"2f292158-b17a-d041-0194-c2fbc7d9e6bc","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"ANTHONY STARK","SECRETARY",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"4d90b795-536a-f557-0896-ab2fdbae4676","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"HENRY SCHUCK","REAL PROPERTY",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"15240b58-04ba-7c9c-06e6-30dd86feaea7","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"M GRAHAM O'BRIEN","REAL PROPERTY",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"9a8092f5-7735-45fb-6a52-25e8c7e9f186","22709ffe-f6f9-0b28-2e80-d33cc9b2ae36",NULL,NULL,NULL,"RYAN DAVID SANDERS","MANAGER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"b2eb174c-f026-7818-4859-03c825bf54f4","22709ffe-f6f9-0b28-2e80-d33cc9b2ae36",NULL,NULL,NULL,"THE RLS TRUST","GOVERNING PERSON",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"e236d212-a020-3e57-b904-b5b1ffc0df67","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"ASHLEY MCGRANE","MANAGER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"e08cc098-d917-8840-7568-1d0815657cd9","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"MICHAEL G O APOS BRIEN","CFO",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"8500cfef-7bb9-1337-dbbe-f3edcc8c0b46","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"ZOOMINFO INTERMEDIATE INC","GOVERNOR",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"05b34c4e-76cc-bcea-a8dc-a264d41ba91d","27f7c935-643b-76ab-6b3f-40f377b762d7",NULL,NULL,NULL,"HENRY SCHUCK","MEMBER",NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-"53daa612-d671-e34b-ea30-872c34f2dd8c","3032d8ee-75e6-bb26-666b-b44e2eea9222",NULL,NULL,NULL,"Danielle Brancazio",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-07-30 01:57:13.537"
-
-
-
-do i hv to go with indivisual function for each column like below or how to fix it
-
-def explode_associated_people(row):
-    try:
-        # Convert the string representation of the list to an actual list
-        people_list = ast.literal_eval(row['associated_people'])
-        # Create a DataFrame from the list of dictionaries
-        exploded_df = pd.DataFrame(people_list)
-        exploded_df['vendor_name_cleaned'] = row['vendor_name_cleaned']  # Add vendor name to each row
- 
-        # Explode the 'titles' column into multiple rows
-        exploded_df = exploded_df.explode('titles')
-        return exploded_df
-    except Exception as e:
-        print(f"Error processing row: {e}")
-        return pd.DataFrame()
-		
-		
-def explode_card_revenue(data):
+def process_all_json_columns(df, base_columns=None):
     """
-    Explodes a nested dictionary into a flat dictionary with multiple columns.
- 
-    Args:
-        data (str): A string representation of a dictionary.
- 
-    Returns:
-        dict: A flattened dictionary with keys as column names and values as the corresponding data.
+    Process all JSON columns and return separate DataFrames
     """
-    try:
-        # Convert the string representation of the dictionary to an actual dictionary
-        card_revenue_data = ast.literal_eval(data)
- 
-        # Extract the relevant fields from the dictionary
-        flattened_data = {
-            'end_date': card_revenue_data.get('end_date'),
-            'date_accessible': card_revenue_data.get('date_accessible'),
-            '1m_start_date': card_revenue_data.get('1m', {}).get('start_date'),
-            '1m_average_monthly_amount': card_revenue_data.get('1m', {}).get('average_monthly_amount'),
-            '3m_start_date': card_revenue_data.get('3m', {}).get('start_date'),
-            '3m_average_monthly_amount': card_revenue_data.get('3m', {}).get('average_monthly_amount'),
-            '12m_start_date': card_revenue_data.get('12m', {}).get('start_date'),
-            '12m_average_monthly_amount': card_revenue_data.get('12m', {}).get('average_monthly_amount'),
-        }
-        return flattened_data
-    except Exception as e:
-        print(f"Error processing data: {e}")
-        return {
-            'end_date': None,
-            'date_accessible': None,
-            '1m_start_date': None,
-            '1m_average_monthly_amount': None,
-            '3m_start_date': None,
-            '3m_average_monthly_amount': None,
-            '12m_start_date': None,
-            '12m_average_monthly_amount': None,
-        }
+    if base_columns is None:
+        base_columns = ["stg_business_entity_id"]
+    
+    flattened_dfs = {}
+    
+    for column_name, config in ss.JSON_FIELD_CONFIGS.items():
+        print(f"Processing {column_name}...")
+        flattened_df = flatten_json_column_improved(df, column_name, config, base_columns)
+        
+        if flattened_df.count() > 0:
+            flattened_dfs[column_name] = flattened_df
+            print(f"✓ {column_name}: {flattened_df.count()} rows")
+        else:
+            print(f"✗ {column_name}: No data after flattening")
+    
+    return flattened_dfs
+
+def combine_flattened_results(base_df, flattened_dfs, join_key="stg_business_entity_id"):
+    """
+    Combine all flattened DataFrames back to base DataFrame
+    """
+    result_df = base_df
+    
+    for df_name, df in flattened_dfs.items():
+        if df.count() > 0:
+            print(f"Joining {df_name}...")
+            result_df = result_df.join(df, on=join_key, how="left")
+        else:
+            print(f"Skipping {df_name} - no data to join")
+    
+    return result_df
+
+# USAGE EXAMPLE:
+"""
+# Your existing code would become:
+transformed_json_df = transformed_df.select(*ss.jsoncol)
+
+# Process all JSON columns
+flattened_dataframes = process_all_json_columns(transformed_json_df)
+
+# For columns that need to be kept in main table (like registered_agents)
+# Handle them separately:
+if 'registered_agents' in transformed_json_df.columns:
+    transformed_json_df = transformed_json_df.withColumn(
+        "registered_agents",
+        when(
+            ~is_empty_or_null("registered_agents"),
+            concat_ws(";", from_json(col("registered_agents"), ArrayType(StringType())))
+        ).otherwise(lit(None))
+    )
+
+# Combine everything
+final_df = combine_flattened_results(
+    transformed_json_df.select("stg_business_entity_id", "registered_agents"), 
+    flattened_dataframes
+)
+"""
