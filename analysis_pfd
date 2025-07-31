@@ -1,26 +1,67 @@
+if any of the column has empty list or dict or emty value
+
+then we shouldn't consider such values
+
+also need to ingerate below as well
+
+see now issue with card  revenue is still exist, wat ever code u gave its not working see 
+
+for card_revenue has following values in input file
+
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 8815233.7777}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 8310170.7713}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 7844672.1036}}
+
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}
+
+
+but flatten_nested_json_column is not loading below record in tgt table, first up all flatten_nested_json_column is not returning below row
+
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 6767731.4118}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 5545336.8131}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 5226886.2024}}
+
 registered_agents sample values 
+
 []
+
 ['CASSIE WHITLOCK']
+
 ['C T CORPORATION SYSTEM', 'CT CORPORATION SYSTEM', 'THE CORPORATION TRUST INCORPORATED']
 
 registered_agents_schema = ArrayType(StringType())
 
 # Convert JSON string to actual array
+
 transformed_json_df = transformed_json_df.withColumn(
+
     "registered_agents",
+
     when(
+
         (col("registered_agents_json").isNotNull()) & 
+
         (col("registered_agents_json") != "[]") & 
+
         (col("registered_agents_json") != ""),
+
         from_json(col("registered_agents_json"), ArrayType(StringType()))
+
     ).otherwise(lit(None))
+
 )
 
 # Convert array to semicolon-separated string
+
 transformed_json_df = transformed_json_df.withColumn(
+
     "registered_agents",
+
     when(
+
         (col("registered_agents").isNotNull()) & (size(col("registered_agents")) > 0),
+
         concat_ws(";", col("registered_agents"))
+
     ).otherwise(lit(""))
+
 )
+
+
+shall we go with indiviual function for each column n then cobine all based on stg_business_entity_id
