@@ -147,3 +147,19 @@ indivisual to internal changes
 receivable attribute type
 
 technology used 
+
+
+1) classification table
+levels to lower case
+indivisual to internal changes
+
+2)receivable attribute type
+
+technology used 
+{'vendor_name': 'Paypal', 'category': 'payments'}
+
+receivables_attribute_type = payment_tech_used, value(fetch vendor_name from json): 
+
+
+3)change stp_ind_declined in type table 
+4)telecommunication address type from mobile to personal
