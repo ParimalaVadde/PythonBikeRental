@@ -1,179 +1,101 @@
-# utils.py - IMPROVED FUNCTIONS
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import *
+# staging_schema.py - CORRECTED SCHEMAS
 from pyspark.sql.types import *
-import staging_schema as ss
 
-def is_empty_or_null(column_value):
-    """Helper function to check if a value is empty, null, or contains only empty structures"""
-    return (
-        col(column_value).isNull() | 
-        (col(column_value) == "") |
-        (col(column_value) == "[]") |
-        (col(column_value) == "{}") |
-        (col(column_value) == "null")
-    )
+# CORRECTED: card_revenue is a single object, not an array
+card_revenue_schema = StructType([
+    StructField("end_date", StringType(), True),
+    StructField("date_accessible", StringType(), True),  # MISSING FIELD ADDED
+    StructField("1m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]), True),
+    StructField("3m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]), True),
+    StructField("12m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]), True)
+])
 
-def flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns):
-    """
-    Flatten a struct type into individual columns
-    """
-    select_expressions = list(base_columns)
-    
-    def add_struct_fields(struct_schema, current_path, current_prefix):
-        for field in struct_schema.fields:
-            field_path = f"{current_path}.{field.name}"
-            
-            if isinstance(field.dataType, StructType):
-                # Nested struct - recurse
-                add_struct_fields(field.dataType, field_path, f"{current_prefix}__{field.name}")
-            else:
-                # Primitive field
-                alias_name = f"{current_prefix}__{field.name}"
-                select_expressions.append(col(field_path).alias(alias_name))
-    
-    add_struct_fields(schema, parsed_col_name, prefix)
-    return df.select(*select_expressions)
+# CORRECTED: card_transactions_stability is a single object, not an array
+card_transactions_stability_schema = StructType([
+    StructField("end_date", StringType(), True),
+    StructField("date_accessible", StringType(), True),
+    StructField("1m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("days_present", IntegerType(), True),
+        StructField("weeks_present", IntegerType(), True),
+        StructField("months_present", IntegerType(), True),
+        StructField("daily_coverage_ratio", DoubleType(), True),
+        StructField("weekly_coverage_ratio", DoubleType(), True),
+        StructField("monthly_coverage_ratio", DoubleType(), True)
+    ]), True),
+    StructField("3m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("days_present", IntegerType(), True),
+        StructField("weeks_present", IntegerType(), True),
+        StructField("months_present", IntegerType(), True),
+        StructField("daily_coverage_ratio", DoubleType(), True),
+        StructField("weekly_coverage_ratio", DoubleType(), True),
+        StructField("monthly_coverage_ratio", DoubleType(), True)
+    ]), True),
+    StructField("12m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("days_present", IntegerType(), True),
+        StructField("weeks_present", IntegerType(), True),
+        StructField("months_present", IntegerType(), True),
+        StructField("daily_coverage_ratio", DoubleType(), True),
+        StructField("weekly_coverage_ratio", DoubleType(), True),
+        StructField("monthly_coverage_ratio", DoubleType(), True)
+    ]), True)
+])
 
-def flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns):
-    """
-    Handle arrays with nested arrays (like associated_people with titles)
-    """
-    # First explode the main array
-    df_exploded = df.select(*base_columns, explode(col(parsed_col_name)).alias("person"))
-    
-    # Now explode the nested titles array
-    df_final = df_exploded.select(
-        *base_columns,
-        col("person.name").alias(f"{prefix}__name"),
-        explode(col("person.titles")).alias(f"{prefix}__title")
-    )
-    
-    return df_final
+# CORRECT: associated_people is an array
+associated_people_schema = ArrayType(StructType([
+    StructField("name", StringType(), True),
+    StructField("titles", ArrayType(StringType()), True)
+]))
 
-def flatten_simple_array(df, parsed_col_name, prefix, base_columns):
-    """
-    Handle simple arrays (convert to semicolon-separated string)
-    """
-    return df.select(
-        *base_columns,
-        concat_ws(";", col(parsed_col_name)).alias(prefix)
-    )
+# CORRECTED: industries is a single object, not an array
+industries_schema = StructType([
+    StructField("classification_type", StringType(), True),
+    StructField("classification_code", StringType(), True),
+    StructField("classification_description", StringType(), True)
+])
 
-def flatten_json_column_improved(df, column_name, config, base_columns=None):
-    """
-    Improved JSON flattening function that handles different data types correctly
-    """
-    try:
-        if base_columns is None:
-            base_columns = ["stg_business_entity_id"]
-        
-        # Check if column exists
-        if column_name not in df.columns:
-            print(f"Column {column_name} does not exist in DataFrame")
-            return df
-        
-        # Check if column has any non-null values
-        non_null_count = df.filter(col(column_name).isNotNull() & ~is_empty_or_null(column_name)).count()
-        
-        if non_null_count == 0:
-            print(f"Column {column_name} contains only null/empty values, skipping flattening")
-            return df
-        
-        schema = config['schema']
-        flatten_type = config['flatten_type']
-        prefix = config['prefix']
-        
-        # Parse JSON
-        parsed_col_name = f"{column_name}_parsed"
-        df = df.withColumn(parsed_col_name, from_json(col(column_name), schema))
-        
-        # Filter out rows where parsing failed
-        df = df.filter(col(parsed_col_name).isNotNull())
-        
-        # Handle different flatten types
-        if flatten_type == 'struct':
-            # Single nested object - flatten to columns
-            result_df = flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns)
-            
-        elif flatten_type == 'array_double_explode':
-            # Array with nested arrays (like associated_people)
-            result_df = flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns)
-            
-        elif flatten_type == 'simple_array':
-            # Simple array - join with semicolon
-            result_df = flatten_simple_array(df, parsed_col_name, prefix, base_columns)
-            
-        else:
-            print(f"Unknown flatten_type: {flatten_type}")
-            return df
-        
-        return result_df
-        
-    except Exception as error:
-        print(f"Error flattening column {column_name}: {error}")
-        import traceback
-        traceback.print_exc()
-        return df
+# CORRECTED: technologies is a single object, not an array  
+technologies_schema = StructType([
+    StructField("vendor_name", StringType(), True),
+    StructField("category", StringType(), True)
+])
 
-def process_all_json_columns(df, base_columns=None):
-    """
-    Process all JSON columns and return separate DataFrames
-    """
-    if base_columns is None:
-        base_columns = ["stg_business_entity_id"]
-    
-    flattened_dfs = {}
-    
-    for column_name, config in ss.JSON_FIELD_CONFIGS.items():
-        print(f"Processing {column_name}...")
-        flattened_df = flatten_json_column_improved(df, column_name, config, base_columns)
-        
-        if flattened_df.count() > 0:
-            flattened_dfs[column_name] = flattened_df
-            print(f"✓ {column_name}: {flattened_df.count()} rows")
-        else:
-            print(f"✗ {column_name}: No data after flattening")
-    
-    return flattened_dfs
-
-def combine_flattened_results(base_df, flattened_dfs, join_key="stg_business_entity_id"):
-    """
-    Combine all flattened DataFrames back to base DataFrame
-    """
-    result_df = base_df
-    
-    for df_name, df in flattened_dfs.items():
-        if df.count() > 0:
-            print(f"Joining {df_name}...")
-            result_df = result_df.join(df, on=join_key, how="left")
-        else:
-            print(f"Skipping {df_name} - no data to join")
-    
-    return result_df
-
-# USAGE EXAMPLE:
-"""
-# Your existing code would become:
-transformed_json_df = transformed_df.select(*ss.jsoncol)
-
-# Process all JSON columns
-flattened_dataframes = process_all_json_columns(transformed_json_df)
-
-# For columns that need to be kept in main table (like registered_agents)
-# Handle them separately:
-if 'registered_agents' in transformed_json_df.columns:
-    transformed_json_df = transformed_json_df.withColumn(
-        "registered_agents",
-        when(
-            ~is_empty_or_null("registered_agents"),
-            concat_ws(";", from_json(col("registered_agents"), ArrayType(StringType())))
-        ).otherwise(lit(None))
-    )
-
-# Combine everything
-final_df = combine_flattened_results(
-    transformed_json_df.select("stg_business_entity_id", "registered_agents"), 
-    flattened_dataframes
-)
-"""
+# Configuration mapping
+JSON_FIELD_CONFIGS = {
+    'card_revenue': {
+        'schema': card_revenue_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_revenue'
+    },
+    'card_transactions_stability': {
+        'schema': card_transactions_stability_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_transactions_stability'
+    },
+    'associated_people': {
+        'schema': associated_people_schema,
+        'flatten_type': 'array_double_explode',  # Array with nested array (titles)
+        'prefix': 'associated_people'
+    },
+    'industries': {
+        'schema': industries_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'industries'
+    },
+    'technologies': {
+        'schema': technologies_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'technologies'
+    }
+}
