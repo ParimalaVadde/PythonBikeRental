@@ -13,3 +13,43 @@
 "fff5a25d-e3b0-cc08-558a-1a71ce926f25","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","",""
 "ac9b8218-33c4-ca50-ef99-b2d14a65d94f","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","",""
 "f19ef224-1d6a-8039-fdf4-ad14aebb150c","2025-03-31","2025-06-15","","","","","","","2025-03-31","2025-06-15","2025-03-01","0","0","0","0.0","0.0","0.0","","","","","","","","","","","","","","","","","enigma_description","","law firm","","",""
+
+
+
+
+
+
+from pyspark.sql.functions import col
+
+def combine_flattened_results(base_df, flattened_dfs, join_key="stg_business_entity_id"):
+    """
+    Combine all flattened DataFrames back to base DataFrame using LEFT JOIN 
+    but filter out rows with no actual data.
+    """
+    result_df = base_df.select(join_key).distinct()
+    
+    for df_name, df in flattened_dfs.items():
+        if df.count() > 0:
+            print(f"Joining {df_name}...")
+            result_df = result_df.join(df, on=join_key, how="left")
+        else:
+            print(f"Skipping {df_name} - no data to join")
+    
+    # Identify non-key columns
+    non_key_cols = [c for c in result_df.columns if c != join_key]
+    
+    # Filter out rows where all other columns are NULL or empty
+    condition = None
+    for c in non_key_cols:
+        col_cond = (
+            col(c).isNotNull() &
+            (col(c) != "") &
+            (col(c) != "[]") &
+            (col(c) != "{}")
+        )
+        condition = col_cond if condition is None else (condition | col_cond)
+    
+    if condition is not None:
+        result_df = result_df.filter(condition)
+    
+    return result_df
