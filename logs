@@ -1,3 +1,21 @@
+industries
+{'classification_description': 'internet marketing service', 'classification_type': 'enigma_description'}
+
+in df it should be something like below similar to card_revenue and card_transactions_stability
+industries__classification_description,industries__classification_type
+internet marketing service,enigma_description
+
+technologies
+
+{'vendor_name': 'Paypal', 'category': 'payments'}
+
+in df it should be something like below similar to card_revenue and card_transactions_stability
+technologies__vendor_name, technologies__payments
+
+
+
+
+
 registered_agents
 
 ['KIRA GABER', 'NATIONAL REGISTERED AGENTS INC', 'BRIAN MUNDEN', 'LEWIS PR INC', 'SECRETARY OF STATE']
