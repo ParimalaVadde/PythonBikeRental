@@ -1,76 +1,16 @@
-# === JSON Columns Processing ===
+registered_agents
 
-# Include both JSON columns
-jsoncol = ['stg_business_entity_id', 'card_revenue', 'card_transactions_stability']
-transformed_json_df = transformed_df.select(jsoncol)
-
-# Write combined JSON to S3
-write_single_csv_to_s3_fixed(
-    transformed_json_df,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-    s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_json_df_v2.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
-)
-
-# Base columns for flattening
-base_columns = ['stg_business_entity_id']
-
-# === 1. Process card_revenue ===
-card_revenue_df = transformed_df.select(base_columns + ['card_revenue'])
-card_revenue_config = ss.JSON_FIELD_CONFIGS['card_revenue']
-
-flattened_card_revenue = utl.flatten_json_column_improved(
-    card_revenue_df, 
-    'card_revenue', 
-    card_revenue_config, 
-    base_columns
-)
-
-# Filter null rows for card_revenue
-card_revenue_cols = [c for c in flattened_card_revenue.columns if c.startswith('card_revenue__')]
-if card_revenue_cols:
-    non_null_condition = None
-    for c in card_revenue_cols:
-        cond = col(c).isNotNull()
-        non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
-    flattened_card_revenue = flattened_card_revenue.filter(non_null_condition)
-
-# Write card_revenue to S3
-write_single_csv_to_s3_fixed(
-    flattened_card_revenue,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-    s3_key="pfd_scripts/pfd_staging_pvr_test/card_revenue_only.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
-)
-
-print(f"Successfully processed card_revenue: {flattened_card_revenue.count()} rows")
-
-# === 2. Process card_transactions_stability ===
-card_trans_stability_df = transformed_df.select(base_columns + ['card_transactions_stability'])
-card_trans_stability_config = ss.JSON_FIELD_CONFIGS['card_transactions_stability']
-
-flattened_card_trans_stability = utl.flatten_json_column_improved(
-    card_trans_stability_df, 
-    'card_transactions_stability', 
-    card_trans_stability_config, 
-    base_columns
-)
-
-# Filter null rows for card_transactions_stability
-card_trans_cols = [c for c in flattened_card_trans_stability.columns if c.startswith('card_transactions_stability__')]
-if card_trans_cols:
-    non_null_condition = None
-    for c in card_trans_cols:
-        cond = col(c).isNotNull()
-        non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
-    flattened_card_trans_stability = flattened_card_trans_stability.filter(non_null_condition)
-
-# Write card_transactions_stability to S3
-write_single_csv_to_s3_fixed(
-    flattened_card_trans_stability,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-    s3_key="pfd_scripts/pfd_staging_pvr_test/card_transactions_stability_only.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
-)
-
-print(f"Successfully processed card_transactions_stability: {flattened_card_trans_stability.count()} rows")
+['KIRA GABER', 'NATIONAL REGISTERED AGENTS INC', 'BRIAN MUNDEN', 'LEWIS PR INC', 'SECRETARY OF STATE']
+['UNITED STATES CORPORATION AGENTS INC']
+['C T CORPORATION SYSTEM', '825 8TH AVENUE']
+[]
+['CASSIE WHITLOCK', 'INCORP SERVICES INC', 'JESSICA BJORLING', 'TODD GRIERSON']
+['GRYFON ENTERPRISES CORP']
+['C T CORPORATION SYSTEM', 'CT CORPORATION SYSTEM', 'THE CORPORATION TRUST INCORPORATED']
+['JOEL DAVID CHESTERMAN']
+['CYRUS DEYHIMI', 'INCORP SERVICES INC', 'MICHAEL GRAY', 'NO AGENT', 'PARADIGM SAMPLE LLC', 'REGISTERED AGENT SOLUTIONS INC', 'REGISTERED AGENTS INC', 'ROBERT GRAY', 'SIMA VASA', 'TEXAN REGISTERED AGENT LLC']
+['C T CORPORATION SYSTEM', 'ARIBA INC', 'CT CORPORATION SYSTEM', 'THE CORPORATION TRUST INCORPORATED']
+['HOWELL LEGAL INC']
+['RODRIGUEZ-MCCLOSKEY PLLC']
+['REBECCA MARIE BODONY']
+['C T CORPORATION SYSTEM', 'CT CORPORATION SYSTEM', 'AGENT REVOKED', 'JULISSA BETANCOURT', 'KY SECRETARY OF STATE', 'ND SECRETARY OF STATE N D C C 10-01 1-13', 'SALESFORCE COM INC', 'SALESFORCE ORG', 'SECRETARY OF STATE', 'SERVE SECRETARY OF STATE FOR MAILING TO', 'THE CORPORATION TRUST INCORPORATED']
