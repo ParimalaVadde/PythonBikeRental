@@ -22,3 +22,10 @@ for col_name in revenue_value_columns:
 
 #Filter out rows where all these revenue columns are NULL
 transformed_revenue = transformed_revenue.filter(non_null_condition)
+
+
+#Remove 'stg_business_entity_id'
+revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+
+#Rename "card_revenue__end_date" → "end_date"
+revenue_columns = ["end_date" if col == "card_revenue__end_date" else col for col in revenue_columns]
