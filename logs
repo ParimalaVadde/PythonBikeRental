@@ -1,32 +1,64 @@
-all_flattened_combined (this is wrong)
+def flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns):
+    """
+    Handle arrays with nested arrays (like associated_people with titles)
+    Output: associated_people__name, associated_people__titles
+    """
+    df_exploded = (
+        df
+        .filter(size(col(parsed_col_name)) > 0)  # Ignore empty list
+        .select(*base_columns, explode(col(parsed_col_name)).alias("person"))
+    )
 
-"stg_business_entity_id","card_revenue","card_transactions_stability","industries","technologies","registered_agents"
-"f19ef224-1d6a-8039-fdf4-ad14aebb150c","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}, '12m': {'start_date': '2024-04-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}}","{'classification_description': 'law firm', 'classification_type': 'enigma_description'}","",""
-"5addda9a-36e5-91c7-7620-a5860bd8685f","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}, '12m': {'start_date': '2024-04-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}}","{'classification_description': 'corporate office', 'classification_type': 'enigma_description'}","{'vendor_name': 'Shopify', 'category': 'payments'}","C T CORPORATION SYSTEM;825 8TH AVENUE"
-"e76e0d92-88f1-75db-ed70-f031833aa1fc","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}, '12m': {'start_date': '2024-04-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}}","{'classification_description': 'business center', 'classification_type': 'enigma_description'}","","C T CORPORATION SYSTEM;ARIBA INC;CT CORPORATION SYSTEM;THE CORPORATION TRUST INCORPORATED"
-"3ccbd910-5a45-d8fc-d4a0-101c6532c599","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}, '12m': {'start_date': '2024-04-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}}","{'classification_description': 'parking garage', 'classification_type': 'enigma_description'}","{'vendor_name': 'Stripe', 'category': 'payments'}","C T CORPORATION SYSTEM;CT CORPORATION SYSTEM;AGENT REVOKED;JULISSA BETANCOURT;KY SECRETARY OF STATE;ND SECRETARY OF STATE N D C C 10-01 1-13;SALESFORCE COM INC;SALESFORCE ORG;SECRETARY OF STATE;SERVE SECRETARY OF STATE FOR MAILING TO;THE CORPORATION TRUST INCORPORATED"
-"27f7c935-643b-76ab-6b3f-40f377b762d7","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 6767731.4118}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 5545336.8131}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 5226886.2024}}","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 31, 'weeks_present': 6, 'months_present': 1, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '3m': {'start_date': '2025-01-01', 'days_present': 90, 'weeks_present': 14, 'months_present': 3, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '12m': {'start_date': '2024-04-01', 'days_present': 360, 'weeks_present': 53, 'months_present': 12, 'daily_coverage_ratio': 0.9863, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}}","{'classification_code': '511210', 'classification_description': 'Software Publishers', 'classification_type': 'NAICS_2017'}","{'vendor_name': 'Paypal', 'category': 'payments'}","C T CORPORATION SYSTEM;CT CORPORATION SYSTEM;THE CORPORATION TRUST INCORPORATED"
-"ced89840-b900-6650-40e9-b8110f100632","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 31, 'weeks_present': 6, 'months_present': 1, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '3m': {'start_date': '2025-01-01', 'days_present': 90, 'weeks_present': 14, 'months_present': 3, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '12m': {'start_date': '2024-04-01', 'days_present': 360, 'weeks_present': 53, 'months_present': 12, 'daily_coverage_ratio': 0.9863, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}}","{'classification_description': 'electronics store', 'classification_type': 'enigma_description'}","",""
-"22709ffe-f6f9-0b28-2e80-d33cc9b2ae36","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 8815233.7777}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 8310170.7713}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 7844672.1036}}","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 31, 'weeks_present': 6, 'months_present': 1, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '3m': {'start_date': '2025-01-01', 'days_present': 90, 'weeks_present': 14, 'months_present': 3, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '12m': {'start_date': '2024-04-01', 'days_present': 365, 'weeks_present': 53, 'months_present': 12, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}}","{'classification_description': 'software company', 'classification_type': 'enigma_description'}","{'vendor_name': 'Paypal', 'category': 'payments'}","CASSIE WHITLOCK;INCORP SERVICES INC;JESSICA BJORLING;TODD GRIERSON"
-"5396c750-de84-579e-f0f8-195fae7aa746","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '12m': {'start_date': '2024-04-01', 'days_present': 2, 'weeks_present': 1, 'months_present': 1, 'daily_coverage_ratio': 0.0055, 'weekly_coverage_ratio': 0.0189, 'monthly_coverage_ratio': 0.0833}}","{'classification_description': 'corporate office', 'classification_type': 'enigma_description'}","","CYRUS DEYHIMI;INCORP SERVICES INC;MICHAEL GRAY;NO AGENT;PARADIGM SAMPLE LLC;REGISTERED AGENT SOLUTIONS INC;REGISTERED AGENTS INC;ROBERT GRAY;SIMA VASA;TEXAN REGISTERED AGENT LLC"
-"9867824b-4db5-861a-bff4-100a12d835f7","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}","{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}, '12m': {'start_date': '2024-04-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}}","{'classification_description': 'internet marketing service', 'classification_type': 'enigma_description'}","{'vendor_name': 'Paypal', 'category': 'payments'}","KIRA GABER;NATIONAL REGISTERED AGENTS INC;BRIAN MUNDEN;LEWIS PR INC;SECRETARY OF STATE"
-
-
-*********************************************************************************
-
-indivisual for card revenue and card_tranction worked correctly
-
-1) card_transactions_stability_only          
-"stg_business_entity_id","card_transactions_stability__end_date","card_transactions_stability__date_accessible","card_transactions_stability__1m__start_date","card_transactions_stability__1m__days_present","card_transactions_stability__1m__weeks_present","card_transactions_stability__1m__months_present","card_transactions_stability__1m__daily_coverage_ratio","card_transactions_stability__1m__weekly_coverage_ratio","card_transactions_stability__1m__monthly_coverage_ratio","card_transactions_stability__3m__start_date","card_transactions_stability__3m__days_present","card_transactions_stability__3m__weeks_present","card_transactions_stability__3m__months_present","card_transactions_stability__3m__daily_coverage_ratio","card_transactions_stability__3m__weekly_coverage_ratio","card_transactions_stability__3m__monthly_coverage_ratio","card_transactions_stability__12m__start_date","card_transactions_stability__12m__days_present","card_transactions_stability__12m__weeks_present","card_transactions_stability__12m__months_present","card_transactions_stability__12m__daily_coverage_ratio","card_transactions_stability__12m__weekly_coverage_ratio","card_transactions_stability__12m__monthly_coverage_ratio"
-"22709ffe-f6f9-0b28-2e80-d33cc9b2ae36","2025-03-31","2025-06-15","2025-03-01","31","6","1","1.0","1.0","1.0","2025-01-01","90","14","3","1.0","1.0","1.0","2024-04-01","365","53","12","1.0","1.0","1.0"
-"ced89840-b900-6650-40e9-b8110f100632","2025-03-31","2025-06-15","2025-03-01","31","6","1","1.0","1.0","1.0","2025-01-01","90","14","3","1.0","1.0","1.0","2024-04-01","360","53","12","0.9863","1.0","1.0"
-"5396c750-de84-579e-f0f8-195fae7aa746","2025-03-31","2025-06-15","2025-03-01","0","0","0","0.0","0.0","0.0","2025-01-01","0","0","0","0.0","0.0","0.0","2024-04-01","2","1","1","0.0055","0.0189","0.0833"
-"27f7c935-643b-76ab-6b3f-40f377b762d7","2025-03-31","2025-06-15","2025-03-01","31","6","1","1.0","1.0","1.0","2025-01-01","90","14","3","1.0","1.0","1.0","2024-04-01","360","53","12","0.9863","1.0","1.0"
+    df_final = (
+        df_exploded
+        .withColumn("title", explode(col("person.titles")))
+        .select(
+            *base_columns,
+            col("person.name").alias(f"{prefix}__name"),
+            col("title").alias(f"{prefix}__titles")
+        )
+    )
+    return df_final
 
 
-2)card_revenue_only
 
-"stg_business_entity_id","card_revenue__end_date","card_revenue__date_accessible","card_revenue__1m__start_date","card_revenue__1m__average_monthly_amount","card_revenue__3m__start_date","card_revenue__3m__average_monthly_amount","card_revenue__12m__start_date","card_revenue__12m__average_monthly_amount"
-"22709ffe-f6f9-0b28-2e80-d33cc9b2ae36","2025-03-31","2025-06-15","2025-03-01","8815233.7777","2025-01-01","8310170.7713","2024-04-01","7844672.1036"
-"ced89840-b900-6650-40e9-b8110f100632","2025-03-31","2025-06-15","2025-03-01","167570.2109","2025-01-01","179786.4464","2024-04-01","194118.9216"
-"27f7c935-643b-76ab-6b3f-40f377b762d7","2025-03-31","2025-06-15","2025-03-01","6767731.4118","2025-01-01","5545336.8131","2024-04-01","5226886.2024"
+from pyspark.sql.functions import regexp_replace, from_json, ArrayType, StringType, size, lit, concat_ws, when, col
+from functools import reduce
+import utils as utl
+import staging_schema as ss
+
+base_col = "stg_business_entity_id"
+flattened_dfs = {}
+
+# Loop through JSON_FIELD_CONFIGS for struct & array_double_explode fields
+for col_name, config in ss.JSON_FIELD_CONFIGS.items():
+    df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[base_col])
+    if df_flat is not None and df_flat.count() > 0:
+        flattened_dfs[col_name] = df_flat
+
+# Handle registered_agents separately (simple array of strings)
+reg_agents_df = (
+    transformed_df
+    .filter(~utl.is_empty_or_null("registered_agents"))
+    .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+    .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+    .withColumn(
+        "registered_agents",
+        when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
+    )
+    .select(base_col, "registered_agents")
+)
+
+if reg_agents_df.count() > 0:
+    flattened_dfs["registered_agents"] = reg_agents_df
+
+# Combine all results
+final_df = utl.combine_flattened_results(transformed_df.select(base_col).distinct(), flattened_dfs)
+
+# Write to S3
+write_single_csv_to_s3_fixed(
+    final_df,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/all_flattened_combined.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+)
