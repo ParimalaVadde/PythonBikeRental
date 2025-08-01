@@ -1,1 +1,64 @@
-Error Category: INVALID_ARGUMENT_ERROR; Failed Line Number: 340; AttributeError: module 'utils' has no attribute 'flatten_nested_json_column'
+from pyspark.sql.functions import (
+    regexp_replace, from_json, ArrayType, StringType, size, lit, concat_ws,
+    when, col
+)
+from functools import reduce
+
+base_col = "stg_business_entity_id"
+
+#Handle JSON-based columns
+json_columns = [
+    ("card_revenue", ss.card_revenue_schema),
+    ("card_transactions_stability", ss.card_transactions_stability_schema),
+    ("industries", ss.industries_schema),
+    ("technologies", ss.technologies_schema),
+]
+
+flattened_dfs = []
+
+for col_name, schema in json_columns:
+    df = transformed_df.filter(
+        (col(col_name).isNotNull()) &
+        (col(col_name) != "") &
+        (col(col_name) != "{}")
+    ).select(base_col, col_name)
+    
+    if df.head(1):  # avoids unnecessary count()
+        flat_df = utl.flatten_json_column_improved(df, col_name, schema, [base_col])
+        flattened_dfs.append(flat_df)
+
+#Handle registered_agents
+reg_agents_df = transformed_df.filter(
+    (col("registered_agents").isNotNull()) &
+    (col("registered_agents") != "") &
+    (col("registered_agents") != "[]")
+).select(base_col, "registered_agents")
+
+if reg_agents_df.head(1):
+    reg_agents_df = (
+        reg_agents_df
+        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+        .withColumn(
+            "registered_agents", 
+            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents")))
+            .otherwise(lit(None))
+        )
+        .drop("registered_agents_json")
+    )
+    
+    flattened_dfs.append(reg_agents_df)
+
+#Combine all flattened DataFrames
+final_df = reduce(
+    lambda df1, df2: df1.join(df2, base_col, "left"),
+    flattened_dfs
+)
+
+#Write to S3
+write_single_csv_to_s3_fixed(
+    final_df,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/all_flattened_combined.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+)
