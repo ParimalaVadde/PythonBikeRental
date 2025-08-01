@@ -1,0 +1,447 @@
+-- main code
+
+import sys
+import os
+import boto3
+import json
+import hashlib
+import uuid
+import psycopg2
+import utils as utl
+import staging_schema as ss
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from pyspark.sql import SparkSession
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue.dynamicframe import DynamicFrame
+from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, from_json, struct
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
+from pyspark.sql.utils import AnalysisException
+from datetime import datetime
+from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round
+from pyspark.sql import DataFrame
+from functools import reduce
+from pyspark.sql.functions import col, lit, when, isnan, isnull
+from pyspark.sql.types import NullType
+from pyspark.sql.functions import lit
+
+
+## @params: [JOB_NAME]
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+
+s3 = boto3.client("s3")
+#s3.download_file(s3_bucket,ssl_cert_s3_path,local_ssl_cert_path)
+
+
+rds_client = boto3.client ("rds",region_name=ss.region)
+rds_token = rds_client.generate_db_auth_token(
+    DBHostname = ss.rds_host,
+    Port = ss.rds_port,
+    DBUsername = ss.db_user
+    )
+    
+pg_connection_options = {
+    "url" : f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
+    "user" : ss.db_user,
+    "password" : rds_token
+   # "db_table":source_table
+    }
+
+# Register the UDF
+compute_uuid_udf = udf(lambda x: utl.compute_uuid(x, ss.decimal_columns), StringType())
+
+def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
+    """
+    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
+    Handles void data type columns by converting them to string type.
+    """
+    
+    # Check for void columns and convert them to string type
+    void_columns = [field.name for field in df.schema.fields if isinstance(field.dataType, NullType)]
+    
+    if void_columns:
+        print(f"Found void columns: {void_columns}. Converting to string type.")
+        # Convert void columns to string type with null values
+        for col_name in void_columns:
+            df = df.withColumn(col_name, lit(None).cast("string"))
+    
+    try:
+        # Ensure temp_path ends with a trailing slash
+        if not temp_path.endswith('/'):
+            temp_path += '/'
+        
+        # Coalesce to one partition and write to temp S3 directory with proper CSV options
+        df.coalesce(1).write.mode("overwrite") \
+            .option("header", "true") \
+            .option("quote", '"') \
+            .option("escape", '"') \
+            .option("quoteAll", "true") \
+            .option("multiLine", "true") \
+            .option("timestampFormat", "yyyy-MM-dd HH:mm:ss") \
+            .option("dateFormat", "yyyy-MM-dd") \
+            .csv(temp_path)
+        
+        # Initialize S3 client
+        s3 = boto3.client("s3")
+        
+        # Parse temp path
+        temp_bucket = temp_path.replace("s3://", "").split("/")[0]
+        temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
+        
+        # Remove trailing slash from prefix if present
+        if temp_prefix.endswith('/'):
+            temp_prefix = temp_prefix[:-1]
+        
+        # List objects in temp directory
+        response = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
+        
+        if 'Contents' not in response:
+            raise Exception(f"No files found in temp path: {temp_path}")
+        
+        objects = response['Contents']
+        
+        # Find the CSV part file, excluding _SUCCESS and other metadata files
+        csv_files = [
+            obj['Key'] for obj in objects 
+            if obj['Key'].endswith(".csv") and not obj['Key'].endswith("_SUCCESS")
+        ]
+        
+        if not csv_files:
+            raise Exception(f"No CSV files found in temp directory: {temp_path}")
+        
+        # Use the first (and should be only) CSV file
+        part_file = csv_files[0]
+        
+        # Copy the CSV file to the target location
+        s3.copy_object(
+            Bucket=s3_bucket,
+            CopySource={'Bucket': temp_bucket, 'Key': part_file},
+            Key=s3_key
+        )
+        
+        print(f"Successfully copied CSV to s3://{s3_bucket}/{s3_key}")
+        
+        # Clean up temp files - delete all objects in the temp directory
+        delete_objects = [{'Key': obj['Key']} for obj in objects]
+        if delete_objects:
+            s3.delete_objects(
+                Bucket=temp_bucket,
+                Delete={'Objects': delete_objects}
+            )
+            print(f"Cleaned up {len(delete_objects)} temp files")
+            
+    except Exception as e:
+        print(f"Error in write_single_csv_to_s3_fixed: {str(e)}")
+        raise
+
+# PROCESS ONLY CARD_REVENUE
+print("Processing card_revenue only...")
+
+
+def get_landing_data():
+    try:
+        # Query to fetch data
+        query = "(SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee = 'N') AS temp_table"
+
+        # Read the query result into a Spark DataFrame
+        source_df = glueContext.read.format("jdbc").options(
+                dbtable=query,
+                **pg_connection_options
+            ).load()
+
+        # Define UDFs for computing business entity ID and buying entity ID
+        
+        
+        print("printing compute uuid bussiness entity")
+        source_df = source_df.withColumn(
+                        "stg_business_entity_id",
+                        when(
+                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+                            ).otherwise(
+                                compute_uuid_udf(struct("vendor_name_cleaned"))
+                            )
+                            )
+                
+
+        print("stg_business_entity_id column added.")
+
+
+        source_df = source_df.withColumn(
+                "stg_buying_entity",
+            compute_uuid_udf(struct("client_name"))
+                )
+    
+        print("stg_buying_entity column added.")
+
+        print("After adding the UUID columns")
+        source_df.select("stg_business_entity_id").show()
+        # Return the Spark DataFrame
+        return source_df
+
+    except Exception as e:
+        print('Error Message is:', e)
+        return None
+        
+
+def sanitize_and_add_missing_columns(df, required_columns):
+    """
+    adds missing columns with null values.
+    
+    Args:
+        df (DataFrame): The input Spark DataFrame.
+        required_columns (list): List of required column names.
+    
+    Returns:
+        DataFrame: The updated DataFrame with sanitized column names and all required columns.
+    """
+    print("required columns", required_columns)
+    print("existing columns in pfd file",  df.columns)
+    
+    
+    # : Add missing columns with null values
+    existing_columns = df.columns
+    missing_columns = [col for col in required_columns if col not in existing_columns]
+    for col in missing_columns:
+        df = df.withColumn(col, lit(None))
+    
+    return df
+
+
+def process_mapping_and_transform_data(source_df,  output_data_path):
+    """
+    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
+    """
+        
+    mapping_file = utl.read_map_file('pfd_mapping')
+    print("Reading mapping file completed")
+       
+
+    mapping_df = spark.createDataFrame(mapping_file)
+    
+    print("Converting mapping file to Dataframe completed")
+
+    # Validate mapping DataFrame
+    if mapping_df.rdd.isEmpty():
+        raise ValueError("The mapping DataFrame is empty. Please check the mapping file.")
+    if "source_column" not in mapping_df.columns or "target_column" not in mapping_df.columns:
+        raise ValueError("The mapping DataFrame does not contain the required columns: 'source_column' and 'target_column'.")
+
+    # Initialize variables
+    column_mapping = {}
+    current_date = datetime.today().strftime("%Y-%m-%d")
+
+    # Iterate through the mapping DataFrame to create the column mapping dictionary
+    for row in mapping_df.collect():
+        source_col = str(row["source_column"]).strip().lower()
+        target_col = row["target_column"]
+        column_mapping[source_col] = target_col
+
+   # print("Column Mapping Dictionary:")
+   # print(column_mapping)
+
+    # Read the input data into a Glue DynamicFrame
+    source_df.show()
+    data = source_df
+    print("data:", data.show())
+
+    # Validate input DataFrame
+    if data.rdd.isEmpty():
+      #  raise ValueError("The input DataFrame is empty. Please check the source data.")
+      print("The input DataFrame is empty. Please check the source data.")
+
+    # Verify that all source columns exist in the input DataFrame
+    # missing_columns = [col for col in column_mapping.keys() if col not in data.columns]
+    # if missing_columns:
+    #     raise ValueError(f"The following columns are missing in the input data: {missing_columns}")
+    #  #   print("The following columns are missing in the input data",missing_columns )
+        
+    print("before transforming the data")
+
+    # Rename columns in the input DataFrame using the column mapping
+    transformed_df = data.select(
+        [col(c).alias(column_mapping[c]) if c in column_mapping else col(c) for c in data.columns]
+    )
+    # Add a new column "stg_jpmc_business_entity_id" based on the condition
+    transformed_df = transformed_df.withColumn(
+        "stg_jpmc_business_entity_id",
+        when(
+            (col("client_ecid").isNotNull()) | (col("ind_jpmc") == 'Y'),
+            lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33")
+        ).otherwise(None)
+    )
+    
+    print("after transforming the data")
+
+    print("Transformed DataFrame:")
+    #transformed_df.show()
+
+    # Validate transformed DataFrame
+    if transformed_df.rdd.isEmpty():
+        raise ValueError("The transformed DataFrame is empty after applying column mappings.")
+
+    # Convert the Spark DataFrame to a Glue DynamicFrame
+    #transformed_dynamic_frame = DynamicFrame.fromDF(transformed_df, glueContext, "transformed_dynamic_frame")
+
+
+    
+
+    print("Transformation and writing completed")
+    return transformed_df
+    
+    
+landing_tables= get_landing_data()
+
+
+# Assume `source_df` is your Spark DataFrame
+fixing_source_df = sanitize_and_add_missing_columns(landing_tables, ss.pfd_mandatory_columns)
+
+# Show the updated DataFrame
+fixing_source_df.show()
+
+
+# Check if the DataFrame is empty
+# if landing_tables is None or landing_tables.rdd.isEmpty():
+#     print("Landing data is empty. Skipping all steps and ending the job.")
+#     job.commit()  # End the job immediately
+#     exit()
+    
+#landing_tables.show()
+transformed_df = process_mapping_and_transform_data(fixing_source_df, ss.output_data_path)
+
+transformed_df.show()
+
+# PROCESS ONLY CARD_REVENUE
+print("Processing card_revenue only...")
+
+
+
+
+write_single_csv_to_s3_fixed(
+    transformed_df,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_df_v1.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+)
+
+
+
+# Your existing processing
+jsoncol = ['stg_business_entity_id', 'card_revenue']
+transformed_json_df = transformed_df.select(jsoncol)
+
+# Write to S3
+write_single_csv_to_s3_fixed(
+    transformed_json_df,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_json_df_v1.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+)
+
+if 'card_revenue' in flattened_dataframes:
+    flattened_card_revenue = flattened_dataframes['card_revenue']
+    
+    # Your combine logic
+    final_df = utl.combine_flattened_results(
+        transformed_json_df.select("stg_business_entity_id"), 
+        flattened_dataframes
+    )
+    
+    # Your null filtering logic
+    card_revenue_columns = [col for col in final_df.columns if col.startswith('card_revenue__')]
+    print("Card revenue columns found:", card_revenue_columns)
+    
+    if card_revenue_columns:
+        
+        # Show which records pass the filter
+        filter_condition = col(card_revenue_columns[0]).isNotNull()
+        for card_col in card_revenue_columns[1:]:
+            filter_condition = filter_condition | col(card_col).isNotNull()
+        
+        # Apply filter
+        final_filtered_df = final_df.filter(filter_condition)
+        print("15. After filtering nulls:", final_filtered_df.count())
+        
+        
+
+else:
+    print("8. ERROR: card_revenue not found in flattened_dataframes!")
+
+print("=== END DEBUG ===")
+
+
+
+# Select base columns and card_revenue (don't include card_revenue in jsoncol to avoid conflicts)
+base_columns = ['stg_business_entity_id']
+card_revenue_df = transformed_df.select(base_columns + ['card_revenue'])
+
+# Process card_revenue using the utility function
+card_revenue_config = ss.JSON_FIELD_CONFIGS['card_revenue']
+flattened_card_revenue = utl.flatten_json_column_improved(
+    card_revenue_df, 
+    'card_revenue', 
+    card_revenue_config, 
+    base_columns
+)
+
+# Check if we got any results
+if flattened_card_revenue.count() > 0:
+    print(f"Successfully flattened card_revenue: {flattened_card_revenue.count()} rows")
+    
+    # Optional: Remove rows where all card_revenue fields are null
+    card_revenue_cols = [col_name for col_name in flattened_card_revenue.columns 
+                        if col_name.startswith('card_revenue__')]
+    
+    if card_revenue_cols:
+        # Create condition to keep rows where at least one card_revenue field is not null
+        non_null_condition = None
+        for col_name in card_revenue_cols:
+            condition = col(col_name).isNotNull()
+            if non_null_condition is None:
+                non_null_condition = condition
+            else:
+                non_null_condition = non_null_condition | condition
+        
+        # Filter out completely null rows
+        final_df = flattened_card_revenue.filter(non_null_condition)
+        print(f"After removing null rows: {final_df.count()} rows")
+    else:
+        final_df = flattened_card_revenue
+    
+    # Show sample data
+    print("Sample data:")
+    final_df.show(10, truncate=False)
+    
+    # Write to S3
+    write_single_csv_to_s3_fixed(
+        final_df,
+        s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+        s3_key="pfd_scripts/pfd_staging_pvr_test/card_revenue_only.csv",
+        temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+    )
+    
+else:
+    print("No data found after flattening card_revenue")
+
+job.commit()
+
+
+**************************************************
+
+above code is for card revenue
+
+now to test for card_transactions_stability along with card revenue . what changes needs to be done in above code
+
+sample card revenue value
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}, '12m': {'start_date': '2024-04-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}}
+
+
+
