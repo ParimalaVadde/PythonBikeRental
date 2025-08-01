@@ -1,34 +1,53 @@
-industries
-{'classification_description': 'internet marketing service', 'classification_type': 'enigma_description'}
+# Flatten the JSON columns
+transformed_json_df = transformed_df.select(*ss.jsoncol)
 
-in df it should be something like below similar to card_revenue and card_transactions_stability
-industries__classification_description,industries__classification_type
-internet marketing service,enigma_description
+# Updated flattening logic
+for column, schema in [
+    ("card_revenue", ss.card_revenue_schema),
+    ("card_transactions_stability", ss.card_transactions_stability_schema),
+    ("industries", ss.industries_schema),
+    ("technologies", ss.technologies_schema),
+]:
+    transformed_json_df = utl.flatten_nested_json_column(transformed_json_df, column, schema)
+    
+# Use the fixed CSV writing function
+write_single_csv_to_s3_fixed(
+    transformed_json_df,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_json_df_new.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+)
 
-technologies
-
-{'vendor_name': 'Paypal', 'category': 'payments'}
-
-in df it should be something like below similar to card_revenue and card_transactions_stability
-technologies__vendor_name, technologies__payments
+# Special handling for associated_people due to nested arrays
+transformed_json_df = utl.flatten_associated_people_with_titles(transformed_json_df, "associated_people")
 
 
 
+# First, convert Python string representation to JSON format
+transformed_json_df = transformed_json_df.withColumn(
+    "registered_agents_json",
+    regexp_replace(col("registered_agents"), "'", "\"")
+)
 
+# Convert JSON string to actual array
+transformed_json_df = transformed_json_df.withColumn(
+    "registered_agents",
+    when(
+        (col("registered_agents_json").isNotNull()) & 
+        (col("registered_agents_json") != "[]") & 
+        (col("registered_agents_json") != ""),
+        from_json(col("registered_agents_json"), ArrayType(StringType()))
+    ).otherwise(lit(None))
+)
 
-registered_agents
+# Convert array to semicolon-separated string
+transformed_json_df = transformed_json_df.withColumn(
+    "registered_agents",
+    when(
+        (col("registered_agents").isNotNull()) & (size(col("registered_agents")) > 0),
+        concat_ws(";", col("registered_agents"))
+    ).otherwise(lit(""))
+)
 
-['KIRA GABER', 'NATIONAL REGISTERED AGENTS INC', 'BRIAN MUNDEN', 'LEWIS PR INC', 'SECRETARY OF STATE']
-['UNITED STATES CORPORATION AGENTS INC']
-['C T CORPORATION SYSTEM', '825 8TH AVENUE']
-[]
-['CASSIE WHITLOCK', 'INCORP SERVICES INC', 'JESSICA BJORLING', 'TODD GRIERSON']
-['GRYFON ENTERPRISES CORP']
-['C T CORPORATION SYSTEM', 'CT CORPORATION SYSTEM', 'THE CORPORATION TRUST INCORPORATED']
-['JOEL DAVID CHESTERMAN']
-['CYRUS DEYHIMI', 'INCORP SERVICES INC', 'MICHAEL GRAY', 'NO AGENT', 'PARADIGM SAMPLE LLC', 'REGISTERED AGENT SOLUTIONS INC', 'REGISTERED AGENTS INC', 'ROBERT GRAY', 'SIMA VASA', 'TEXAN REGISTERED AGENT LLC']
-['C T CORPORATION SYSTEM', 'ARIBA INC', 'CT CORPORATION SYSTEM', 'THE CORPORATION TRUST INCORPORATED']
-['HOWELL LEGAL INC']
-['RODRIGUEZ-MCCLOSKEY PLLC']
-['REBECCA MARIE BODONY']
-['C T CORPORATION SYSTEM', 'CT CORPORATION SYSTEM', 'AGENT REVOKED', 'JULISSA BETANCOURT', 'KY SECRETARY OF STATE', 'ND SECRETARY OF STATE N D C C 10-01 1-13', 'SALESFORCE COM INC', 'SALESFORCE ORG', 'SECRETARY OF STATE', 'SERVE SECRETARY OF STATE FOR MAILING TO', 'THE CORPORATION TRUST INCORPORATED']
+# Drop the temporary column
+transformed_json_df = transformed_json_df.drop("registered_agents_json")
