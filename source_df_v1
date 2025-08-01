@@ -96,3 +96,68 @@ end_date is 	2025-03-31 it has to consider this record or no
 "e5e9ab43-d279-9d7f-1409-98deb8320360","560905df-78bf-4d2a-0003-cb0a8278f87e",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
 "d77ebba7-b463-95b7-9bf1-6cb2bef89671","5addda9a-36e5-91c7-7620-a5860bd8685f","2025-03-31",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
 "a0ab9ab6-bc23-e31f-4c32-7f74c5921651","7099ea58-73ff-92d4-1795-d2a3cc37e62a",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+
+
+
+********************************************************************************************************************************************************************************************************
+
+
+from pyspark.sql.functions import col, lit, struct, round
+
+# 1️⃣ Ensure all expected revenue columns exist
+expected_revenue_columns = [
+    c for c in ss.revenue if c != "stg_business_entity_id"
+]
+for col_name in expected_revenue_columns:
+    if col_name not in transformed_json_df.columns:
+        print(f"Creating {col_name} column with null values")
+        dtype = (
+            "date" if "date" in col_name
+            else "double" if "amount" in col_name
+            else "string"
+        )
+        transformed_json_df = transformed_json_df.withColumn(col_name, lit(None).cast(dtype))
+
+# 2️⃣ Select and rename columns
+transformed_revenue = (
+    transformed_json_df
+    .select(*ss.revenue)
+    .withColumnRenamed("card_revenue__end_date", "end_date")
+)
+
+# 3️⃣ Remove duplicates early (before UUID generation)
+transformed_revenue = transformed_revenue.dropDuplicates()
+
+# 4️⃣ Build filter condition (keep rows where ANY revenue field is NOT NULL)
+revenue_value_columns = [
+    "end_date",
+    "card_revenue__1m__start_date",
+    "card_revenue__1m__average_monthly_amount",
+    "card_revenue__3m__start_date",
+    "card_revenue__3m__average_monthly_amount",
+    "card_revenue__12m__start_date",
+    "card_revenue__12m__average_monthly_amount"
+]
+
+non_null_condition = col("end_date").isNotNull()
+for col_name in revenue_value_columns[1:]:
+    non_null_condition |= col(col_name).isNotNull()
+
+transformed_revenue = transformed_revenue.filter(non_null_condition)
+
+# 5️⃣ Add constant column
+transformed_revenue = transformed_revenue.withColumn("is_active", lit(True))
+
+# 6️⃣ Round only needed columns
+for col_name in ss.decimal_columns:
+    if col_name in transformed_revenue.columns:
+        transformed_revenue = transformed_revenue.withColumn(
+            col_name, round(col(col_name), 2)
+        )
+
+# 7️⃣ Generate UUID & remove duplicates again (final safety)
+transformed_revenue = (
+    transformed_revenue
+    .withColumn("revenue_id", compute_uuid_udf(struct(*transformed_revenue.columns)))
+    .dropDuplicates()
+)
