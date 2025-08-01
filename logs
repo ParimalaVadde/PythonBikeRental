@@ -1,10 +1,76 @@
-INFO:__main__:Found 2 mismatched records
-INFO:__main__:s3 bucket name : s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto
+# === JSON Columns Processing ===
 
+# Include both JSON columns
+jsoncol = ['stg_business_entity_id', 'card_revenue', 'card_transactions_stability']
+transformed_json_df = transformed_df.select(jsoncol)
 
-ERROR:__main__:Error in sync_dataframe_with_postgresql: An error occurred while calling o457.csv.
-: com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.services.s3.model.AmazonS3Exception: Bad Request (Service: Amazon S3; Status Code: 400; Error Code: 400 Bad Request; Request ID: Z51DF8F5T0PRPD9C; S3 Extended Request ID: iTeUgiAo1tLAvKWBm0idw9f5L/s/Go17YBxIMcM7Tva6MzaOo0KcQMclEjNOsyspjPbGmJN+bxk=; Proxy: null), S3 Extended Request ID: iTeUgiAo1tLAvKWBm0idw9f5L/s/Go17YBxIMcM7Tva6MzaOo0KcQMclEjNOsyspjPbGmJN+bxk=
-	at com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1879)
-	at com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleServiceErrorResponse(AmazonHttpClient.java:1418)
-	at com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1387)
-	at com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.http.AmazonHttpClient$RequestExecuto
+# Write combined JSON to S3
+write_single_csv_to_s3_fixed(
+    transformed_json_df,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_json_df_v2.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+)
+
+# Base columns for flattening
+base_columns = ['stg_business_entity_id']
+
+# === 1. Process card_revenue ===
+card_revenue_df = transformed_df.select(base_columns + ['card_revenue'])
+card_revenue_config = ss.JSON_FIELD_CONFIGS['card_revenue']
+
+flattened_card_revenue = utl.flatten_json_column_improved(
+    card_revenue_df, 
+    'card_revenue', 
+    card_revenue_config, 
+    base_columns
+)
+
+# Filter null rows for card_revenue
+card_revenue_cols = [c for c in flattened_card_revenue.columns if c.startswith('card_revenue__')]
+if card_revenue_cols:
+    non_null_condition = None
+    for c in card_revenue_cols:
+        cond = col(c).isNotNull()
+        non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
+    flattened_card_revenue = flattened_card_revenue.filter(non_null_condition)
+
+# Write card_revenue to S3
+write_single_csv_to_s3_fixed(
+    flattened_card_revenue,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/card_revenue_only.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+)
+
+print(f"Successfully processed card_revenue: {flattened_card_revenue.count()} rows")
+
+# === 2. Process card_transactions_stability ===
+card_trans_stability_df = transformed_df.select(base_columns + ['card_transactions_stability'])
+card_trans_stability_config = ss.JSON_FIELD_CONFIGS['card_transactions_stability']
+
+flattened_card_trans_stability = utl.flatten_json_column_improved(
+    card_trans_stability_df, 
+    'card_transactions_stability', 
+    card_trans_stability_config, 
+    base_columns
+)
+
+# Filter null rows for card_transactions_stability
+card_trans_cols = [c for c in flattened_card_trans_stability.columns if c.startswith('card_transactions_stability__')]
+if card_trans_cols:
+    non_null_condition = None
+    for c in card_trans_cols:
+        cond = col(c).isNotNull()
+        non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
+    flattened_card_trans_stability = flattened_card_trans_stability.filter(non_null_condition)
+
+# Write card_transactions_stability to S3
+write_single_csv_to_s3_fixed(
+    flattened_card_trans_stability,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/card_transactions_stability_only.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+)
+
+print(f"Successfully processed card_transactions_stability: {flattened_card_trans_stability.count()} rows")
