@@ -1,157 +1,152 @@
-SELECT * FROM sds_staging.business_entity_spend_analysis where stg_payee_business_entity_id in  
-('9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce','fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57','64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7','2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297','900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1')
+relavent functions in utils for flatten json
 
-SELECT * FROM sds_staging.electronic_address where related_identifier in  
-('9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce','fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57','64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7','2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297','900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1')
-
-select * from sds_staging.physical_address where related_identifier in  
-('9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce','fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57','64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7','2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297','900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1')
-
-select * from sds_staging.restrictions where related_identifier in  
-('9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce','fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57','64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7','2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297','900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1')
-
-select * from sds_staging.telecommunication_address where related_identifier in  
-('9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce','fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57','64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7','2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297','900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1')
-
-
-
-**********************************************************************************************************************************
-
-
-
-SELECT 
-    d.business_entity_name,
-    b.*
-FROM 
-    sds_staging.business_entity_spend_analysis b
-JOIN 
-    sds_staging.business_entity_details d 
-    ON b.stg_payee_business_entity_id = d.stg_business_entity_id
-WHERE 
-    b.stg_payee_business_entity_id IN (
-        '9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce',
-        'fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57',
-        '64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7',
-        '2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297',
-        '900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1'
+def is_empty_or_null(column_value):
+    """Helper function to check if a value is empty, null, or contains only empty structures"""
+    return (
+        col(column_value).isNull() | 
+        (col(column_value) == "") |
+        (col(column_value) == "[]") |
+        (col(column_value) == "{}") |
+        (col(column_value) == "null")
     )
-AND 
-    d.business_entity_name IN (
-        'QUANTIVISTA','NIMBLEWORKS','TERRAQUOTE','ZENVERITY','AURUM CIPHER',
-        'VANTYX LABS','CIRRUSWELL','MODULOQ','STRATEGIX CORE','LUMINOVA PARTNERS'
-    );
+
+def flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns):
+    """
+    Flatten a struct type into individual columns
+    """
+    select_expressions = list(base_columns)
+    
+    def add_struct_fields(struct_schema, current_path, current_prefix):
+        for field in struct_schema.fields:
+            field_path = f"{current_path}.{field.name}"
+            
+            if isinstance(field.dataType, StructType):
+                # Nested struct - recurse
+                add_struct_fields(field.dataType, field_path, f"{current_prefix}__{field.name}")
+            else:
+                # Primitive field
+                alias_name = f"{current_prefix}__{field.name}"
+                select_expressions.append(col(field_path).alias(alias_name))
+    
+    add_struct_fields(schema, parsed_col_name, prefix)
+    return df.select(*select_expressions)
 
 
-
-SELECT 
-    d.business_entity_name,
-    b.*
-FROM 
-    sds_staging.electronic_address b
-JOIN 
-    sds_staging.business_entity_details d 
-    ON b.related_identifier = d.stg_business_entity_id
-WHERE 
-    b.related_identifier IN (
-        '9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce',
-        'fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57',
-        '64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7',
-        '2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297',
-        '900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1'
+def flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns):
+    """
+    Handle arrays with nested arrays (like associated_people with titles)
+    """
+    # First explode the main array
+    df_exploded = df.select(*base_columns, explode(col(parsed_col_name)).alias("person"))
+    
+    # Now explode the nested titles array
+    df_final = df_exploded.select(
+        *base_columns,
+        col("person.name").alias(f"{prefix}__name"),
+        explode(col("person.titles")).alias(f"{prefix}__title")
     )
-AND 
-    d.business_entity_name IN (
-        'QUANTIVISTA','NIMBLEWORKS','TERRAQUOTE','ZENVERITY','AURUM CIPHER',
-        'VANTYX LABS','CIRRUSWELL','MODULOQ','STRATEGIX CORE','LUMINOVA PARTNERS'
-    );
+    
+    return df_final
 
 
-
-SELECT 
-    d.business_entity_name,
-    b.*
-FROM 
-    sds_staging.physical_address b
-JOIN 
-    sds_staging.business_entity_details d 
-    ON b.related_identifier = d.stg_business_entity_id
-WHERE 
-    b.related_identifier IN (
-        '9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce',
-        'fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57',
-        '64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7',
-        '2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297',
-        '900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1'
+def flatten_simple_array(df, parsed_col_name, prefix, base_columns):
+    """
+    Handle simple arrays (convert to semicolon-separated string)
+    """
+    return df.select(
+        *base_columns,
+        concat_ws(";", col(parsed_col_name)).alias(prefix)
     )
-AND 
-    d.business_entity_name IN (
-        'QUANTIVISTA','NIMBLEWORKS','TERRAQUOTE','ZENVERITY','AURUM CIPHER',
-        'VANTYX LABS','CIRRUSWELL','MODULOQ','STRATEGIX CORE','LUMINOVA PARTNERS'
-    );
 
 
-SELECT 
-    d.business_entity_name,
-    b.*
-FROM 
-    sds_staging.restrictions b
-JOIN 
-    sds_staging.business_entity_details d 
-    ON b.related_identifier = d.stg_business_entity_id
-WHERE 
-    b.related_identifier IN (
-        '9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce',
-        'fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57',
-        '64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7',
-        '2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297',
-        '900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1'
-    )
-AND 
-    d.business_entity_name IN (
-        'QUANTIVISTA','NIMBLEWORKS','TERRAQUOTE','ZENVERITY','AURUM CIPHER',
-        'VANTYX LABS','CIRRUSWELL','MODULOQ','STRATEGIX CORE','LUMINOVA PARTNERS'
-    );
+def flatten_json_column_improved(df, column_name, config, base_columns=None):
+    """
+    Improved JSON flattening function that handles different data types correctly
+    """
+    try:
+        if base_columns is None:
+            base_columns = ["stg_business_entity_id"]
+        
+        # Check if column exists
+        if column_name not in df.columns:
+            print(f"Column {column_name} does not exist in DataFrame")
+            return df
+        
+        # Check if column has any non-null values
+        non_null_count = df.filter(col(column_name).isNotNull() & ~is_empty_or_null(column_name)).count()
+        
+        if non_null_count == 0:
+            print(f"Column {column_name} contains only null/empty values, skipping flattening")
+            return df
+        
+        schema = config['schema']
+        flatten_type = config['flatten_type']
+        prefix = config['prefix']
+        
+        # Parse JSON
+        parsed_col_name = f"{column_name}_parsed"
+        df = df.withColumn(parsed_col_name, from_json(col(column_name), schema))
+        
+        # Filter out rows where parsing failed
+        df = df.filter(col(parsed_col_name).isNotNull())
+        
+        # Handle different flatten types
+        if flatten_type == 'struct':
+            # Single nested object - flatten to columns
+            result_df = flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns)
+            
+        elif flatten_type == 'array_double_explode':
+            # Array with nested arrays (like associated_people)
+            result_df = flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns)
+            
+        elif flatten_type == 'simple_array':
+            # Simple array - join with semicolon
+            result_df = flatten_simple_array(df, parsed_col_name, prefix, base_columns)
+            
+        else:
+            print(f"Unknown flatten_type: {flatten_type}")
+            return df
+        
+        return result_df
+        
+    except Exception as error:
+        print(f"Error flattening column {column_name}: {error}")
+        import traceback
+        traceback.print_exc()
+        return df
 
+def process_all_json_columns(df, base_columns=None):
+    """
+    Process all JSON columns and return separate DataFrames
+    """
+    if base_columns is None:
+        base_columns = ["stg_business_entity_id"]
+    
+    flattened_dfs = {}
+    
+    for column_name, config in ss.JSON_FIELD_CONFIGS.items():
+        print(f"Processing {column_name}...")
+        flattened_df = flatten_json_column_improved(df, column_name, config, base_columns)
+        
+        if flattened_df.count() > 0:
+            flattened_dfs[column_name] = flattened_df
+            print(f" {column_name}: {flattened_df.count()} rows")
+        else:
+            print(f" {column_name}: No data after flattening")
+    
+    return flattened_dfs
 
-
-SELECT 
-    d.business_entity_name,
-    b.*
-FROM 
-    sds_staging.telecommunication_address b
-JOIN 
-    sds_staging.business_entity_details d 
-    ON b.related_identifier = d.stg_business_entity_id
-WHERE 
-    b.related_identifier IN (
-        '9ad1b0e1-4bff-1dd2-e642-e5112cefca09','e5b749e0-d282-041f-b773-038405c185ce',
-        'fb98d2ef-5833-2980-d117-eb3e6a5a5300','af298829-2630-b81b-3ef7-3b30c24eee57',
-        '64806fac-5f64-987f-7e2e-87597544a7b2','6710c73c-d6e6-11c0-4023-4e613b7933e7',
-        '2fe9d99a-e4ec-096a-5ab8-d1dc62bb03af','4d6396ee-7f82-1dde-3100-5087703ef297',
-        '900bd37b-30b0-d1ab-c74d-ce10cab93377','ace784ae-7c5e-7e61-a373-940d517594a1'
-    )
-AND 
-    d.business_entity_name IN (
-        'QUANTIVISTA','NIMBLEWORKS','TERRAQUOTE','ZENVERITY','AURUM CIPHER',
-        'VANTYX LABS','CIRRUSWELL','MODULOQ','STRATEGIX CORE','LUMINOVA PARTNERS'
-    );
-
-*******************************************************************************************************************************
-
-Here's a more polished version of your email:
-
----
-
-**Subject:** Mock Data and UUIDs for Analysis\_PFD
-
-Hi,
-
-I have mocked the data for the `analysis_pfd` and generated UUIDs for all 16 tables.
-Please find the attached files.
-
-Thanks,
-Parimala
-
----
-
-Let me know if you want to add context (like purpose, deadlines, or next steps).
+def combine_flattened_results(base_df, flattened_dfs, join_key="stg_business_entity_id"):
+    """
+    Combine all flattened DataFrames back to base DataFrame
+    """
+    result_df = base_df
+    
+    for df_name, df in flattened_dfs.items():
+        if df.count() > 0:
+            print(f"Joining {df_name}...")
+            result_df = result_df.join(df, on=join_key, how="left")
+        else:
+            print(f"Skipping {df_name} - no data to join")
+    
+    return result_df
