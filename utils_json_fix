@@ -1,0 +1,341 @@
+-- utils
+
+import sys
+import boto3
+import json
+import hashlib
+import pandas as pd
+import uuid
+import psycopg2
+from psycopg2 import sql
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from pyspark.sql import SparkSession
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue.dynamicframe import DynamicFrame
+from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
+from pyspark.sql.utils import AnalysisException
+from datetime import datetime
+from pyspark.sql.functions import when, lit, col, explode,from_json
+from pyspark.sql.functions import  concat_ws,current_timestamp
+from pyspark.sql import DataFrame
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+import staging_schema as ss
+
+
+
+# Define a UDF to compute UUID from concatenated column values
+def compute_uuid(data_row, decimal_columns):
+    values = []
+    
+    # Convert Row object to dictionary
+    data = data_row.asDict()
+    # Sort by column names to ensure consistent order
+    for column in sorted(data.keys()):
+        val = data[column]
+        if val is not None and str(val).strip().lower() not in {"", "nan", "null", "none", "nat"}:
+            if column in decimal_columns:
+                val = f"{float(val):.6f}"
+            values.append(str(val).strip().lower())
+    
+    name = ','.join(values)
+    return str(uuid.UUID(bytes=hashlib.sha256(name.encode()).digest()[:16])) if name else None
+
+
+def truncate_tables(rds_host, rds_port, db_name, db_user, rds_token, ssl_cert_s3_path):
+    connection = None
+    cursor = None
+
+    try:
+        # Establish a connection to the database
+        connection = psycopg2.connect(
+            host=rds_host,
+            port=rds_port,
+            database=db_name,
+            user=db_user,
+            password=rds_token,
+            sslmode="require",
+            sslrootcert=ssl_cert_s3_path
+        )
+        cursor = connection.cursor()
+
+        # Fetch all table names in the schema
+        selecting_tables = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'sds_staging'"
+        cursor.execute(selecting_tables)
+        tables = [row[0] for row in cursor.fetchall()]  # Fetch all rows and extract table names
+        print("Tables to truncate:", tables)
+
+        # Truncate each table
+        for table in tables:
+            #truncate_query = f'TRUNCATE TABLE sds_staging.{table} CASCADE'
+            #nosec - this query uses psycopg2.sql.identifier to safely format the table name
+            truncate_query = sql.SQL("TRUNCATE TABLE {}.{} CASCADE").format(
+                sql.Identifier('sds_staging'),  # Schema name
+                sql.Identifier(table)  # Table name
+            )
+
+            cursor.execute(truncate_query)
+            print(f"Truncated table: sds_staging.{table}")
+
+        # Commit the transaction
+        connection.commit()
+        print("All tables in the schema have been truncated successfully.")
+
+    except Exception as e:
+        print(f"Error truncating tables: {e}")
+        if connection:
+            connection.rollback()  # Rollback the transaction on error
+
+    finally:
+        # Close the cursor and connection if they were created
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+			
+
+def read_map_file(file_name):
+    # Specify the path to the mapping file with respect to the current directory
+    map_file = f"{file_name}.csv"
+    map_df = pd.read_csv(map_file)
+    return map_df
+    
+    
+def is_empty_or_null(column_value):
+    """Helper function to check if a value is empty, null, or contains only empty structures"""
+    return (
+        col(column_value).isNull() | 
+        (col(column_value) == "") |
+        (col(column_value) == "[]") |
+        (col(column_value) == "{}") |
+        (col(column_value) == "null")
+    )
+
+def flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns):
+    """
+    Flatten a struct type into individual columns
+    """
+    select_expressions = list(base_columns)
+    
+    def add_struct_fields(struct_schema, current_path, current_prefix):
+        for field in struct_schema.fields:
+            field_path = f"{current_path}.{field.name}"
+            
+            if isinstance(field.dataType, StructType):
+                # Nested struct - recurse
+                add_struct_fields(field.dataType, field_path, f"{current_prefix}__{field.name}")
+            else:
+                # Primitive field
+                alias_name = f"{current_prefix}__{field.name}"
+                select_expressions.append(col(field_path).alias(alias_name))
+    
+    add_struct_fields(schema, parsed_col_name, prefix)
+    return df.select(*select_expressions)
+
+
+def flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns):
+    """
+    Handle arrays with nested arrays (like associated_people with titles)
+    """
+    # First explode the main array
+    df_exploded = df.select(*base_columns, explode(col(parsed_col_name)).alias("person"))
+    
+    # Now explode the nested titles array
+    df_final = df_exploded.select(
+        *base_columns,
+        col("person.name").alias(f"{prefix}__name"),
+        explode(col("person.titles")).alias(f"{prefix}__title")
+    )
+    
+    return df_final
+
+
+def flatten_simple_array(df, parsed_col_name, prefix, base_columns):
+    """
+    Handle simple arrays (convert to semicolon-separated string)
+    """
+    return df.select(
+        *base_columns,
+        concat_ws(";", col(parsed_col_name)).alias(prefix)
+    )
+
+
+def flatten_json_column_improved(df, column_name, config, base_columns=None):
+    """
+    Improved JSON flattening function that handles different data types correctly
+    """
+    try:
+        if base_columns is None:
+            base_columns = ["stg_business_entity_id"]
+        
+        # Check if column exists
+        if column_name not in df.columns:
+            print(f"Column {column_name} does not exist in DataFrame")
+            return df
+        
+        # Check if column has any non-null values
+        non_null_count = df.filter(col(column_name).isNotNull() & ~is_empty_or_null(column_name)).count()
+        
+        if non_null_count == 0:
+            print(f"Column {column_name} contains only null/empty values, skipping flattening")
+            return df
+        
+        schema = config['schema']
+        flatten_type = config['flatten_type']
+        prefix = config['prefix']
+        
+        # Parse JSON
+        parsed_col_name = f"{column_name}_parsed"
+        df = df.withColumn(parsed_col_name, from_json(col(column_name), schema))
+        
+        # Filter out rows where parsing failed
+        df = df.filter(col(parsed_col_name).isNotNull())
+        
+        # Handle different flatten types
+        if flatten_type == 'struct':
+            # Single nested object - flatten to columns
+            result_df = flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns)
+            
+        elif flatten_type == 'array_double_explode':
+            # Array with nested arrays (like associated_people)
+            result_df = flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns)
+            
+        elif flatten_type == 'simple_array':
+            # Simple array - join with semicolon
+            result_df = flatten_simple_array(df, parsed_col_name, prefix, base_columns)
+            
+        else:
+            print(f"Unknown flatten_type: {flatten_type}")
+            return df
+        
+        return result_df
+        
+    except Exception as error:
+        print(f"Error flattening column {column_name}: {error}")
+        import traceback
+        traceback.print_exc()
+        return df
+
+def process_all_json_columns(df, base_columns=None):
+    """
+    Process all JSON columns and return separate DataFrames
+    """
+    if base_columns is None:
+        base_columns = ["stg_business_entity_id"]
+    
+    flattened_dfs = {}
+    
+    for column_name, config in ss.JSON_FIELD_CONFIGS.items():
+        print(f"Processing {column_name}...")
+        flattened_df = flatten_json_column_improved(df, column_name, config, base_columns)
+        
+        if flattened_df.count() > 0:
+            flattened_dfs[column_name] = flattened_df
+            print(f" {column_name}: {flattened_df.count()} rows")
+        else:
+            print(f" {column_name}: No data after flattening")
+    
+    return flattened_dfs
+
+def combine_flattened_results(base_df, flattened_dfs, join_key="stg_business_entity_id"):
+    """
+    Combine all flattened DataFrames back to base DataFrame
+    """
+    result_df = base_df
+    
+    for df_name, df in flattened_dfs.items():
+        if df.count() > 0:
+            print(f"Joining {df_name}...")
+            result_df = result_df.join(df, on=join_key, how="left")
+        else:
+            print(f"Skipping {df_name} - no data to join")
+    
+    return result_df
+	
+def melt_dataframe(df, id_column, columns_to_melt, melted_column_names) :
+    """
+    Melts a PySpark DataFrame by unpivoting specified columns into key-value pairs.
+
+    Args:
+        df (DataFrame): The input PySpark DataFrame.
+        id_column (str): The column to retain as the identifier.
+        columns_to_melt (list): The list of columns to melt.
+        melted_column_names (tuple): A tuple containing the names of the new columns 
+                                     (e.g., ("melted_column_name", "melted_value_name")).
+
+    Returns:
+        DataFrame: The melted PySpark DataFrame.
+    """
+    melted_dfs = []
+    melted_column_name, melted_value_name = melted_column_names
+
+    for col_name in columns_to_melt:
+        melted_df = df.select(
+            col(id_column),
+            lit(col_name).alias(melted_column_name),  # Add the column name as the melted column
+            col(col_name).alias(melted_value_name)   # Add the column value as the melted value
+        )
+        melted_dfs.append(melted_df)
+
+    # Combine all the melted DataFrames using `unionByName`
+    melted_df = melted_dfs[0]
+    for df in melted_dfs[1:]:
+        melted_df = melted_df.unionByName(df)
+
+    # Drop duplicates and filter out rows with null values in the melted value column
+    melted_df = melted_df.dropDuplicates().filter(col(melted_value_name).isNotNull())
+
+    return melted_df
+    
+    
+def load_dataframes_to_postgres(dataframes_with_tables, glueContext, ss, rds_token):
+    """
+    Function to load multiple PySpark DataFrames into PostgreSQL using AWS Glue.
+
+    Args:
+        dataframes_with_tables (dict): A dictionary where keys are table names and values are PySpark DataFrames.
+        glueContext (GlueContext): The AWS Glue context.
+        ss (object): An object containing database connection details (e.g., `rds_host`, `rds_port`, `db_name`, `ssl_cert_s3_path`, `db_user`).
+        rds_token (str): The RDS authentication token.
+
+    Returns:
+        None
+    """
+
+
+    # Add common columns to all DataFrames
+    for table_name, df in dataframes_with_tables.items():
+        dataframes_with_tables[table_name] = df  # Update the DataFrame in the dictionary
+
+    # Load each DataFrame into its corresponding table
+    for table_name, df in dataframes_with_tables.items():
+        try:
+            # Convert PySpark DataFrame to Glue DynamicFrame
+            dynamic_frame = DynamicFrame.fromDF(df, glueContext, table_name)
+            
+            # Define connection options
+            connection_options = {
+                "url": f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
+                "user": ss.db_user,
+                "password": rds_token,
+                "dbtable": f"sds_staging.{table_name}",  # Specify the target table name here
+            }
+
+            # Write the DynamicFrame to the database
+            glueContext.write_dynamic_frame.from_options(
+                frame=dynamic_frame,
+                connection_type="postgresql",  # Specify the connection type
+                connection_options=connection_options,
+                transformation_ctx=f"write_{table_name}"
+            )
+            
+            print(f"Data written successfully to the table {table_name}.")
+        except Exception as e:
+            print(f"Error loading data into {table_name}: {e}")
+			
+    return "Data written successfully to all tables"
