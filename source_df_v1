@@ -1,31 +1,98 @@
-from pyspark.sql.functions import col
+# Transform `transformed_revenue`
+    
+    expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+    for col_name in expected_revenue_columns:
+        if col_name not in transformed_json_df.columns:
+            print(f"Creating {col_name} column with null values")
+            
+            # Determine appropriate data type based on column name
+            if "date" in col_name:
+                transformed_json_df = transformed_json_df.withColumn(
+                    col_name, 
+                    lit(None).cast("date")
+                )
+            elif "amount" in col_name:
+                transformed_json_df = transformed_json_df.withColumn(
+                    col_name, 
+                    lit(None).cast("double")
+                )
+            else:
+                transformed_json_df = transformed_json_df.withColumn(
+                    col_name, 
+                    lit(None).cast("string")
+                )
+    
+    transformed_revenue = transformed_json_df.select(*ss.revenue).withColumnRenamed(
+        "card_revenue__end_date", "end_date"
+    )
+    
+    #Remove duplicates
+    transformed_revenue = transformed_revenue.dropDuplicates()
+    
+    #Remove 'stg_business_entity_id'
+    revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+    
+    #Rename "card_revenue__end_date" → "end_date"
+    revenue_value_columns = ["end_date" if col == "card_revenue__end_date" else col for col in revenue_columns]
+    
+    #Build condition: At least one of these columns must be non-null
+    non_null_condition = None
+    for col_name in revenue_value_columns:
+        cond = col(col_name).isNotNull()
+        non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
+    
+    #Filter out rows where all these revenue columns are NULL
+    transformed_revenue = transformed_revenue.filter(non_null_condition)
 
-#Define revenue columns that should not all be NULL
-revenue_value_columns = [
-    "end_date",
-    "card_revenue__1m__start_date",
-    "card_revenue__1m__average_monthly_amount",
-    "card_revenue__3m__start_date",
-    "card_revenue__3m__average_monthly_amount",
-    "card_revenue__12m__start_date",
-    "card_revenue__12m__average_monthly_amount"
-]
+    transformed_revenue = transformed_revenue.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+    
+    # Get columns present in both transformed_revenue and decimal_columns
+    columns_to_round = [col for col in ss.decimal_columns if col in transformed_revenue.columns]
+    
+    # Apply rounding to decimal columns
+    for col_name in columns_to_round:
+        transformed_revenue = transformed_revenue.withColumn(
+            col_name,
+            round(col(col_name), 2)
+        )
+    
+    transformed_revenue = transformed_revenue.withColumn(
+        "revenue_id",
+        compute_uuid_udf(struct(*transformed_revenue.columns))
+    ).dropDuplicates()
+	
+	
+above  code is taking bit time for execution any way to optimize also its not displaying below record
 
-#Remove duplicates
-transformed_revenue = transformed_revenue.dropDuplicates()
+"d77ebba7-b463-95b7-9bf1-6cb2bef89671","5addda9a-36e5-91c7-7620-a5860bd8685f","2025-03-31",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
 
-#Build condition: At least one of these columns must be non-null
-non_null_condition = None
-for col_name in revenue_value_columns:
-    cond = col(col_name).isNotNull()
-    non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
+after dropping duplicates
 
-#Filter out rows where all these revenue columns are NULL
-transformed_revenue = transformed_revenue.filter(non_null_condition)
-
-
-#Remove 'stg_business_entity_id'
-revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
-
-#Rename "card_revenue__end_date" → "end_date"
-revenue_columns = ["end_date" if col == "card_revenue__end_date" else col for col in revenue_columns]
+after comparing not null values
+end_date is 	2025-03-31 it has to consider this record or no
+	
+	
+"revenue_id","stg_business_entity_id","end_date","card_revenue__1m__start_date","card_revenue__1m__average_monthly_amount","card_revenue__3m__start_date","card_revenue__3m__average_monthly_amount","card_revenue__12m__start_date","card_revenue__12m__average_monthly_amount","is_active","created_by","created_date"
+"07f431d3-9d4d-2024-d37a-c34e29e152af","5396c750-de84-579e-f0f8-195fae7aa746","2025-03-31",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"02443f00-8dd7-f4d9-82b8-fd4fd17e3ec0","26b50826-f0d2-758f-1af0-e8f9abf24137",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"255ea43d-b3b6-d7a7-4735-9a1daacb1138","4236a35d-04ea-ccda-08cc-7235d57e28cf",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"aee05c94-e8ae-6868-44e6-bc5ac113942d","ced89840-b900-6650-40e9-b8110f100632","2025-03-31","2025-03-01",167570.21,"2025-01-01",179786.45,"2024-04-01",194118.92,True,"PFD","2025-08-01 12:21:38.573"
+"5da7c613-0163-ee94-2748-0791370ea4bf","f19ef224-1d6a-8039-fdf4-ad14aebb150c","2025-03-31",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"260d40d8-f24a-026c-ab38-5cc6294f439e","1a34d721-7bf5-8eb8-695b-0c7f4d5f6f14",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"3a85523b-6921-bf7b-d6f7-854307b37fa2","3a17e69d-a228-1401-a350-834e9f724cdd",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"f3a6634e-beaf-9085-178f-cd8f0d979dc2","22709ffe-f6f9-0b28-2e80-d33cc9b2ae36","2025-03-31","2025-03-01",8815233.78,"2025-01-01",8310170.77,"2024-04-01",7844672.10,True,"PFD","2025-08-01 12:21:38.573"
+"6ea365a7-8572-f577-5d4f-4e1f8ee805be","27f7c935-643b-76ab-6b3f-40f377b762d7","2025-03-31","2025-03-01",6767731.41,"2025-01-01",5545336.81,"2024-04-01",5226886.20,True,"PFD","2025-08-01 12:21:38.573"
+"91edb39b-e829-5533-8b2d-83c90dd95141","b165b127-cab2-4903-794c-dbea6b7e6927",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"27c13231-f0c2-324f-dd67-54e451f17819","9867824b-4db5-861a-bff4-100a12d835f7","2025-03-31",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"47b1fc4c-4cd3-8809-b986-661da2920151","d6970a62-61da-a2c7-96c1-e2448fb5d662",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"39530348-382b-4689-425c-84836dbb9394","b326ea8b-f4f0-e51c-2b93-fac42386f7bb",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"e8f1bd9c-679c-221a-2cd4-d78e0b526f86","e76e0d92-88f1-75db-ed70-f031833aa1fc","2025-03-31",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"7320b4d8-aefd-b1c7-5af7-8028eee80bfb","f07c4c9c-481d-0933-f388-5735a6dd1031",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"0dd739b0-da13-00e2-0a9c-f11899af71d5","5f89768e-8508-6e39-8979-e85d996dc069",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"cf2bbe11-aa9f-0bd5-0663-8d4c6353f1d5","3ccbd910-5a45-d8fc-d4a0-101c6532c599","2025-03-31",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"e5e9ab43-d279-9d7f-1409-98deb8320360","560905df-78bf-4d2a-0003-cb0a8278f87e",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"d77ebba7-b463-95b7-9bf1-6cb2bef89671","5addda9a-36e5-91c7-7620-a5860bd8685f","2025-03-31",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
+"a0ab9ab6-bc23-e31f-4c32-7f74c5921651","7099ea58-73ff-92d4-1795-d2a3cc37e62a",NULL,NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-01 12:21:38.573"
