@@ -1,16 +1,7 @@
-
 transformed_characteristics = transformed_characteristics.join(
-    transformed_json_df.select("stg_business_entity_id", "registered_agents"),
+    transformed_json_df
+        .select("stg_business_entity_id", "registered_agents")
+        .dropDuplicates(),
     on="stg_business_entity_id",
     how="left"
-    )
-	
-	
-i want to drop duplicates before joining does below code works
-
-
-transformed_characteristics = transformed_characteristics.join(
-    transformed_json_df.select("stg_business_entity_id", "registered_agents").dropDuplicates,
-    on="stg_business_entity_id",
-    how="left"
-    )
+)
