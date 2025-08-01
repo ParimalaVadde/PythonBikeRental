@@ -1,156 +1,135 @@
-Title: Landing to Staging Process - KT for B2B Supplier Directory Services
 
-Slide 1: Introduction - My Scope in the Project
 
-Speaking Notes:
-Hi, I'm currently working on the ETL staging layer of the B2B Supplier Directory Services project for JPMC. Our project focuses on creating a centralized system to manage supplier data. I will be walking you through the staging process, i.e., how data is transformed from the landing schema to the staging schema.
 
-Slide 2: Project Background
-
-Slide Text:
-
-Client: JPMorgan Chase (JPMC)
-
-Vendor: Mphasis
-
-Domain: Banking / B2B Supplier Management
-
-Goal: Centralized supplier repository, enhanced supplier profiling, and spend/payment insights
-
-Slide 3: Where I Fit - Landing to Staging
-
-Slide Text:
-
-Source: CSV files arrive in S3 bucket from external sources like Diagnostic
-
-Landing: ECS job loads raw CSV into PostgreSQL landing schema
-
-Staging: Glue job processes landing data into transformed structured tables
-
-Speaking Notes:
-My focus is on Step 3. From landing, we apply transformations using PySpark in AWS Glue and load data into normalized staging tables in PostgreSQL.
-
-Slide 4: Source Table - landing.analysis_pfd
-
-Slide Text:
-
-Flat columns + Nested JSON columns
-
-Examples:
-
-vendor_id, site_id, client_ecid
-
-associated_people, card_revenues, registered_agents
-
-Speaking Notes:
-The landing table holds raw data, including nested structures that must be flattened. This becomes our input.
-
-Slide 5: Staging Tables Created
-
-Slide Text:
-We create ~12 structured tables:
-
-business_entity_contacts
-
-business_entity_card_revenues
-
-business_entity_card_transactions_stability
-
-telecommunication_address
-
-electronic_address
-
-business_entity_receivables_attribute
-
-industry_classification, characteristics
-
-physical_address, restrictions, relationships, identifiers
-
-Speaking Notes:
-Each table represents a specific aspect of supplier information.
-
-Slide 6: Table Example - business_entity_contacts
-
-Slide Text:
-Input: associated_people JSON
-
-Transformation:
-
-Flatten nested structure using flatten_nested_json_column
-
-Explode titles[]
-
-Output Columns:
-
-stg_business_entity_id
-
-contact_name
-
-contact_title
-
-business_entity_contact_id (UUID)
-
-Slide 7: Table Example - business_entity_card_revenues
-
-Input: card_revenues JSON
-Output:
-
-stg_business_entity_id
-
-end_date, 1m.average_monthly_amount, etc.
-
-revenue_id (UUID)
-
-Notes: Flattened & exploded, then deduplicated
-
-Slide 8: Table Example - business_entity_receivables_attribute
-
-Input: Multiple flat columns like:
-
-average_vendor_dso, vc_concierge, has_online_payments
-
-Transformation:
-
-Use melt_dataframe()
-
-Output:
-
-stg_business_entity_id
-
-receivables_attribute_type
-
-receivables_attribute_value
-
-Slide 9: Table Example - relationships and identifiers
-
-Relationships:
-
-Derived using filter_interco, client_ecid logic
-
-Joins with contacts to link entity roles
-
-Identifiers:
-
-Union of:
-
-Business-level identifiers (from transformed_df)
-
-Relationship-level identifiers (from relationship table)
-
-Output:
-| identifier_type | identifier_value | related_identifier | source |
-
-Slide 10: Summary
-
-Slide Text:
-
-Complex raw data from landing transformed to 12+ staging tables
-
-Uses PySpark + Glue + Postgres
-
-Utilities: flatten_nested_json_column(), melt_dataframe()
-
-UUIDs assigned to each entity for integrity
-
-Speaking Notes:
-The staging job bridges raw CSV and structured insights, normalizing and mapping all fields needed by the main layer.
+associated_people
+sample data
+[{'name': 'CHRIS LEWIS', 'titles': ['DIRECTOR', 'CHIEF FINANCIAL OFFICER', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'NOAH DYE', 'titles': ['DIRECTOR', 'SECRETARY', 'OFFICER']}, {'name': 'BRIAN MUNDEN', 'titles': ['TREASURER', 'FINANCIAL CONTROLLER']}, {'name': 'STEPHEN CORSI', 'titles': ['MANAGER', 'SECRETARY']}, {'name': 'CHRISTOPHER LEWIS', 'titles': ['CFO']}, {'name': 'MORGAN MCCINTIC', 'titles': ['CHIEF EXECUTIVE OFFICER']}]
+
+
+if emty list or null or empty values should ignored
+
+
+associated_people__name , associated_people__titles
+CHRIS LEWIS,DIRECTOR
+CHRIS LEWIS,CHIEF FINANCIAL OFFICER
+CHRIS LEWIS,CHIEF EXECUTIVE OFFICER
+NOAH DYE, DIRECTOR
+NOAH DYE, SECRETARY
+NOAH DYE, OFFICER
+
+simillarly for rest 
+
+need to integrate associated_people too 
+
+
+relavalent configs in staging_schema.py for flatten json
+
+jsoncol = ["stg_business_entity_id", "registered_agents", "associated_people", "industries", "technologies", "card_revenue", "card_transactions_stability"]
+
+# Updated schemas based on your sample data
+# For card_revenue - this appears to be a single object, not an array
+card_revenue_schema = StructType([
+    StructField("end_date", StringType(), True),
+    StructField("date_accessible", StringType(), True),  # MISSING FIELD ADDED
+    StructField("1m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]), True),
+    StructField("3m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]), True),
+    StructField("12m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("average_monthly_amount", DoubleType(), True)
+    ]), True)
+])
+
+# For card_transactions_stability - single object
+card_transactions_stability_schema = StructType([
+    StructField("end_date", StringType(), True),
+    StructField("date_accessible", StringType(), True),
+    StructField("1m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("days_present", IntegerType(), True),
+        StructField("weeks_present", IntegerType(), True),
+        StructField("months_present", IntegerType(), True),
+        StructField("daily_coverage_ratio", DoubleType(), True),
+        StructField("weekly_coverage_ratio", DoubleType(), True),
+        StructField("monthly_coverage_ratio", DoubleType(), True)
+    ]), True),
+    StructField("3m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("days_present", IntegerType(), True),
+        StructField("weeks_present", IntegerType(), True),
+        StructField("months_present", IntegerType(), True),
+        StructField("daily_coverage_ratio", DoubleType(), True),
+        StructField("weekly_coverage_ratio", DoubleType(), True),
+        StructField("monthly_coverage_ratio", DoubleType(), True)
+    ]), True),
+    StructField("12m", StructType([
+        StructField("start_date", StringType(), True),
+        StructField("days_present", IntegerType(), True),
+        StructField("weeks_present", IntegerType(), True),
+        StructField("months_present", IntegerType(), True),
+        StructField("daily_coverage_ratio", DoubleType(), True),
+        StructField("weekly_coverage_ratio", DoubleType(), True),
+        StructField("monthly_coverage_ratio", DoubleType(), True)
+    ]), True)
+])
+
+# For associated_people - this is an array
+associated_people_schema = ArrayType(StructType([
+    StructField("name", StringType(), True),
+    StructField("titles", ArrayType(StringType()), True)
+]))
+
+# For industries - this appears to be a single object based on sample
+industries_schema = StructType([
+    StructField("classification_type", StringType(), True),
+    StructField("classification_code", StringType(), True),
+    StructField("classification_description", StringType(), True)
+])
+
+# For technologies - this appears to be a single object based on sample  
+technologies_schema = StructType([
+    StructField("vendor_name", StringType(), True),
+    StructField("category", StringType(), True)
+])
+
+company_structure_schema = ArrayType(StructType([
+                StructField("corporate_structures", StringType(), True)
+            ]))
+            
+associated_tax_ids_schema = ArrayType(StringType())
+registered_agents_schema = ArrayType(StringType())
+
+
+# Configuration mapping
+JSON_FIELD_CONFIGS = {
+    'card_revenue': {
+        'schema': card_revenue_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_revenue'
+    },
+    'card_transactions_stability': {
+        'schema': card_transactions_stability_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_transactions_stability'
+    },
+    'associated_people': {
+        'schema': associated_people_schema,
+        'flatten_type': 'array_double_explode',  # Array with nested array (titles)
+        'prefix': 'associated_people'
+    },
+    'industries': {
+        'schema': industries_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'industries'
+    },
+    'technologies': {
+        'schema': technologies_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'technologies'
+    }
+}
