@@ -1,5 +1,3 @@
--- staging schema
-
 import sys
 import boto3
 import json
@@ -45,7 +43,7 @@ pfd_mandatory_columns = ["vendor_name", "vendor_name_cleaned", "vendor_id", "ven
 "vendor_phone_number_2", "sds_upload_id", "annual_invoice_count", "payment_terms", "business_start_date","business_end_date", "payment_currency", "payment_actual_days", "payment_terms_days",
 "payment_terms_discount_ind", "payment_terms_discount_rate", "payment_terms_discount_days","vendor_dio", "ind_virtualcard_concierge", "ind_virtual_card_vcn", "ind_virtualcard_interchange_amount",
 "ind_wepay", "ind_vcn", "has_online_payments", "visa_matched_fleet_ind", "sds_supplier_id","client_ecid", "vendor_annualrevenue", "google_places_id"]
-
+base_col = "stg_business_entity_id"
 jsoncol = ["stg_business_entity_id", "registered_agents", "associated_people", "industries", "technologies", "card_revenue", "card_transactions_stability", "associated_tax_ids"]
 business_entity = ["stg_business_entity_id", "stg_payor_business_entity_id", "stg_jpmc_business_entity_id"]
 business_entity_details = ["stg_business_entity_id", "business_entity_name", "reported_annual_revenue", "year_incorporated", "filter_individual", "company_structure"]
@@ -59,7 +57,7 @@ payment_profile = ["stg_business_entity_id", "average_vendor_dso", "average_vend
 restrictions = ["stg_business_entity_id", "do_not_campaign"]
 industry_classification = ["stg_business_entity_id", "level-1", "level-2", "level-3", "trust", "real_estate", "govt", "utilities", "insurance", "fi"]
 association = ["stg_business_entity_id", "match_confidence", "matched_level_2", "matched_level_3_summary", "matched_level_3_lineitem", "matched_fleet_ind", "matched_data_quality", "matched_mcc", "ind_card_match"]
-contacts = ["stg_business_entity_id", "associated_people__name", "associated_people__title"]
+contacts = ["stg_business_entity_id", "associated_people__name", "associated_people__titles"]
 vendor_contact = ["stg_business_entity_id", "vendor_contact_name"]
 revenue = ["stg_business_entity_id", "card_revenue__end_date", "card_revenue__1m__start_date", "card_revenue__1m__average_monthly_amount", "card_revenue__3m__start_date", "card_revenue__3m__average_monthly_amount", "card_revenue__12m__start_date", "card_revenue__12m__average_monthly_amount"]
 transaction_stability = ["stg_business_entity_id", "card_transactions_stability__end_date", "card_transactions_stability__1m__start_date", "card_transactions_stability__1m__days_present", "card_transactions_stability__1m__weeks_present", "card_transactions_stability__1m__months_present", "card_transactions_stability__1m__daily_coverage_ratio", "card_transactions_stability__1m__weekly_coverage_ratio", "card_transactions_stability__1m__monthly_coverage_ratio", "card_transactions_stability__3m__start_date", "card_transactions_stability__3m__days_present", "card_transactions_stability__3m__weeks_present", "card_transactions_stability__3m__months_present", "card_transactions_stability__3m__daily_coverage_ratio", "card_transactions_stability__3m__weekly_coverage_ratio", "card_transactions_stability__3m__monthly_coverage_ratio", "card_transactions_stability__12m__start_date", "card_transactions_stability__12m__days_present", "card_transactions_stability__12m__weeks_present", "card_transactions_stability__12m__months_present", "card_transactions_stability__12m__daily_coverage_ratio", "card_transactions_stability__12m__weekly_coverage_ratio", "card_transactions_stability__12m__monthly_coverage_ratio"]
