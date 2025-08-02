@@ -1,26 +1,51 @@
-flattened_dfs = {}
+def process_flattened_df_memory_optimized(df: DataFrame, filtered_columns: list, df_name: str = "") -> DataFrame:
+    """
+    Memory-optimized version - single pass through data
+    """
+    if not filtered_columns:
+        return df.dropDuplicates().coalesce(10)
     
-    # Loop through JSON_FIELD_CONFIGS for struct & array_double_explode fields
-    for col_name, config in ss.JSON_FIELD_CONFIGS.items():
-        df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
-        if df_flat is not None and df_flat.count() > 0:
-            flattened_dfs[col_name] = df_flat
+    existing_columns = [c for c in filtered_columns if c in df.columns]
+    if not existing_columns:
+        return df.dropDuplicates().coalesce(10)
     
-    # Handle registered_agents separately (simple array of strings)
-    reg_agents_df = (
-        transformed_df
-        .filter(~utl.is_empty_or_null("registered_agents"))
-        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
-        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
-        .withColumn(
-            "registered_agents",
-            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
-        )
-        .select(ss.base_col, "registered_agents")
-    )
+    # Single pipeline - filter and dedupe in one go
+    return (df
+            .withColumn("_any_not_null", coalesce(*[col(c) for c in existing_columns]))
+            .filter(col("_any_not_null").isNotNull())
+            .drop("_any_not_null")
+            .dropDuplicates(existing_columns)
+            .coalesce(20))
+
+
+
+# Define specific columns for each dataframe type if needed
+column_configs = {
+    "revenue": ["card_revenue__end_date", "amount", "currency"],  # Specify your revenue columns
+    "registered_agents": ["registered_agents"],
+    # Add more specific configurations as needed
+}
+
+flattened_dfs_new = {}
+
+for df_name, df in flattened_dfs.items():
+    print(f"Processing {df_name}...")
     
-    if reg_agents_df.count() > 0:
-        flattened_dfs["registered_agents"] = reg_agents_df
+    # Use specific column config if available, otherwise use all non-base columns
+    if df_name in column_configs:
+        filtered_columns = column_configs[df_name]
+        print(f"  Using specific columns: {filtered_columns}")
+    else:
+        filtered_columns = [c for c in df.columns if c != ss.base_col]
+        print(f"  Using all non-base columns: {filtered_columns}")
     
-    # Combine all results
-    transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
+    # Process the dataframe
+    processed_df = process_flattened_df_memory_optimized(df, filtered_columns, df_name)
+    
+    # Store in new dictionary
+    flattened_dfs_new[df_name] = processed_df
+    
+    print(f"{df_name}: Processed")
+    
+    
+    
