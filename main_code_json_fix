@@ -1,5 +1,3 @@
--- main code
-
 import sys
 import os
 import boto3
@@ -21,7 +19,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
 from pyspark.sql.utils import AnalysisException
 from datetime import datetime
-from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round
+from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round, regexp_replace, size
 from pyspark.sql import DataFrame
 from functools import reduce
 from pyspark.sql.functions import col, lit, when, isnan, isnull
@@ -319,193 +317,42 @@ transformed_df = process_mapping_and_transform_data(fixing_source_df, ss.output_
 
 transformed_df.show()
 
-# PROCESS ONLY CARD_REVENUE
-print("Processing card_revenue only...")
+base_col = "stg_business_entity_id"
 
+flattened_dfs = {}
+    
+# Loop through JSON_FIELD_CONFIGS for struct & array_double_explode fields
+for col_name, config in ss.JSON_FIELD_CONFIGS.items():
+    df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
+    if df_flat is not None and df_flat.count() > 0:
+        flattened_dfs[col_name] = df_flat
 
-# DEBUG VERSION - Add this to your existing code to find the missing record
-
-# After reading the CSV, add this debug section:
-print("=== DEBUGGING CARD_REVENUE PROCESSING ===")
-
-# Check original data
-print("1. Original DataFrame count:", transformed_df.count())
-print("2. Checking card_revenue values:")
-
-# Show all records with card_revenue data
-card_revenue_data = transformed_df.select("stg_business_entity_id", "vendor_name", "card_revenue")
-card_revenue_data.show(20, truncate=False)
-
-write_single_csv_to_s3_fixed(
-    transformed_df,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-    s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_df_v1.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+# Handle registered_agents separately (simple array of strings)
+reg_agents_df = (
+    transformed_df
+    .filter(~utl.is_empty_or_null("registered_agents"))
+    .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+    .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+    .withColumn(
+        "registered_agents",
+        when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
+    )
+    .select(ss.base_col, "registered_agents")
 )
 
-# Count non-null card_revenue records
-non_null_card_revenue = transformed_df.filter(
-    col("card_revenue").isNotNull() & 
-    (col("card_revenue") != "") &
-    (col("card_revenue") != "null") &
-    (col("card_revenue") != "{}")
-).count()
-print(f"3. Non-null card_revenue records: {non_null_card_revenue}")
+if reg_agents_df.count() > 0:
+    flattened_dfs["registered_agents"] = reg_agents_df
 
-# Your existing processing
-jsoncol = ['stg_business_entity_id', 'card_revenue']
-transformed_json_df = transformed_df.select(jsoncol)
+# Combine all results
+transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
 
 # Write to S3
 write_single_csv_to_s3_fixed(
-    transformed_json_df,
+    final_df,
     s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-    s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_json_df_v1.csv",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/all_flattened_combined.csv",
     temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
 )
 
-print("4. After selecting jsoncol:", transformed_json_df.count())
-
-# Check the specific records we expect
-expected_records = [
-    "8815233.7777",  # BAMBOOHR
-    "6767731.4118",  # ZOOMINFO - This is missing!
-    "167570.2109"    # LOS GATOS
-]
-
-print("5. Checking for expected amounts in original data:")
-for amount in expected_records:
-    count = transformed_df.filter(col("card_revenue").contains(amount)).count()
-    if count > 0:
-        print(f"   ✓ Found amount {amount}")
-        transformed_df.filter(col("card_revenue").contains(amount)).select("vendor_name", "stg_business_entity_id").show()
-    else:
-        print(f"   ✗ Missing amount {amount}")
-
-# Process using your utility function
-print("6. Processing with utility function...")
-flattened_dataframes = utl.process_all_json_columns(transformed_json_df)
-
-print("7. Flattened dataframes keys:", flattened_dataframes.keys())
-
-if 'card_revenue' in flattened_dataframes:
-    flattened_card_revenue = flattened_dataframes['card_revenue']
-    print("8. Flattened card_revenue count:", flattened_card_revenue.count())
-    
-    # Show the flattened data BEFORE filtering
-    print("9. Flattened data (before filtering):")
-    flattened_card_revenue.show(10, truncate=False)
-    
-    # Check for the missing amounts in flattened data
-    print("10. Checking for expected amounts in flattened data:")
-    for amount in expected_records:
-        count = flattened_card_revenue.filter(
-            col("card_revenue__1m__average_monthly_amount") == float(amount)
-        ).count()
-        if count > 0:
-            print(f"    ✓ Found amount {amount} in flattened data")
-        else:
-            print(f"    ✗ Missing amount {amount} in flattened data")
-    
-    # Your combine logic
-    final_df = utl.combine_flattened_results(
-        transformed_json_df.select("stg_business_entity_id"), 
-        flattened_dataframes
-    )
-    
-    print("11. After combine_flattened_results:", final_df.count())
-    
-    # Show data before null filtering
-    print("12. Data before null filtering:")
-    final_df.show(10, truncate=False)
-    
-    # Your null filtering logic
-    card_revenue_columns = [col for col in final_df.columns if col.startswith('card_revenue__')]
-    print("13. Card revenue columns found:", card_revenue_columns)
-    
-    if card_revenue_columns:
-        # Check each record against the filter condition
-        print("14. Checking filter condition for each record:")
-        
-        # Show which records pass the filter
-        filter_condition = col(card_revenue_columns[0]).isNotNull()
-        for card_col in card_revenue_columns[1:]:
-            filter_condition = filter_condition | col(card_col).isNotNull()
-        
-        # Apply filter
-        final_filtered_df = final_df.filter(filter_condition)
-        print("15. After filtering nulls:", final_filtered_df.count())
-        
-        print("16. Final filtered data:")
-        final_filtered_df.show(10, truncate=False)
-        
-        # Check for missing amounts in final data
-        print("17. Final check for expected amounts:")
-        for amount in expected_records:
-            count = final_filtered_df.filter(
-                col("card_revenue__1m__average_monthly_amount") == float(amount)
-            ).count()
-            if count > 0:
-                print(f"    ✓ Found amount {amount} in final data")
-            else:
-                print(f"    ✗ Missing amount {amount} in final data")
-else:
-    print("8. ERROR: card_revenue not found in flattened_dataframes!")
-
-print("=== END DEBUG ===")
-
-
-
-# Select base columns and card_revenue (don't include card_revenue in jsoncol to avoid conflicts)
-base_columns = ['stg_business_entity_id']
-card_revenue_df = transformed_df.select(base_columns + ['card_revenue'])
-
-# Process card_revenue using the utility function
-card_revenue_config = ss.JSON_FIELD_CONFIGS['card_revenue']
-flattened_card_revenue = utl.flatten_json_column_improved(
-    card_revenue_df, 
-    'card_revenue', 
-    card_revenue_config, 
-    base_columns
-)
-
-# Check if we got any results
-if flattened_card_revenue.count() > 0:
-    print(f"Successfully flattened card_revenue: {flattened_card_revenue.count()} rows")
-    
-    # Optional: Remove rows where all card_revenue fields are null
-    card_revenue_cols = [col_name for col_name in flattened_card_revenue.columns 
-                        if col_name.startswith('card_revenue__')]
-    
-    if card_revenue_cols:
-        # Create condition to keep rows where at least one card_revenue field is not null
-        non_null_condition = None
-        for col_name in card_revenue_cols:
-            condition = col(col_name).isNotNull()
-            if non_null_condition is None:
-                non_null_condition = condition
-            else:
-                non_null_condition = non_null_condition | condition
-        
-        # Filter out completely null rows
-        final_df = flattened_card_revenue.filter(non_null_condition)
-        print(f"After removing null rows: {final_df.count()} rows")
-    else:
-        final_df = flattened_card_revenue
-    
-    # Show sample data
-    print("Sample data:")
-    final_df.show(10, truncate=False)
-    
-    # Write to S3
-    write_single_csv_to_s3_fixed(
-        final_df,
-        s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-        s3_key="pfd_scripts/pfd_staging_pvr_test/card_revenue_only.csv",
-        temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
-    )
-    
-else:
-    print("No data found after flattening card_revenue")
 
 job.commit()
