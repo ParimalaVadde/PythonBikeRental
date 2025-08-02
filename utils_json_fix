@@ -1,5 +1,3 @@
--- utils
-
 import sys
 import boto3
 import json
@@ -141,17 +139,23 @@ def flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns):
 def flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns):
     """
     Handle arrays with nested arrays (like associated_people with titles)
+    Output: associated_people__name, associated_people__titles
     """
-    # First explode the main array
-    df_exploded = df.select(*base_columns, explode(col(parsed_col_name)).alias("person"))
-    
-    # Now explode the nested titles array
-    df_final = df_exploded.select(
-        *base_columns,
-        col("person.name").alias(f"{prefix}__name"),
-        explode(col("person.titles")).alias(f"{prefix}__title")
+    df_exploded = (
+        df
+        .filter(size(col(parsed_col_name)) > 0)  # Ignore empty list
+        .select(*base_columns, explode(col(parsed_col_name)).alias("person"))
     )
-    
+
+    df_final = (
+        df_exploded
+        .withColumn("title", explode(col("person.titles")))
+        .select(
+            *base_columns,
+            col("person.name").alias(f"{prefix}__name"),
+            col("title").alias(f"{prefix}__titles")
+        )
+    )
     return df_final
 
 
@@ -171,7 +175,7 @@ def flatten_json_column_improved(df, column_name, config, base_columns=None):
     """
     try:
         if base_columns is None:
-            base_columns = ["stg_business_entity_id"]
+            base_columns = [ss.base_col]
         
         # Check if column exists
         if column_name not in df.columns:
@@ -226,7 +230,7 @@ def process_all_json_columns(df, base_columns=None):
     Process all JSON columns and return separate DataFrames
     """
     if base_columns is None:
-        base_columns = ["stg_business_entity_id"]
+        base_columns = [ss.base_col]
     
     flattened_dfs = {}
     
@@ -242,11 +246,12 @@ def process_all_json_columns(df, base_columns=None):
     
     return flattened_dfs
 
-def combine_flattened_results(base_df, flattened_dfs, join_key="stg_business_entity_id"):
+def combine_flattened_results(base_df, flattened_dfs, join_key=ss.base_col):
     """
-    Combine all flattened DataFrames back to base DataFrame
+    Combine all flattened DataFrames back to base DataFrame using LEFT JOIN 
+    but filter out rows with no actual data.
     """
-    result_df = base_df
+    result_df = base_df.select(join_key).distinct()
     
     for df_name, df in flattened_dfs.items():
         if df.count() > 0:
@@ -254,6 +259,25 @@ def combine_flattened_results(base_df, flattened_dfs, join_key="stg_business_ent
             result_df = result_df.join(df, on=join_key, how="left")
         else:
             print(f"Skipping {df_name} - no data to join")
+    
+    # Identify non-key columns
+    non_key_cols = [c for c in result_df.columns if c != join_key]
+    
+    # Filter out rows where all other columns are NULL or empty
+    condition = None
+    for c in non_key_cols:
+        col_cond = (
+            col(c).isNotNull() &
+            (col(c) != "") &
+            (col(c) != "[]") &
+            (col(c) != "{}")
+        )
+        condition = col_cond if condition is None else (condition | col_cond)
+    
+    if condition is not None:
+        result_df = result_df.filter(condition)
+
+    result_df = result_df.dropDuplicates()
     
     return result_df
 	
