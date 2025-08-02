@@ -445,3 +445,78 @@ sample card revenue value
 
 
 
+*********************************************************************
+
+
+jsoncol = ["stg_business_entity_id", "registered_agents", "associated_people", "industries", "technologies", "card_revenue", "card_transactions_stability"]
+
+
+registered_agents
+
+['KIRA GABER', 'NATIONAL REGISTERED AGENTS INC', 'BRIAN MUNDEN', 'LEWIS PR INC', 'SECRETARY OF STATE']
+['UNITED STATES CORPORATION AGENTS INC']
+['C T CORPORATION SYSTEM', '825 8TH AVENUE']
+[]
+['CASSIE WHITLOCK', 'INCORP SERVICES INC', 'JESSICA BJORLING', 'TODD GRIERSON']
+['GRYFON ENTERPRISES CORP']
+['C T CORPORATION SYSTEM', 'CT CORPORATION SYSTEM', 'THE CORPORATION TRUST INCORPORATED']
+['JOEL DAVID CHESTERMAN']
+['CYRUS DEYHIMI', 'INCORP SERVICES INC', 'MICHAEL GRAY', 'NO AGENT', 'PARADIGM SAMPLE LLC', 'REGISTERED AGENT SOLUTIONS INC', 'REGISTERED AGENTS INC', 'ROBERT GRAY', 'SIMA VASA', 'TEXAN REGISTERED AGENT LLC']
+['C T CORPORATION SYSTEM', 'ARIBA INC', 'CT CORPORATION SYSTEM', 'THE CORPORATION TRUST INCORPORATED']
+['HOWELL LEGAL INC']
+['RODRIGUEZ-MCCLOSKEY PLLC']
+['REBECCA MARIE BODONY']
+['C T CORPORATION SYSTEM', 'CT CORPORATION SYSTEM', 'AGENT REVOKED', 'JULISSA BETANCOURT', 'KY SECRETARY OF STATE', 'ND SECRETARY OF STATE N D C C 10-01 1-13', 'SALESFORCE COM INC', 'SALESFORCE ORG', 'SECRETARY OF STATE', 'SERVE SECRETARY OF STATE FOR MAILING TO', 'THE CORPORATION TRUST INCORPORATED']
+
+
+associated_people
+
+[{'name': 'CHRIS LEWIS', 'titles': ['DIRECTOR', 'CHIEF FINANCIAL OFFICER', 'CHIEF EXECUTIVE OFFICER']}, {'name': 'NOAH DYE', 'titles': ['DIRECTOR', 'SECRETARY', 'OFFICER']}, {'name': 'BRIAN MUNDEN', 'titles': ['TREASURER', 'FINANCIAL CONTROLLER']}, {'name': 'STEPHEN CORSI', 'titles': ['MANAGER', 'SECRETARY']}, {'name': 'CHRISTOPHER LEWIS', 'titles': ['CFO']}, {'name': 'MORGAN MCCINTIC', 'titles': ['CHIEF EXECUTIVE OFFICER']}]
+[{'name': 'CHRISTOPHER RACK', 'titles': ['MANAGER']}]
+[{'name': 'JULIETTE MORRIS', 'titles': ['MANAGER', 'REAL PROPERTY', 'OFFICER']}, {'name': 'ERIK SHAKUN', 'titles': ['MANAGER']}, {'name': 'ERIC HAYDEN SHAKUN', 'titles': ['OFFICER']}, {'name': 'ERIC HAYDENSHAKUN', 'titles': ['OFFICER']}, {'name': 'ERIC SHAKUN', 'titles': ['REAL PROPERTY']}, {'name': 'MATTHEW PASS', 'titles': ['OFFICER']}]
+[]
+
+
+
+industries
+{'classification_description': 'internet marketing service', 'classification_type': 'enigma_description'}
+{'classification_description': 'corporate office', 'classification_type': 'enigma_description'}
+{'classification_description': 'legal services', 'classification_type': 'enigma_description'}
+
+
+technologies
+{'vendor_name': 'Paypal', 'category': 'payments'}
+{'vendor_name': 'Shopify', 'category': 'payments'}
+{'vendor_name': 'Stripe', 'category': 'payments'}
+
+
+card_revenue
+
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 8815233.7777}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 8310170.7713}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 7844672.1036}}
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 6767731.4118}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 5545336.8131}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 5226886.2024}}
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}
+
+
+
+
+
+card_transactions_stability
+
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}, '12m': {'start_date': '2024-04-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}}
+
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': 0.0}, '3m': {'start_date': '2025-01-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}, '12m': {'start_date': '2024-04-01', 'days_present': 0, 'weeks_present': 0, 'months_present': 0, 'daily_coverage_ratio': 0.0, 'weekly_coverage_ratio': 0.0, 'monthly_coverage_ratio': None}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'days_present': 31, 'weeks_present': 6, 'months_present': 1, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '3m': {'start_date': '2025-01-01', 'days_present': 90, 'weeks_present': 14, 'months_present': 3, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}, '12m': {'start_date': '2024-04-01', 'days_present': 365, 'weeks_present': 53, 'months_present': 12, 'daily_coverage_ratio': 1.0, 'weekly_coverage_ratio': 1.0, 'monthly_coverage_ratio': 1.0}}
