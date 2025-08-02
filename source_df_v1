@@ -1,28 +1,26 @@
-transformed_transaction_stability = transformed_json_df.select(*ss.transaction_stability).withColumnRenamed(
-        "card_transactions_stability__end_date", "end_date"
+flattened_dfs = {}
+    
+    # Loop through JSON_FIELD_CONFIGS for struct & array_double_explode fields
+    for col_name, config in ss.JSON_FIELD_CONFIGS.items():
+        df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
+        if df_flat is not None and df_flat.count() > 0:
+            flattened_dfs[col_name] = df_flat
+    
+    # Handle registered_agents separately (simple array of strings)
+    reg_agents_df = (
+        transformed_df
+        .filter(~utl.is_empty_or_null("registered_agents"))
+        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+        .withColumn(
+            "registered_agents",
+            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
+        )
+        .select(ss.base_col, "registered_agents")
     )
     
-    #Remove duplicates
-    transformed_transaction_stability = transformed_transaction_stability.dropDuplicates()
+    if reg_agents_df.count() > 0:
+        flattened_dfs["registered_agents"] = reg_agents_df
     
-    #Rename "card_revenue__end_date" → "end_date"
-    transaction_value_columns = ["end_date" if col == "card_transactions_stability__end_date" else col for col in expected_transaction_columns]
-    
-    #Build condition: At least one of these columns must be non-null
-    non_null_condition = None
-    for col_name in transaction_value_columns:
-        cond = col(col_name).isNotNull()
-        non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
-    
-    #Filter out rows where all these revenue columns are NULL
-    transformed_transaction_stability = transformed_transaction_stability.filter(non_null_condition)
-
-    transformed_transaction_stability = transformed_transaction_stability.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-    )
-
-    transformed_transaction_stability = transformed_transaction_stability.withColumn(
-        "card_transactions_stability_id",
-        compute_uuid_udf(struct(*transformed_transaction_stability.columns))
-    ).dropDuplicates()
+    # Combine all results
+    transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
