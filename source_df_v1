@@ -80,3 +80,50 @@ Error Category: QUERY_ERROR; Failed Line Number: 373; Spark Error Class: MISSING
 
 #Build condition: At least one of these columns must be non-null
 transformed_revenue = utl.process_flattened_df_with_select_distinct(transformed_revenue, revenue_value_columns, ss.base_col)
+
+
+***********************************
+
+expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+for col_name in expected_revenue_columns:
+    if col_name not in transformed_json_df.columns:
+        print(f"Creating {col_name} column with null values")
+        dtype = (
+            "date" if "date" in col_name
+            else "double" if "amount" in col_name
+            else "string"
+        )
+        transformed_json_df = transformed_json_df.withColumn(col_name, lit(None).cast(dtype))
+
+transformed_revenue = transformed_json_df.select(*ss.revenue).withColumnRenamed(
+    "card_revenue__end_date", "end_date"
+)
+
+# #Remove duplicates
+# transformed_revenue = transformed_revenue.dropDuplicates()
+
+#Rename "card_revenue__end_date" → "end_date"
+revenue_value_columns = transformed_revenue.columns
+
+#Build condition: At least one of these columns must be non-null
+transformed_revenue = utl.process_flattened_df_with_select_distinct(transformed_revenue, revenue_value_columns, ss.base_col)
+
+transformed_revenue = transformed_revenue.withColumn(
+"is_active", 
+lit(True)  # This creates a Boolean column with True values for all rows
+)
+
+# Get columns present in both transformed_revenue and decimal_columns
+columns_to_round = [col for col in ss.decimal_columns if col in transformed_revenue.columns]
+
+# Apply rounding to decimal columns
+for col_name in columns_to_round:
+    transformed_revenue = transformed_revenue.withColumn(
+        col_name,
+        round(col(col_name), 2)
+    )
+
+transformed_revenue = transformed_revenue.withColumn(
+    "revenue_id",
+    compute_uuid_udf(struct(*transformed_revenue.columns))
+).dropDuplicates()
