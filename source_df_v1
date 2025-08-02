@@ -1,109 +1,20 @@
-def process_flattened_df_memory_optimized(df: DataFrame, filtered_columns: list, df_name: str = "") -> DataFrame:
-    """
-    Memory-optimized version - single pass through data
-    """
-    if not filtered_columns:
-        return df.dropDuplicates().coalesce(10)
-    
-    existing_columns = [c for c in filtered_columns if c in df.columns]
-    if not existing_columns:
-        return df.dropDuplicates().coalesce(10)
-    
-    # Single pipeline - filter and dedupe in one go
-    return (df
-            .withColumn("_any_not_null", coalesce(*[col(c) for c in existing_columns]))
-            .filter(col("_any_not_null").isNotNull())
-            .drop("_any_not_null")
-            .dropDuplicates(existing_columns)
-            .coalesce(20))
-
-
-
-# Define specific columns for each dataframe type if needed
-column_configs = {
-    "revenue": ["card_revenue__end_date", "amount", "currency"],  # Specify your revenue columns
-    "registered_agents": ["registered_agents"],
-    # Add more specific configurations as needed
-}
-
-flattened_dfs_new = {}
-
-for df_name, df in flattened_dfs.items():
-    print(f"Processing {df_name}...")
-    
-    # Use specific column config if available, otherwise use all non-base columns
-    if df_name in column_configs:
-        filtered_columns = column_configs[df_name]
-        print(f"  Using specific columns: {filtered_columns}")
-    else:
-        filtered_columns = [c for c in df.columns if c != ss.base_col]
-        print(f"  Using all non-base columns: {filtered_columns}")
-    
-    # Process the dataframe
-    processed_df = process_flattened_df_memory_optimized(df, filtered_columns, df_name)
-    
-    # Store in new dictionary
-    flattened_dfs_new[df_name] = processed_df
-    
-    print(f"{df_name}: Processed")
-
-
-
-expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
-revenue_value_columns = ["end_date" if col == "card_revenue__end_date" else col for col in expected_revenue_columns]
-    
-    
-    
-revenue_value_columns = [
-    "end_date" if col == "card_revenue__end_date" else col
-    for col in ss.revenue
-    if col != "stg_business_entity_id"
-]
-
-
-**********
-
-
-def process_flattened_df_with_select_distinct(df: DataFrame, filtered_columns: list, ss_columns: list, df_name: str = "") -> DataFrame:
-    """
-    Optimized version using select + distinct
-    """
-    if not filtered_columns:
-        return df.select(ss_columns).distinct().coalesce(10)
-    
-    existing_columns = [c for c in filtered_columns if c in df.columns]
-    if not existing_columns:
-        return df.select(ss_columns).distinct().coalesce(10)
-    
-    # Combine needed columns
-    processing_columns = list(set(ss_columns + existing_columns))
-    
-    return (df
-            .select(processing_columns)  # Early column pruning - KEY OPTIMIZATION
-            .withColumn("_any_not_null", coalesce(*[col(c) for c in existing_columns]))
-            .filter(col("_any_not_null").isNotNull())
-            .drop("_any_not_null")
-            .select(ss_columns)  # Final column selection
-            .distinct()          # Distinct on smaller dataset
-            .coalesce(20))
-
-
-********************
+from pyspark.sql import DataFrame
+from pyspark.sql.functions import coalesce, col
 
 def process_flattened_df_with_select_distinct(df: DataFrame, ss_columns: list, df_name: str = "", key_col: str = "stg_business_entity_id") -> DataFrame:
     """
     Optimized version using select + distinct
     """
-    
-	df.select(ss_columns).distinct().coalesce(10)
- 
-    processing_columns = [col if col != key_col for col in ss_columns]
-    
-    return (df
-            .select(processing_columns)  # Early column pruning - KEY OPTIMIZATION
-            .withColumn("_any_not_null", coalesce(*[col(c) for c in existing_columns]))
-            .filter(col("_any_not_null").isNotNull())
-            .drop("_any_not_null")
-            .select(ss_columns)  # Final column selection
-            .distinct()          # Distinct on smaller dataset
-            .coalesce(20))
+    df = df.select(ss_columns).distinct().coalesce(10)
+    processing_columns = [c for c in ss_columns if c != key_col]
+
+    return (
+        df
+        .select(processing_columns)  # Early column pruning - KEY OPTIMIZATION
+        .withColumn("_any_not_null", coalesce(*[col(c) for c in processing_columns]))
+        .filter(col("_any_not_null").isNotNull())
+        .drop("_any_not_null")
+        .select(ss_columns)  # Final column selection (adds back key_col if needed)
+        .distinct()          # Distinct on smaller dataset
+        .coalesce(20)
+    )
