@@ -54,3 +54,8 @@ revenue_value_columns = ["end_date" if col == "card_revenue__end_date" else col 
     
     
     
+revenue_value_columns = [
+    "end_date" if col == "card_revenue__end_date" else col
+    for col in ss.revenue
+    if col != "stg_business_entity_id"
+]
