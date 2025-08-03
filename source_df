@@ -1,48 +1,100 @@
-# Optimized version - key improvements:
-# 1. Combine column creation into single operation
-# 2. Use coalesce() instead of building complex OR conditions
-# 3. Combine select, distinct, and rename operations
-# 4. Cache intermediate results if reused
+# Optimized for SMALL datasets (400-10000 records)
+# Key optimizations for small data:
+# 1. Reduce partitions to minimize overhead
+# 2. Use single-pass operations
+# 3. Avoid unnecessary shuffles
 
 from pyspark.sql.functions import lit, col, coalesce
 
 # Get expected columns (excluding business entity id)
 expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
 
-# Step 1: Add missing columns in batch (if any missing)
-missing_columns = [col_name for col_name in expected_revenue_columns 
-                  if col_name not in transformed_json_df.columns]
+# For small datasets, coalesce to single partition to reduce overhead
+transformed_json_df = transformed_json_df.coalesce(1)
 
-if missing_columns:
-    print(f"Creating missing columns: {missing_columns}")
-    for col_name in missing_columns:
+# Step 1: Add ALL missing columns in single operation using select
+existing_columns = set(transformed_json_df.columns)
+missing_columns = [col_name for col_name in expected_revenue_columns 
+                  if col_name not in existing_columns]
+
+# Build select expression with missing columns added
+select_expressions = []
+for col_name in ss.revenue:
+    if col_name in existing_columns:
+        select_expressions.append(col(col_name))
+    else:
+        print(f"Adding missing column: {col_name}")
         dtype = (
             "date" if "date" in col_name
-            else "double" if "amount" in col_name
+            else "double" if "amount" in col_name  
             else "string"
         )
-        transformed_json_df = transformed_json_df.withColumn(col_name, lit(None).cast(dtype))
+        select_expressions.append(lit(None).cast(dtype).alias(col_name))
 
-# Step 2: Create revenue value columns list with renamed column
-revenue_value_columns = ["end_date" if col == "card_revenue__end_date" else col 
-                        for col in expected_revenue_columns]
+# Step 2: Single operation - select with missing columns + rename + filter + distinct
+revenue_value_columns = ["end_date" if c == "card_revenue__end_date" else c 
+                        for c in expected_revenue_columns]
 
-# Step 3: Build coalesce condition for non-null check (more efficient than OR chain)
-# This checks if ANY of the revenue columns is not null
-non_null_condition = coalesce(*[col(col_name) for col_name in revenue_value_columns]).isNotNull()
+# Build non-null condition using coalesce (most efficient for small data)
+non_null_condition = coalesce(*[col(c) for c in revenue_value_columns]).isNotNull()
 
-# Step 4: Combine all operations in single chain
+# Single-pass operation combining everything
 transformed_revenue = (transformed_json_df
-                      .select(*ss.revenue)
-                      .withColumnRenamed("card_revenue__end_date", "end_date")
+                      .select(*select_expressions)
+                      .withColumnRenamed("card_revenue__end_date", "end_date")  
                       .filter(non_null_condition)
                       .distinct())
 
-# Alternative approach if you have very large datasets and the above is still slow:
-# Use broadcast join or repartition before operations
+# For small datasets in Glue, this should be much faster
 
-# For very large datasets, consider:
-# transformed_json_df = transformed_json_df.repartition(200)  # Adjust based on cluster size
 
-# If this DataFrame is used multiple times, cache it:
-# transformed_revenue.cache()
+*********************************************
+
+
+# Optimized for SMALL to MEDIUM datasets (400-1000+ records)
+# Handles current 400 records and future growth efficiently
+
+from pyspark.sql.functions import lit, col, coalesce
+
+# Get expected columns (excluding business entity id)
+expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+
+# Optimize partitioning for small datasets (reduces Spark overhead)
+transformed_json_df = transformed_json_df.coalesce(2)  # 2 partitions handles growth better than 1
+
+# Step 1: Build complete select expression in ONE operation (eliminates multiple withColumn calls)
+existing_columns = set(transformed_json_df.columns)
+select_expressions = []
+
+for col_name in ss.revenue:
+    if col_name in existing_columns:
+        # Rename during select to avoid separate withColumnRenamed operation
+        if col_name == "card_revenue__end_date":
+            select_expressions.append(col(col_name).alias("end_date"))
+        else:
+            select_expressions.append(col(col_name))
+    else:
+        print(f"Adding missing column: {col_name}")
+        dtype = (
+            "date" if "date" in col_name
+            else "double" if "amount" in col_name  
+            else "string"
+        )
+        # Handle the rename case for missing columns too
+        alias_name = "end_date" if col_name == "card_revenue__end_date" else col_name
+        select_expressions.append(lit(None).cast(dtype).alias(alias_name))
+
+# Step 2: Build efficient non-null condition
+# Use renamed column names for condition
+revenue_value_columns = ["end_date" if c == "card_revenue__end_date" else c 
+                        for c in expected_revenue_columns]
+
+non_null_condition = coalesce(*[col(c) for c in revenue_value_columns]).isNotNull()
+
+# Step 3: SINGLE operation combining select + rename + filter + distinct
+transformed_revenue = (transformed_json_df
+                      .select(*select_expressions)  # Handles missing columns AND rename
+                      .filter(non_null_condition)   # Filter before distinct for better performance
+                      .distinct())
+
+# This single-pass approach minimizes Spark job overhead for small datasets
