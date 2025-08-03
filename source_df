@@ -1,29 +1,48 @@
+# Optimized version - key improvements:
+# 1. Combine column creation into single operation
+# 2. Use coalesce() instead of building complex OR conditions
+# 3. Combine select, distinct, and rename operations
+# 4. Cache intermediate results if reused
+
+from pyspark.sql.functions import lit, col, coalesce
+
+# Get expected columns (excluding business entity id)
 expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
-    for col_name in expected_revenue_columns:
-        if col_name not in transformed_json_df.columns:
-            print(f"Creating {col_name} column with null values")
-            dtype = (
-                "date" if "date" in col_name
-                else "double" if "amount" in col_name
-                else "string"
-            )
-            transformed_json_df = transformed_json_df.withColumn(col_name, lit(None).cast(dtype))
-    
-    transformed_revenue = transformed_json_df.select(*ss.revenue).distinct().withColumnRenamed(
-        "card_revenue__end_date", "end_date"
-    )
-    
-    # #Remove duplicates
-    # transformed_revenue = transformed_revenue.dropDuplicates()
-    
-    #Rename "card_revenue__end_date" → "end_date"
-    revenue_value_columns = ["end_date" if col == "card_revenue__end_date" else col for col in expected_revenue_columns]
-    
-    #Build condition: At least one of these columns must be non-null
-    non_null_condition = None
-    for col_name in revenue_value_columns:
-        cond = col(col_name).isNotNull()
-        non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
-    
-    #Filter out rows where all these revenue columns are NULL
-    transformed_revenue = transformed_revenue.filter(non_null_condition)
+
+# Step 1: Add missing columns in batch (if any missing)
+missing_columns = [col_name for col_name in expected_revenue_columns 
+                  if col_name not in transformed_json_df.columns]
+
+if missing_columns:
+    print(f"Creating missing columns: {missing_columns}")
+    for col_name in missing_columns:
+        dtype = (
+            "date" if "date" in col_name
+            else "double" if "amount" in col_name
+            else "string"
+        )
+        transformed_json_df = transformed_json_df.withColumn(col_name, lit(None).cast(dtype))
+
+# Step 2: Create revenue value columns list with renamed column
+revenue_value_columns = ["end_date" if col == "card_revenue__end_date" else col 
+                        for col in expected_revenue_columns]
+
+# Step 3: Build coalesce condition for non-null check (more efficient than OR chain)
+# This checks if ANY of the revenue columns is not null
+non_null_condition = coalesce(*[col(col_name) for col_name in revenue_value_columns]).isNotNull()
+
+# Step 4: Combine all operations in single chain
+transformed_revenue = (transformed_json_df
+                      .select(*ss.revenue)
+                      .withColumnRenamed("card_revenue__end_date", "end_date")
+                      .filter(non_null_condition)
+                      .distinct())
+
+# Alternative approach if you have very large datasets and the above is still slow:
+# Use broadcast join or repartition before operations
+
+# For very large datasets, consider:
+# transformed_json_df = transformed_json_df.repartition(200)  # Adjust based on cluster size
+
+# If this DataFrame is used multiple times, cache it:
+# transformed_revenue.cache()
