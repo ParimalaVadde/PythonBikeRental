@@ -1,33 +1,31 @@
-stg_business_entity_id	registered_agents
-560905df-78bf-4d2a-0003-cb0a8278f87e	
-3a17e69d-a228-1401-a350-834e9f724cdd	UNITED STATES CORPORATION AGENTS INC
-f19ef224-1d6a-8039-fdf4-ad14aebb150c	
-1a34d721-7bf5-8eb8-695b-0c7f4d5f6f14	RODRIGUEZ-MCCLOSKEY PLLC
-5addda9a-36e5-91c7-7620-a5860bd8685f	C T CORPORATION SYSTEM;825 8TH AVENUE
-f07c4c9c-481d-0933-f388-5735a6dd1031	
-e76e0d92-88f1-75db-ed70-f031833aa1fc	C T CORPORATION SYSTEM;ARIBA INC;CT CORPORATION SYSTEM;THE CORPORATION TRUST INCORPORATED
-3ccbd910-5a45-d8fc-d4a0-101c6532c599	C T CORPORATION SYSTEM;CT CORPORATION SYSTEM;AGENT REVOKED;JULISSA BETANCOURT;KY SECRETARY OF STATE;ND SECRETARY OF STATE N D C C 10-01 1-13;SALESFORCE COM INC;SALESFORCE ORG;SECRETARY OF STATE;SERVE SECRETARY OF STATE FOR MAILING TO;THE CORPORATION TRUST INCORPORATED
-b165b127-cab2-4903-794c-dbea6b7e6927	REBECCA MARIE BODONY
-7099ea58-73ff-92d4-1795-d2a3cc37e62a	JOEL DAVID CHESTERMAN
-27f7c935-643b-76ab-6b3f-40f377b762d7	C T CORPORATION SYSTEM;CT CORPORATION SYSTEM;THE CORPORATION TRUST INCORPORATED
-ced89840-b900-6650-40e9-b8110f100632	
-b326ea8b-f4f0-e51c-2b93-fac42386f7bb	C T CORPORATION SYSTEM;CT CORPORATION SYSTEM;THE CORPORATION TRUST INCORPORATED
-d6970a62-61da-a2c7-96c1-e2448fb5d662	
-22709ffe-f6f9-0b28-2e80-d33cc9b2ae36	CASSIE WHITLOCK;INCORP SERVICES INC;JESSICA BJORLING;TODD GRIERSON
-5396c750-de84-579e-f0f8-195fae7aa746	CYRUS DEYHIMI;INCORP SERVICES INC;MICHAEL GRAY;NO AGENT;PARADIGM SAMPLE LLC;REGISTERED AGENT SOLUTIONS INC;REGISTERED AGENTS INC;ROBERT GRAY;SIMA VASA;TEXAN REGISTERED AGENT LLC
-9867824b-4db5-861a-bff4-100a12d835f7	KIRA GABER;NATIONAL REGISTERED AGENTS INC;BRIAN MUNDEN;LEWIS PR INC;SECRETARY OF STATE
-4236a35d-04ea-ccda-08cc-7235d57e28cf	
-26b50826-f0d2-758f-1af0-e8f9abf24137	HOWELL LEGAL INC
-5f89768e-8508-6e39-8979-e85d996dc069	GRYFON ENTERPRISES CORP
+from pyspark.sql.functions import col, trim
 
+# Step 1: Create distinct registered_agents dataset with proper null filtering
+# This filters out null, empty string, and whitespace-only values
+registered_agents_df = (transformed_json_df
+                       .select("stg_business_entity_id", "registered_agents")
+                       .distinct()
+                       .filter(
+                           col("registered_agents").isNotNull() &  # Not null
+                           (trim(col("registered_agents")) != "") &  # Not empty after trimming whitespace
+                           (col("registered_agents") != "none")  # Not "none" (case sensitive)
+                       ))
 
-in below code
-first i want to add to select distinct 
-transformed_json_df.select("stg_business_entity_id", "registered_agents").distinct()
-then if any of values in registered_agents (null,"",none) - basicallically need to apply not null check on registered_agentsthen join with transformed_characteristics
-
+# Step 2: Join with transformed_characteristics using the filtered dataset
 transformed_characteristics = transformed_characteristics.join(
-    transformed_json_df.select("stg_business_entity_id", "registered_agents"),
-    on="stg_business_entity_id",
+    registered_agents_df,
+    on="stg_business_entity_id", 
     how="left"
-    )
+)
+
+# Alternative version if you want case-insensitive "none" filtering:
+# registered_agents_df = (transformed_json_df
+#                        .select("stg_business_entity_id", "registered_agents")
+#                        .distinct()
+#                        .filter(
+#                            col("registered_agents").isNotNull() &
+#                            (trim(col("registered_agents")) != "") &
+#                            (upper(trim(col("registered_agents"))) != "NONE")
+#                        ))
+
+print(f"Total distinct business entities with valid registered agents: {registered_agents_df.count()}")
