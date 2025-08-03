@@ -1,31 +1,12 @@
-from pyspark.sql.functions import col, trim
+simillarly for people_contacts
 
-# Step 1: Create distinct registered_agents dataset with proper null filtering
-# This filters out null, empty string, and whitespace-only values
-registered_agents_df = (transformed_json_df
-                       .select("stg_business_entity_id", "registered_agents")
-                       .distinct()
-                       .filter(
-                           col("registered_agents").isNotNull() &  # Not null
-                           (trim(col("registered_agents")) != "") &  # Not empty after trimming whitespace
-                           (col("registered_agents") != "none")  # Not "none" (case sensitive)
-                       ))
-
-# Step 2: Join with transformed_characteristics using the filtered dataset
-transformed_characteristics = transformed_characteristics.join(
-    registered_agents_df,
-    on="stg_business_entity_id", 
-    how="left"
-)
-
-# Alternative version if you want case-insensitive "none" filtering:
-# registered_agents_df = (transformed_json_df
-#                        .select("stg_business_entity_id", "registered_agents")
-#                        .distinct()
-#                        .filter(
-#                            col("registered_agents").isNotNull() &
-#                            (trim(col("registered_agents")) != "") &
-#                            (upper(trim(col("registered_agents"))) != "NONE")
-#                        ))
-
-print(f"Total distinct business entities with valid registered agents: {registered_agents_df.count()}")
+# Transform contacts from associated_people data
+    people_contacts = transformed_json_df.select(*ss.contacts).distinct()
+	.filter(col("associated_people__name","associated_people__titles").isNotNull() &  # Not null
+            (trim(col("associated_people__name","associated_people__titles")) != "") &  # Not empty after trimming whitespace
+            (col("associated_people__name","associated_people__titles") != "none")  # Not "none" (case sensitive)
+                       )
+	.withColumnRenamed(
+    "associated_people__name", "contact_name"
+    ).withColumnRenamed(
+    "associated_people__titles", "contact_title")
