@@ -10,3 +10,46 @@ simillarly for people_contacts
     "associated_people__name", "contact_name"
     ).withColumnRenamed(
     "associated_people__titles", "contact_title")
+
+
+
+from pyspark.sql.functions import col, trim, coalesce
+
+# Transform contacts from associated_people data
+# Logic: At least ONE of name or title must be non-null/non-empty
+people_contacts = (transformed_json_df
+                  .select(*ss.contacts)
+                  .distinct()
+                  .filter(
+                      # At least one column must have valid data (more efficient with coalesce)
+                      coalesce(
+                          # Check if name is valid
+                          col("associated_people__name").isNotNull() & 
+                          (trim(col("associated_people__name")) != "") & 
+                          (col("associated_people__name") != "none"),
+                          # OR check if title is valid  
+                          col("associated_people__titles").isNotNull() & 
+                          (trim(col("associated_people__titles")) != "") & 
+                          (col("associated_people__titles") != "none")
+                      )
+                  )
+                  .withColumnRenamed("associated_people__name", "contact_name")
+                  .withColumnRenamed("associated_people__titles", "contact_title"))
+
+# Alternative simpler approach (same logic, more readable):
+# people_contacts = (transformed_json_df
+#                   .select(*ss.contacts)
+#                   .distinct()
+#                   .filter(
+#                       # Name is valid OR title is valid
+#                       (col("associated_people__name").isNotNull() & 
+#                        (trim(col("associated_people__name")) != "") & 
+#                        (col("associated_people__name") != "none")) |
+#                       (col("associated_people__titles").isNotNull() & 
+#                        (trim(col("associated_people__titles")) != "") & 
+#                        (col("associated_people__titles") != "none"))
+#                   )
+#                   .withColumnRenamed("associated_people__name", "contact_name")
+#                   .withColumnRenamed("associated_people__titles", "contact_title"))
+
+print(f"Total valid people contacts: {people_contacts.count()}")
