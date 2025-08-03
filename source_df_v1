@@ -1,105 +1,63 @@
-#card revenue
+from pyspark.sql.functions import lit, col, coalesce, struct
+
+# Card Transaction Stability - OPTIMIZED VERSION (same logic as revenue)
 # Get expected columns (excluding business entity id)
-    expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
-    
-    # For small datasets, coalesce to single partition to reduce overhead
-    transformed_json_df = transformed_json_df.coalesce(1)
-    
-    # Step 1: Add ALL missing columns in single operation using select
-    existing_columns = set(transformed_json_df.columns)
-    missing_columns = [col_name for col_name in expected_revenue_columns 
-                      if col_name not in existing_columns]
-    
-    # Build select expression with missing columns added
-    select_expressions = []
-    for col_name in ss.revenue:
-        if col_name in existing_columns:
-            select_expressions.append(col(col_name))
-        else:
-            print(f"Adding missing column: {col_name}")
-            dtype = (
-                "date" if "date" in col_name
-                else "double" if "amount" in col_name  
-                else "string"
-            )
-            select_expressions.append(lit(None).cast(dtype).alias(col_name))
-    
-    # Step 2: Single operation - select with missing columns + rename + filter + distinct
-    revenue_value_columns = ["end_date" if c == "card_revenue__end_date" else c 
-                            for c in expected_revenue_columns]
-    
-    # Build non-null condition using coalesce (most efficient for small data)
-    non_null_condition = coalesce(*[col(c) for c in revenue_value_columns]).isNotNull()
-    
-    # Single-pass operation combining everything
-    transformed_revenue = (transformed_json_df
-                          .select(*select_expressions)
-                          .withColumnRenamed("card_revenue__end_date", "end_date")  
-                          .filter(non_null_condition)
-                          .distinct())
-
-
-
-i want to apply same above logic for card transaction stability. whenever i m trying to apply its going into long run
-
-#card transaction stability
-
 expected_transaction_columns = [col for col in ss.transaction_stability if col != "stg_business_entity_id"]
-    for col_name in expected_transaction_columns:
-        if col_name not in transformed_json_df.columns:
-            print(f"Creating {col_name} column with null values")
-            
-            # Determine appropriate data type based on column name
-            if "date" in col_name:
-                transformed_json_df = transformed_json_df.withColumn(
-                    col_name, 
-                    lit(None).cast("date")
-                )
-            elif "amount" in col_name:
-                transformed_json_df = transformed_json_df.withColumn(
-                    col_name, 
-                    lit(None).cast("double")
-                )
-            else:
-                transformed_json_df = transformed_json_df.withColumn(
-                    col_name, 
-                    lit(None).cast("string")
-                )
 
-    
-    transformed_transaction_stability = transformed_json_df.select(*ss.transaction_stability).withColumnRenamed(
-        "card_transactions_stability__end_date", "end_date"
-    )
-    
-    # #Remove duplicates
-    # transformed_transaction_stability = transformed_transaction_stability.dropDuplicates()
-    
-    # #Rename "card_revenue__end_date" → "end_date"
-    # transaction_value_columns = ["end_date" if col == "card_transactions_stability__end_date" else col for col in expected_transaction_columns]
-    
-    # #Build condition: At least one of these columns must be non-null
-    # non_null_condition = None
-    # for col_name in transaction_value_columns:
-    #     cond = col(col_name).isNotNull()
-    #     non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
-    
-    # #Filter out rows where all these revenue columns are NULL
-    # transformed_transaction_stability = transformed_transaction_stability.filter(non_null_condition)
+# For small datasets, coalesce to single partition to reduce overhead  
+# NOTE: Only do this if not already done above for revenue
+# transformed_json_df = transformed_json_df.coalesce(1)
 
-    transformed_transaction_stability = transformed_transaction_stability.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-    )
+# Step 1: Build complete select expression in ONE operation (eliminates multiple withColumn calls)
+existing_columns = set(transformed_json_df.columns)
+select_expressions = []
 
-    transformed_transaction_stability = transformed_transaction_stability.withColumn(
-        "card_transactions_stability_id",
-        compute_uuid_udf(struct(*transformed_transaction_stability.columns))
-    ).dropDuplicates()
-    
-    # Transform `transformed_melt_payment_profile_attribute`
-    transformed_melt_payment_profile_attribute = utl.melt_dataframe(
-        transformed_df.select(*ss.payment_profile),
-        id_column="stg_business_entity_id",
-        columns_to_melt=ss.payment_profile_columns,
-        melted_column_names=("receivables_attribute_type", "receivables_attribute_value")
-    )
+for col_name in ss.transaction_stability:
+    if col_name in existing_columns:
+        # Rename during select to avoid separate withColumnRenamed operation
+        if col_name == "card_transactions_stability__end_date":
+            select_expressions.append(col(col_name).alias("end_date"))
+        else:
+            select_expressions.append(col(col_name))
+    else:
+        print(f"Adding missing column: {col_name}")
+        dtype = (
+            "date" if "date" in col_name
+            else "double" if "amount" in col_name  
+            else "string"
+        )
+        # Handle the rename case for missing columns too
+        alias_name = "end_date" if col_name == "card_transactions_stability__end_date" else col_name
+        select_expressions.append(lit(None).cast(dtype).alias(alias_name))
+
+# Step 2: Build efficient non-null condition
+# Use renamed column names for condition
+transaction_value_columns = ["end_date" if c == "card_transactions_stability__end_date" else c 
+                           for c in expected_transaction_columns]
+
+non_null_condition = coalesce(*[col(c) for c in transaction_value_columns]).isNotNull()
+
+# Step 3: SINGLE operation combining select + rename + filter + distinct + add columns
+transformed_transaction_stability = (transformed_json_df
+                                   .select(*select_expressions)  # Handles missing columns AND rename
+                                   .filter(non_null_condition)   # Filter before distinct for better performance
+                                   .withColumn("is_active", lit(True))  # Add is_active column
+                                   .distinct())  # Remove duplicates
+
+# Step 4: Add UUID column and final dropDuplicates
+transformed_transaction_stability = (transformed_transaction_stability
+                                   .withColumn(
+                                       "card_transactions_stability_id",
+                                       compute_uuid_udf(struct(*transformed_transaction_stability.columns))
+                                   )
+                                   .dropDuplicates())
+
+print(f"Transaction stability records processed: {transformed_transaction_stability.count()}")
+
+# Transform `transformed_melt_payment_profile_attribute` (keeping your existing code)
+transformed_melt_payment_profile_attribute = utl.melt_dataframe(
+    transformed_df.select(*ss.payment_profile),
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.payment_profile_columns,
+    melted_column_names=("receivables_attribute_type", "receivables_attribute_value")
+)
