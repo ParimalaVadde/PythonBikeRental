@@ -1,75 +1,19 @@
-print("=== DYNAMIC FILTERING USING ss.transaction_stability ===")
+can i use below logic to filter out null columns . also final transformed_association df should contain stg_business_entity_id
 
-# Get expected columns (excluding stg_business_entity_id)
-expected_transaction_columns = [col for col in ss.transaction_stability if col != "stg_business_entity_id"]
 
-# Step 1: Build select expressions and track final column names
-existing_columns = set(transformed_json_df.columns)
-select_expressions = []
-final_column_names = []  # Track what the column names will be after renaming
+association = ["stg_business_entity_id", "match_confidence", "matched_level_2", "matched_level_3_summary", "matched_level_3_lineitem", "matched_fleet_ind", "matched_data_quality", "matched_mcc", "ind_card_match"]
 
-for col_name in ss.transaction_stability:
-    if col_name in existing_columns:
-        if col_name == "card_transactions_stability__end_date":
-            select_expressions.append(col(col_name).alias("end_date"))
-            final_column_names.append("end_date")  # Track the renamed column
-        else:
-            select_expressions.append(col(col_name))
-            final_column_names.append(col_name)  # Track the original column name
-    else:
-        print(f"Adding missing column: {col_name}")
-        dtype = "date" if "date" in col_name else "double" if "amount" in col_name else "string"
-        alias_name = "end_date" if col_name == "card_transactions_stability__end_date" else col_name
-        select_expressions.append(lit(None).cast(dtype).alias(alias_name))
-        final_column_names.append(alias_name)
+expected_association_columns = [col for col in ss.association if col != "stg_business_entity_id"]
 
-# Step 2: Apply select transformation
-temp_df = transformed_json_df.select(*select_expressions)
 
-print("Columns after select:", temp_df.columns)
-print("Before filtering - total rows:", temp_df.count())
 
-# Step 3: Build dynamic filter condition using FINAL column names (after renaming)
-# Get the columns to check (exclude stg_business_entity_id from the final column names)
-columns_to_check = [name for name in final_column_names if name != "stg_business_entity_id"]
+# Build non-null condition using coalesce (most efficient for small data)
+non_null_condition = coalesce(*[col(c) for c in expected_association_columns]).isNotNull()
 
-print("Columns to check for meaningful data:", columns_to_check)
 
-# Build condition to keep records where AT LEAST ONE column has meaningful data
-keep_conditions = []
 
-for col_name in columns_to_check:
-    if col_name in temp_df.columns:
-        # Single condition for all columns - exclude null, empty string, and "null" string
-        meaningful_condition = col(col_name).isNotNull() & (col(col_name) != "") & (col(col_name) != "null")
-        keep_conditions.append(meaningful_condition)
-        print(f"Added condition for column: {col_name}")
-
-# Step 4: Combine conditions with OR - keep record if ANY column has meaningful data
-if keep_conditions:
-    final_condition = keep_conditions[0]
-    for condition in keep_conditions[1:]:
-        final_condition = final_condition | condition
-    
-    # Apply the filter
-    filtered_df = temp_df.filter(final_condition)
-    print("After filtering - remaining rows:", filtered_df.count())
-else:
-    print("No conditions to apply, keeping all records")
-    filtered_df = temp_df
-
-# Step 5: Add remaining columns and finalize
-transformed_transaction_stability = (filtered_df
-                                   .withColumn("is_active", lit(True))
-                                   .distinct())
-
-# Add UUID
-transformed_transaction_stability = transformed_transaction_stability.withColumn(
-    "card_transactions_stability_id",
-    compute_uuid_udf(struct(*transformed_transaction_stability.columns))
-).dropDuplicates()
-
-print("Final result rows:", transformed_transaction_stability.count())
-print("Final columns:", transformed_transaction_stability.columns)
-
-print("=== DYNAMIC FILTERING COMPLETE ===")
+transformed_association = transformed_df.select(expected_association_columns)
+        .filter(non_null_condition)
+        .distinct().withColumn(
+        "association_name",
+		when(col("ind_card_match").isin("yes","YES")  , "visa" ).otherwise(""))
