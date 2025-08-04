@@ -1,23 +1,31 @@
-# Transform contacts from associated_people data
+from pyspark.sql.functions import col, trim, when
+
+# Transform technology data
 technology_used = (transformed_json_df
-              .select(*ss.technology)
-              .distinct()
-              .filter(
-                  (col("technologies__vendor_name").isNotNull() & 
-                   (trim(col("technologies__vendor_name")) != "") & 
-                   (col("technologies__vendor_name") != "none")) |
-                  (col("technologies__category").isNotNull() & 
-                   (trim(col("technologies__category")) != "") & 
-                   (col("technologies__category") != "none"))
-              )
-              .withColumnRenamed("technologies__vendor_name", "technologies_vendor_name")
-              .withColumnRenamed("technologies__category", "technologies_category"))
-				  
+    .select(*ss.technology)
+    .distinct()
+    .filter(
+        (col("technologies__vendor_name").isNotNull() & 
+         (trim(col("technologies__vendor_name")) != "") & 
+         (col("technologies__vendor_name") != "none")) |
+        (col("technologies__category").isNotNull() & 
+         (trim(col("technologies__category")) != "") & 
+         (col("technologies__category") != "none"))
+    )
+    .withColumnRenamed("technologies__vendor_name", "technologies_vendor_name")
+    .withColumnRenamed("technologies__category", "technologies_category")
+)
+
+# Create receivables dataframe
 receivables_df1 = transformed_df.select(*ss.payment_profile).distinct()
 
-receivables_df = receivables_df1.leftjoin(technology_used).on = "stg_business_entity_id".dropduplicates()
+# CORRECTED: Fix join syntax
+receivables_df = (receivables_df1
+    .join(technology_used, on="stg_business_entity_id", how="left")
+    .dropDuplicates()
+)
 
-# Transform `transformed_melt_payment_profile_attribute`
+# Transform using melt operation
 transformed_melt_payment_profile_attribute = utl.melt_dataframe(
     receivables_df,
     id_column="stg_business_entity_id",
@@ -25,4 +33,10 @@ transformed_melt_payment_profile_attribute = utl.melt_dataframe(
     melted_column_names=("receivables_attribute_type", "receivables_attribute_value")
 )
 
-also in transformed_melt_payment_profile_attribute if receivables_attribute_type = technologies_vendor_name then i have to rename to "payment_tech_used"
+# ADDED: Rename technologies_vendor_name to payment_tech_used
+transformed_melt_payment_profile_attribute = (transformed_melt_payment_profile_attribute
+    .withColumn("receivables_attribute_type", 
+        when(col("receivables_attribute_type") == "technologies_vendor_name", "payment_tech_used")
+        .otherwise(col("receivables_attribute_type"))
+    )
+)
