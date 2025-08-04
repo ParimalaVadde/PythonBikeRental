@@ -1,50 +1,85 @@
-# Transform `transformed_transaction_stability`
+# SIMPLIFIED DEBUG VERSION - Let's find the exact issue
 
-expected_transaction_columns = [col for col in ss.transaction_stability if col != "stg_business_entity_id"]
+print("=== DEBUGGING TRANSACTION STABILITY ===")
 
-# Step 1: Build complete select expression in ONE operation
+# Step 1: Check what columns we actually have
+print("Original columns:", transformed_json_df.columns)
+print("Expected columns:", ss.transaction_stability)
+
+# Step 2: Simple select with rename - NO FILTER YET
+print("=== Step 2: Building select expressions ===")
 existing_columns = set(transformed_json_df.columns)
 select_expressions = []
-final_column_names = []  # Track the final column names after renaming
 
 for col_name in ss.transaction_stability:
     if col_name in existing_columns:
-        # Rename during select to avoid separate withColumnRenamed operation
         if col_name == "card_transactions_stability__end_date":
             select_expressions.append(col(col_name).alias("end_date"))
-            final_column_names.append("end_date")
+            print(f"Renaming: {col_name} -> end_date")
         else:
             select_expressions.append(col(col_name))
-            final_column_names.append(col_name)
+            print(f"Keeping: {col_name}")
     else:
-        print(f"Adding missing column: {col_name}")
-        dtype = (
-            "date" if "date" in col_name
-            else "double" if "amount" in col_name  
-            else "string"
-        )
-        # Handle the rename case for missing columns too
+        print(f"Missing column, adding NULL: {col_name}")
+        dtype = "date" if "date" in col_name else "double" if "amount" in col_name else "string"
         alias_name = "end_date" if col_name == "card_transactions_stability__end_date" else col_name
         select_expressions.append(lit(None).cast(dtype).alias(alias_name))
-        final_column_names.append(alias_name)
 
-# Step 2: First apply the select transformation
+# Step 3: Apply ONLY the select - NO FILTER
+print("=== Step 3: Applying select only ===")
 temp_df = transformed_json_df.select(*select_expressions)
+print("After select, columns are:", temp_df.columns)
 
-# Step 3: Build non-null condition using the RENAMED column names
-# Get all value columns (excluding stg_business_entity_id) with their final names
-transaction_value_columns = [name for name in final_column_names if name != "stg_business_entity_id"]
+# Step 4: Show a few rows to see what we have
+print("=== Step 4: Sample data ===")
+temp_df.show(5, truncate=False)
 
-# Build the non-null condition using the actual column names in the DataFrame
-non_null_condition = coalesce(*[col(c) for c in transaction_value_columns]).isNotNull()
+# Step 5: Count rows BEFORE any filter
+print("=== Step 5: Row count before filter ===")
+row_count = temp_df.count()
+print(f"Total rows: {row_count}")
 
-# Step 4: Apply filter and other transformations
+# STOP HERE - Don't apply any filter yet
+# Let's see if this much works without infinite loop
+
+print("=== If you see this message, the basic select is working ===")
+
+# COMMENTED OUT - Only uncomment after above works
+"""
+# Step 6: Try simple filter instead of coalesce
+print("=== Step 6: Testing simple filter ===")
+# Instead of coalesce, let's try a simple condition
+simple_condition = col("end_date").isNotNull()
+filtered_df = temp_df.filter(simple_condition)
+print("Simple filter count:", filtered_df.count())
+
+# Step 7: If simple filter works, try the complex one
+transaction_value_columns = [c for c in temp_df.columns if c != "stg_business_entity_id"]
+print("Value columns for filter:", transaction_value_columns)
+
+# Try building condition step by step
+conditions = []
+for col_name in transaction_value_columns[:3]:  # Test with just first 3 columns
+    conditions.append(col(col_name).isNotNull())
+
+test_condition = conditions[0]
+for condition in conditions[1:]:
+    test_condition = test_condition | condition
+
+test_filtered = temp_df.filter(test_condition)
+print("Test condition count:", test_filtered.count())
+"""
+
+# FINAL RESULT - Only if everything above works
 transformed_transaction_stability = (temp_df
-                                   .filter(non_null_condition)   # Now using correct column names
-                                   .withColumn("is_active", lit(True))  # Add is_active column
-                                   .distinct())  # Remove duplicates
+                                   .withColumn("is_active", lit(True))
+                                   .distinct())
 
-# Step 5: Add the UUID column
+print("=== SUCCESS: Basic transformation complete ===")
+print(f"Final columns: {transformed_transaction_stability.columns}")
+print(f"Final count: {transformed_transaction_stability.count()}")
+
+# Add UUID last
 transformed_transaction_stability = transformed_transaction_stability.withColumn(
     "card_transactions_stability_id",
     compute_uuid_udf(struct(*transformed_transaction_stability.columns))
