@@ -1,12 +1,6 @@
-from pyspark.sql.functions import lit, col, coalesce, struct
-
-# Card Transaction Stability - OPTIMIZED VERSION (same logic as revenue)
-# Get expected columns (excluding business entity id)
+# Transform `transformed_transaction_stability`
+    
 expected_transaction_columns = [col for col in ss.transaction_stability if col != "stg_business_entity_id"]
-
-# For small datasets, coalesce to single partition to reduce overhead  
-# NOTE: Only do this if not already done above for revenue
-# transformed_json_df = transformed_json_df.coalesce(1)
 
 # Step 1: Build complete select expression in ONE operation (eliminates multiple withColumn calls)
 existing_columns = set(transformed_json_df.columns)
@@ -40,24 +34,11 @@ non_null_condition = coalesce(*[col(c) for c in transaction_value_columns]).isNo
 # Step 3: SINGLE operation combining select + rename + filter + distinct + add columns
 transformed_transaction_stability = (transformed_json_df
                                    .select(*select_expressions)  # Handles missing columns AND rename
-                                   .filter(non_null_condition)   # Filter before distinct for better performance
+                                   #.filter(non_null_condition)   # Filter before distinct for better performance
                                    .withColumn("is_active", lit(True))  # Add is_active column
                                    .distinct())  # Remove duplicates
 
-# Step 4: Add UUID column and final dropDuplicates
-transformed_transaction_stability = (transformed_transaction_stability
-                                   .withColumn(
-                                       "card_transactions_stability_id",
-                                       compute_uuid_udf(struct(*transformed_transaction_stability.columns))
-                                   )
-                                   .dropDuplicates())
-
-print(f"Transaction stability records processed: {transformed_transaction_stability.count()}")
-
-# Transform `transformed_melt_payment_profile_attribute` (keeping your existing code)
-transformed_melt_payment_profile_attribute = utl.melt_dataframe(
-    transformed_df.select(*ss.payment_profile),
-    id_column="stg_business_entity_id",
-    columns_to_melt=ss.payment_profile_columns,
-    melted_column_names=("receivables_attribute_type", "receivables_attribute_value")
-)
+transformed_transaction_stability = transformed_transaction_stability.withColumn(
+    "card_transactions_stability_id",
+    compute_uuid_udf(struct(*transformed_transaction_stability.columns))
+).dropDuplicates()
