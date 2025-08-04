@@ -1,25 +1,75 @@
-wat ever filter condition u gave is not working. code didnt throw any error but see. if below columns are null then need to eliminate such records. but it is not doing that
-"end_date","card_transactions_stability__1m__start_date","card_transactions_stability__1m__days_present","card_transactions_stability__1m__weeks_present","card_transactions_stability__1m__months_present","card_transactions_stability__1m__daily_coverage_ratio","card_transactions_stability__1m__weekly_coverage_ratio","card_transactions_stability__1m__monthly_coverage_ratio","card_transactions_stability__3m__start_date","card_transactions_stability__3m__days_present","card_transactions_stability__3m__weeks_present","card_transactions_stability__3m__months_present","card_transactions_stability__3m__daily_coverage_ratio","card_transactions_stability__3m__weekly_coverage_ratio","card_transactions_stability__3m__monthly_coverage_ratio","card_transactions_stability__12m__start_date","card_transactions_stability__12m__days_present","card_transactions_stability__12m__weeks_present","card_transactions_stability__12m__months_present","card_transactions_stability__12m__daily_coverage_ratio","card_transactions_stability__12m__weekly_coverage_ratio","card_transactions_stability__12m__monthly_coverage_ratio"
+print("=== DYNAMIC FILTERING USING ss.transaction_stability ===")
 
+# Get expected columns (excluding stg_business_entity_id)
+expected_transaction_columns = [col for col in ss.transaction_stability if col != "stg_business_entity_id"]
 
-"stg_business_entity_id","end_date","card_transactions_stability__1m__start_date","card_transactions_stability__1m__days_present","card_transactions_stability__1m__weeks_present","card_transactions_stability__1m__months_present","card_transactions_stability__1m__daily_coverage_ratio","card_transactions_stability__1m__weekly_coverage_ratio","card_transactions_stability__1m__monthly_coverage_ratio","card_transactions_stability__3m__start_date","card_transactions_stability__3m__days_present","card_transactions_stability__3m__weeks_present","card_transactions_stability__3m__months_present","card_transactions_stability__3m__daily_coverage_ratio","card_transactions_stability__3m__weekly_coverage_ratio","card_transactions_stability__3m__monthly_coverage_ratio","card_transactions_stability__12m__start_date","card_transactions_stability__12m__days_present","card_transactions_stability__12m__weeks_present","card_transactions_stability__12m__months_present","card_transactions_stability__12m__daily_coverage_ratio","card_transactions_stability__12m__weekly_coverage_ratio","card_transactions_stability__12m__monthly_coverage_ratio","is_active","card_transactions_stability_id"
-"f19ef224-1d6a-8039-fdf4-ad14aebb150c","2025-03-31","2025-03-01","0","0","0","0.0","0.0","0.0","","","","","","","","","","","","","","","true","2d568abe-747b-42bc-d47d-01b1bd136b90"
-"3a17e69d-a228-1401-a350-834e9f724cdd","","","","","","","","","","","","","","","","","","","","","","","true","3a85523b-6921-bf7b-d6f7-854307b37fa2"
-"4236a35d-04ea-ccda-08cc-7235d57e28cf","","","","","","","","","","","","","","","","","","","","","","","true","255ea43d-b3b6-d7a7-4735-9a1daacb1138"
-"27f7c935-643b-76ab-6b3f-40f377b762d7","2025-03-31","2025-03-01","31","6","1","1.0","1.0","1.0","2025-01-01","90","14","3","1.0","1.0","1.0","2024-04-01","360","53","12","0.9863","1.0","1.0","true","b1e1ac31-db8d-206f-e648-c54a109ea128"
-"b165b127-cab2-4903-794c-dbea6b7e6927","","","","","","","","","","","","","","","","","","","","","","","true","91edb39b-e829-5533-8b2d-83c90dd95141"
-"7099ea58-73ff-92d4-1795-d2a3cc37e62a","","","","","","","","","","","","","","","","","","","","","","","true","a0ab9ab6-bc23-e31f-4c32-7f74c5921651"
-"e76e0d92-88f1-75db-ed70-f031833aa1fc","2025-03-31","2025-03-01","0","0","0","0.0","0.0","0.0","","","","","","","","","","","","","","","true","b7d4c6ed-aae9-a92d-5695-f48ff56e7638"
-"b326ea8b-f4f0-e51c-2b93-fac42386f7bb","","","","","","","","","","","","","","","","","","","","","","","true","39530348-382b-4689-425c-84836dbb9394"
-"d6970a62-61da-a2c7-96c1-e2448fb5d662","","","","","","","","","","","","","","","","","","","","","","","true","47b1fc4c-4cd3-8809-b986-661da2920151"
-"ced89840-b900-6650-40e9-b8110f100632","2025-03-31","2025-03-01","31","6","1","1.0","1.0","1.0","2025-01-01","90","14","3","1.0","1.0","1.0","2024-04-01","360","53","12","0.9863","1.0","1.0","true","5d886f40-543f-51d1-dc81-b2349b594a39"
-"26b50826-f0d2-758f-1af0-e8f9abf24137","","","","","","","","","","","","","","","","","","","","","","","true","02443f00-8dd7-f4d9-82b8-fd4fd17e3ec0"
-"1a34d721-7bf5-8eb8-695b-0c7f4d5f6f14","","","","","","","","","","","","","","","","","","","","","","","true","260d40d8-f24a-026c-ab38-5cc6294f439e"
-"5396c750-de84-579e-f0f8-195fae7aa746","2025-03-31","2025-03-01","0","0","0","0.0","0.0","0.0","2025-01-01","0","0","0","0.0","0.0","0.0","2024-04-01","2","1","1","0.0055","0.0189","0.0833","true","fa3aa5b7-1ba5-6969-dfde-ce78e69c783e"
-"22709ffe-f6f9-0b28-2e80-d33cc9b2ae36","2025-03-31","2025-03-01","31","6","1","1.0","1.0","1.0","2025-01-01","90","14","3","1.0","1.0","1.0","2024-04-01","365","53","12","1.0","1.0","1.0","true","07e36d7d-eb13-bafe-bdc1-ce91c7a3bd36"
-"9867824b-4db5-861a-bff4-100a12d835f7","2025-03-31","2025-03-01","0","0","0","0.0","0.0","0.0","","","","","","","","","","","","","","","true","5e8abcf4-0643-a341-9399-ce9bd5d08289"
-"3ccbd910-5a45-d8fc-d4a0-101c6532c599","2025-03-31","2025-03-01","0","0","0","0.0","0.0","0.0","","","","","","","","","","","","","","","true","02004884-8b7d-5684-9f6e-906e22f45a1a"
-"f07c4c9c-481d-0933-f388-5735a6dd1031","","","","","","","","","","","","","","","","","","","","","","","true","7320b4d8-aefd-b1c7-5af7-8028eee80bfb"
-"560905df-78bf-4d2a-0003-cb0a8278f87e","","","","","","","","","","","","","","","","","","","","","","","true","e5e9ab43-d279-9d7f-1409-98deb8320360"
-"5addda9a-36e5-91c7-7620-a5860bd8685f","2025-03-31","2025-03-01","0","0","0","0.0","0.0","0.0","","","","","","","","","","","","","","","true","024973a2-f3bc-2494-2984-c123ae0ad3cc"
-"5f89768e-8508-6e39-8979-e85d996dc069","","","","","","","","","","","","","","","","","","","","","","","true","0dd739b0-da13-00e2-0a9c-f11899af71d5"
+# Step 1: Build select expressions and track final column names
+existing_columns = set(transformed_json_df.columns)
+select_expressions = []
+final_column_names = []  # Track what the column names will be after renaming
+
+for col_name in ss.transaction_stability:
+    if col_name in existing_columns:
+        if col_name == "card_transactions_stability__end_date":
+            select_expressions.append(col(col_name).alias("end_date"))
+            final_column_names.append("end_date")  # Track the renamed column
+        else:
+            select_expressions.append(col(col_name))
+            final_column_names.append(col_name)  # Track the original column name
+    else:
+        print(f"Adding missing column: {col_name}")
+        dtype = "date" if "date" in col_name else "double" if "amount" in col_name else "string"
+        alias_name = "end_date" if col_name == "card_transactions_stability__end_date" else col_name
+        select_expressions.append(lit(None).cast(dtype).alias(alias_name))
+        final_column_names.append(alias_name)
+
+# Step 2: Apply select transformation
+temp_df = transformed_json_df.select(*select_expressions)
+
+print("Columns after select:", temp_df.columns)
+print("Before filtering - total rows:", temp_df.count())
+
+# Step 3: Build dynamic filter condition using FINAL column names (after renaming)
+# Get the columns to check (exclude stg_business_entity_id from the final column names)
+columns_to_check = [name for name in final_column_names if name != "stg_business_entity_id"]
+
+print("Columns to check for meaningful data:", columns_to_check)
+
+# Build condition to keep records where AT LEAST ONE column has meaningful data
+keep_conditions = []
+
+for col_name in columns_to_check:
+    if col_name in temp_df.columns:
+        # Single condition for all columns - exclude null, empty string, and "null" string
+        meaningful_condition = col(col_name).isNotNull() & (col(col_name) != "") & (col(col_name) != "null")
+        keep_conditions.append(meaningful_condition)
+        print(f"Added condition for column: {col_name}")
+
+# Step 4: Combine conditions with OR - keep record if ANY column has meaningful data
+if keep_conditions:
+    final_condition = keep_conditions[0]
+    for condition in keep_conditions[1:]:
+        final_condition = final_condition | condition
+    
+    # Apply the filter
+    filtered_df = temp_df.filter(final_condition)
+    print("After filtering - remaining rows:", filtered_df.count())
+else:
+    print("No conditions to apply, keeping all records")
+    filtered_df = temp_df
+
+# Step 5: Add remaining columns and finalize
+transformed_transaction_stability = (filtered_df
+                                   .withColumn("is_active", lit(True))
+                                   .distinct())
+
+# Add UUID
+transformed_transaction_stability = transformed_transaction_stability.withColumn(
+    "card_transactions_stability_id",
+    compute_uuid_udf(struct(*transformed_transaction_stability.columns))
+).dropDuplicates()
+
+print("Final result rows:", transformed_transaction_stability.count())
+print("Final columns:", transformed_transaction_stability.columns)
+
+print("=== DYNAMIC FILTERING COMPLETE ===")
