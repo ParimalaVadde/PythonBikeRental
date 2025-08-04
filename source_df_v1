@@ -1,63 +1,28 @@
+from functools import reduce
+from pyspark.sql.functions import col, when, coalesce
 
-# Get expected columns (excluding business entity id)
-expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+# Define association columns
+association = ["stg_business_entity_id", "match_confidence", "matched_level_2", "matched_level_3_summary", 
+               "matched_level_3_lineitem", "matched_fleet_ind", "matched_data_quality", "matched_mcc", "ind_card_match"]
 
-# For small datasets, coalesce to single partition to reduce overhead
-transformed_json_df = transformed_json_df.coalesce(1)
-
-# Step 1: Add ALL missing columns in single operation using select
-existing_columns = set(transformed_json_df.columns)
-missing_columns = [col_name for col_name in expected_revenue_columns 
-                  if col_name not in existing_columns]
-
-# Build select expression with missing columns added
-select_expressions = []
-for col_name in ss.revenue:
-    if col_name in existing_columns:
-        select_expressions.append(col(col_name))
-    else:
-        print(f"Adding missing column: {col_name}")
-        dtype = (
-            "date" if "date" in col_name
-            else "double" if "amount" in col_name  
-            else "string"
-        )
-        select_expressions.append(lit(None).cast(dtype).alias(col_name))
-
-# Step 2: Single operation - select with missing columns + rename + filter + distinct
-revenue_value_columns = ["end_date" if c == "card_revenue__end_date" else c 
-                        for c in expected_revenue_columns]
-
-# Build non-null condition using coalesce (most efficient for small data)
-non_null_condition = coalesce(*[col(c) for c in revenue_value_columns]).isNotNull()
-
-# Single-pass operation combining everything
-transformed_revenue = (transformed_json_df
-                      .select(*select_expressions)
-                      .withColumnRenamed("card_revenue__end_date", "end_date")  
-                      .filter(non_null_condition)
-                      .distinct())
-
-
-
-**********************************************************************************************************************************
-
-can i use below logic to filter out null columns . also final transformed_association df should contain stg_business_entity_id
-
-
-association = ["stg_business_entity_id", "match_confidence", "matched_level_2", "matched_level_3_summary", "matched_level_3_lineitem", "matched_fleet_ind", "matched_data_quality", "matched_mcc", "ind_card_match"]
-
+# Get expected columns (excluding business entity id for null filtering)
 expected_association_columns = [col for col in ss.association if col != "stg_business_entity_id"]
 
+# Build comprehensive non-null condition (checks for null, empty string, and "null" string)
+individual_conditions = [
+    (col(col_name).isNotNull()) & (col(col_name) != "") & (col(col_name) != "null")
+    for col_name in expected_association_columns
+]
+# At least one column should meet all the non-null/non-empty conditions
+non_null_condition = reduce(lambda a, b: a | b, individual_conditions)
 
-
-# Build non-null condition using coalesce (most efficient for small data)
-non_null_condition = coalesce(*[col(c) for c in expected_association_columns]).isNotNull()
-
-
-
-transformed_association = transformed_df.select(expected_association_columns)
-        .filter(non_null_condition)
-        .distinct().withColumn(
+# CORRECTED: Include stg_business_entity_id in select and fix method chaining
+transformed_association = (transformed_df
+    .select(["stg_business_entity_id"] + expected_association_columns)  # Include business entity ID
+    .filter(non_null_condition)
+    .distinct()
+    .withColumn(
         "association_name",
-		when(col("ind_card_match").isin("yes","YES")  , "visa" ).otherwise(""))
+        when(col("ind_card_match").isin("yes", "YES"), "visa").otherwise("")
+    )
+)
