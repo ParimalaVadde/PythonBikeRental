@@ -1,42 +1,28 @@
-from pyspark.sql.functions import col, trim, when
+jira story name : SDS Data Processing: Fixing issues in staging job identified during previous deployment
 
-# Transform technology data
-technology_used = (transformed_json_df
-    .select(*ss.technology)
-    .distinct()
-    .filter(
-        (col("technologies__vendor_name").isNotNull() & 
-         (trim(col("technologies__vendor_name")) != "") & 
-         (col("technologies__vendor_name") != "none")) |
-        (col("technologies__category").isNotNull() & 
-         (trim(col("technologies__category")) != "") & 
-         (col("technologies__category") != "none"))
-    )
-    .withColumnRenamed("technologies__vendor_name", "technologies_vendor_name")
-    .withColumnRenamed("technologies__category", "technologies_category")
-)
 
-# Create receivables dataframe
-receivables_df1 = transformed_df.select(*ss.payment_profile).distinct()
+description:
+Resolve data processing issues in the SDS staging job that were identified during the previous deployment. These include handling null JSON values, resolving column mismatches between the source file and staging logic, ensuring complete data load, and computing UUIDs consistently. The goal is to stabilize the staging job for reliable processing and data consistency.
 
-# CORRECTED: Fix join syntax
-receivables_df = (receivables_df1
-    .join(technology_used, on="stg_business_entity_id", how="left")
-    .dropDuplicates()
-)
 
-# Transform using melt operation
-transformed_melt_payment_profile_attribute = utl.melt_dataframe(
-    receivables_df,
-    id_column="stg_business_entity_id",
-    columns_to_melt=ss.payment_profile_columns,
-    melted_column_names=("receivables_attribute_type", "receivables_attribute_value")
-)
+Acceptance Criteria:
 
-# ADDED: Rename technologies_vendor_name to payment_tech_used
-transformed_melt_payment_profile_attribute = (transformed_melt_payment_profile_attribute
-    .withColumn("receivables_attribute_type", 
-        when(col("receivables_attribute_type") == "technologies_vendor_name", "payment_tech_used")
-        .otherwise(col("receivables_attribute_type"))
-    )
-)
+JSON columns with NULL values are handled without job failure.
+Column names are correctly aligned between source files and staging job schema.
+Staging job successfully loads all intended data without partial loads.
+UUIDs are computed and populated accurately for relevant records.
+
+
+
+
+
+sub task 1:
+Handle JSON NULLs and Column Mismatches
+
+description : Update the staging job logic to properly handle NULL values in JSON-type columns, preventing job failures. Additionally, align staging code column references to match the source file structure, fixing any mismatches that caused mapping issues.
+
+sub task 2: 
+Fix Partial Load
+
+description:
+Investigate and resolve the issue of partial data loads during staging processing. Ensure complete records are ingested. Also, implement or correct UUID computation to consistently generate and store valid UUIDs for all necessary fields.
