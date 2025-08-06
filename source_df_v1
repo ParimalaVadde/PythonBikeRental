@@ -1,51 +1,16 @@
-jira story name : SDS Data Processing: Fixing issues in staging job identified during previous deployment
+jira story name : 
+
+SDS Data Processing : Testing of upload functionality and fixing staging issues
 
 
-description:
-Resolve data processing issues in the SDS staging job that were identified during the previous deployment. These include handling null JSON values, resolving column mismatches between the source file and staging logic, ensuring complete data load, and computing UUIDs consistently. The goal is to stabilize the staging job for reliable processing and data consistency.
+description :
+Fix identified staging job issues and make the data pipeline operational for PFD
 
+1. Building the relationship for Supplier ecid
+	2. Testing special characters
+	3. Handling empty strings
 
 Acceptance Criteria:
 
-JSON columns with NULL values are handled without job failure.
-Column names are correctly aligned between source files and staging job schema.
-Staging job successfully loads all intended data without partial loads.
-UUIDs are computed and populated accurately for relevant records.
+Deploy fixed code to UAT and perform functional testing of staging job for all tables in staging
 
-
-
-
-
-sub task 1:
-Handle JSON NULLs and Column Mismatches
-
-description : Update the staging job logic to properly handle NULL values in JSON-type columns, preventing job failures. Additionally, align staging code column references to match the source file structure, fixing any mismatches that caused mapping issues.
-
-sub task 2: 
-Fix Partial Load
-
-description:
-Investigate and resolve the issue of partial data loads during staging processing. Ensure complete records are ingested. Also, implement or correct UUID computation to consistently generate and store valid UUIDs for all necessary fields.
-
-
-
-*****************************************
-
-Sure! Here’s a more concise version for you:
-
----
-
-### Closing Comments
-
-**Main Story:**
-All issues in the SDS staging job have been resolved. NULL JSON values are handled without failures, column mappings are corrected, data loads are complete, and UUIDs are generated consistently. The staging job is now stable and reliable.
-
-**Sub-task 1:**
-Handled NULL JSON values and fixed column mismatches to prevent job failures and improve data accuracy.
-
-**Sub-task 2:**
-Resolved partial load issues and ensured complete data ingestion. UUID computation was corrected for consistent record identification.
-
----
-
-Let me know if you want it even shorter or more casual!
