@@ -1,16 +1,16 @@
-jira story name : 
+Building the Relationship for Supplier ECID: Establish and validate the relationship between suppliers and their ECIDs to ensure accurate data mapping.
 
-SDS Data Processing : Testing of upload functionality and fixing staging issues
+Testing Special Characters: Verify that the system correctly handles special characters in data fields to prevent processing errors.
+
+Handling Empty Strings: Implement logic to appropriately manage empty strings in data inputs, ensuring they don't cause pipeline failures.
 
 
-description :
-Fix identified staging job issues and make the data pipeline operational for PFD
+ Sub‑Task: Test Upload Functionality & Resolve Issues
+Description:
+Execute and validate the upload process end‑to‑end. Identify any errors or failures and implement fixes to ensure reliable data ingestion.
 
-1. Building the relationship for Supplier ecid
-	2. Testing special characters
-	3. Handling empty strings
 
-Acceptance Criteria:
 
-Deploy fixed code to UAT and perform functional testing of staging job for all tables in staging
-
+Sub‑Task 2: Validate Special Character and Empty String Handling
+Description:
+Test and refine the staging logic to handle special characters and empty strings in incoming data without pipeline failures.
