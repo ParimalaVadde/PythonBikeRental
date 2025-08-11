@@ -1,195 +1,197 @@
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 8815233.7777}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 8310170.7713}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 7844672.1036}}
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 6767731.4118}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 5545336.8131}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 5226886.2024}}
-{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}
+below is existing code
 
-
-vendor_name,business_entity_name,client_vendor_id,client_vendor_site_id,country,payment_terms,vendor_hq_country,state_province,postal_code,street_line_1,street_line_2,city,card_revenue
-LEWIS PR INC,LEWIS PR,345,,US,,,CA,92101,530 B ST,FL 19,SAN DIEGO,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}"
-ADWEEK LLC,ADWEEK,436,,US,,US,NY,10016,261 MADISON AVE,,NEW YORK,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}"
-BAMBOOHR LLC,BAMBOOHR,386,,US,,,UT,84042,335 S 560 W,,LINDON,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 8815233.7777}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 8310170.7713}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 7844672.1036}}"
-PARADIGM SAMPLE LLC,PARADIGM SAMPLE,884,,US,,US,NY,11050,921 PORT WASHINGTON BLVD,STE 11,PORT WASHINGTON,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}"
-ARIBA INC,ARIBA,707,,US,,,CA,94304,3420 HILLVIEW AVE,,PALO ALTO,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}"
-ZOOMINFO TECHNOLOGIES LLC,ZOOMINFO TECH,196,,US,,US,WA,98660,805 BROADWAY ST,STE 900,VANCOUVER,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 6767731.4118}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 5545336.8131}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 5226886.2024}}"
-LOS GATOS,LOS GATOS,711,,US,,,CA,95030,23 N SANTA CRUZ AVE,,LOS GATOS,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': 167570.2109}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': 179786.4464}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': 194118.9216}}"
-FISHER & PHILLIPS LLP,FISHER PHILLIPS,231,,US,,US,CO,80202,1125 17TH ST,STE 2400,DENVER,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}"
-SALESFORCE INC,SALESFORCE,204,,US,,US,CA,94105,415 MISSION ST,,SAN FRANCISCO,"{'end_date': '2025-03-31', 'date_accessible': '2025-06-15', '1m': {'start_date': '2025-03-01', 'average_monthly_amount': None}, '3m': {'start_date': '2025-01-01', 'average_monthly_amount': None}, '12m': {'start_date': '2024-04-01', 'average_monthly_amount': None}}"
-
-
-"stg_business_entity_id","card_revenue__end_date","card_revenue__date_accessible","card_revenue__1m__start_date","card_revenue__1m__average_monthly_amount","card_revenue__3m__start_date","card_revenue__3m__average_monthly_amount","card_revenue__12m__start_date","card_revenue__12m__average_monthly_amount"
-"22709ffe-f6f9-0b28-2e80-d33cc9b2ae36","2025-03-31","2025-06-15","2025-03-01","8815233.7777","2025-01-01","8310170.7713","2024-04-01","7844672.1036"
-"ced89840-b900-6650-40e9-b8110f100632","2025-03-31","2025-06-15","2025-03-01","167570.2109","2025-01-01","179786.4464","2024-04-01","194118.9216"
-
-
-
-# DEBUG VERSION - Add this to your existing code to find the missing record
-
-# After reading the CSV, add this debug section:
-print("=== DEBUGGING CARD_REVENUE PROCESSING ===")
-
-# Check original data
-print("1. Original DataFrame count:", transformed_df.count())
-print("2. Checking card_revenue values:")
-
-# Show all records with card_revenue data
-card_revenue_data = transformed_df.select("stg_business_entity_id", "vendor_name", "card_revenue")
-card_revenue_data.show(20, truncate=False)
-
-# Count non-null card_revenue records
-non_null_card_revenue = transformed_df.filter(
-    col("card_revenue").isNotNull() & 
-    (col("card_revenue") != "") &
-    (col("card_revenue") != "null") &
-    (col("card_revenue") != "{}")
-).count()
-print(f"3. Non-null card_revenue records: {non_null_card_revenue}")
-
-# Your existing processing
-jsoncol = ['stg_business_entity_id', 'card_revenue']
-transformed_json_df = transformed_df.select(jsoncol)
-
-print("4. After selecting jsoncol:", transformed_json_df.count())
-
-# Check the specific records we expect
-expected_records = [
-    "8815233.7777",  # BAMBOOHR
-    "6767731.4118",  # ZOOMINFO - This is missing!
-    "167570.2109"    # LOS GATOS
-]
-
-print("5. Checking for expected amounts in original data:")
-for amount in expected_records:
-    count = transformed_df.filter(col("card_revenue").contains(amount)).count()
-    if count > 0:
-        print(f"   ✓ Found amount {amount}")
-        transformed_df.filter(col("card_revenue").contains(amount)).select("vendor_name", "stg_business_entity_id").show()
-    else:
-        print(f"   ✗ Missing amount {amount}")
-
-# Process using your utility function
-print("6. Processing with utility function...")
-flattened_dataframes = utl.process_all_json_columns(transformed_json_df)
-
-print("7. Flattened dataframes keys:", flattened_dataframes.keys())
-
-if 'card_revenue' in flattened_dataframes:
-    flattened_card_revenue = flattened_dataframes['card_revenue']
-    print("8. Flattened card_revenue count:", flattened_card_revenue.count())
-    
-    # Show the flattened data BEFORE filtering
-    print("9. Flattened data (before filtering):")
-    flattened_card_revenue.show(10, truncate=False)
-    
-    # Check for the missing amounts in flattened data
-    print("10. Checking for expected amounts in flattened data:")
-    for amount in expected_records:
-        count = flattened_card_revenue.filter(
-            col("card_revenue__1m__average_monthly_amount") == float(amount)
-        ).count()
-        if count > 0:
-            print(f"    ✓ Found amount {amount} in flattened data")
-        else:
-            print(f"    ✗ Missing amount {amount} in flattened data")
-    
-    # Your combine logic
-    final_df = utl.combine_flattened_results(
-        transformed_json_df.select("stg_business_entity_id"), 
-        flattened_dataframes
+transformed_df = transformed_df.withColumn(
+    "business_entity_role",
+    when(col("filter_interco") == "Y", "intercompany_supplier")
+    .when(
+        (col("stg_business_entity_id").isNotNull()) &
+        (col("stg_business_entity_id") == "2d35a04a-5fdf-50d5-7750-c1c7621ddc33"),
+        "Firm"
     )
+     .when(
+        (col("stg_business_entity_id").isNotNull()) , "Supplier" )
+    .otherwise("")
+)
+
+# Add `related_business_entity_role` column based on conditions
+transformed_df = transformed_df.withColumn(
+    "related_business_entity_role",
+    when(col("filter_interco") == "Y", "intercompany_buyer")
+    .when(
+        (col("stg_payor_business_entity_id").isNotNull()) &
+        (col("stg_payor_business_entity_id") == "2d35a04a-5fdf-50d5-7750-c1c7621ddc33"),
+        "Firm"
+    )
+     .when(
+        (col("stg_payor_business_entity_id").isNotNull()) ,    "Client")
+    .otherwise("")
+)
+
+
+but i want is 
+
+below is sample input data 
+vendor_name_cleaned,	supplier_ecid,	client_name,	client_ecid
+1ST CLASS GLASS,	530696153,	Brown,	221559630
+3 B,	NULL,	Brown,	221559630
+
+
+wat i want is 
+this col is for reference,	srg_business_entity_id	business_entity_role	related_business_entity_id	related_business_entity_role
+1ST CLASS GLASS,	           123,	                   supplier,	               456,                       	client
+1ST CLASS GLASS,	           123,	                   client,            2d35a04a-5fdf-50d5-7750-c1c7621ddc33, Firm
+BROWN,	                       456,                	   client,          2d35a04a-5fdf-50d5-7750-c1c7621ddc33,   Firm
+3 B,	                       768,	                   supplier,               	   456,                     	client
+
+explaination
+
+'1ST CLASS GLASS' is business_entity_name (vendor_name_cleaned is  business_entity_name in transformed_df)
+srg_business_entity_id for each business_entity_name will be in transformed_df
+
+every srg_business_entity_id is a supplier and will have client so mapping should go as below
+
+this col is for reference,	srg_business_entity_id,	business_entity_role,	related_business_entity_id,	related_business_entity_role
+1ST CLASS GLASS,	           123,	                   supplier,	               456,                       	client
+
+if it doesn't have client_name then mapping goes as below
+
+this col is for reference,	srg_business_entity_id,	business_entity_role,	related_business_entity_id,	related_business_entity_role
+1ST CLASS GLASS,	           123,	                   supplier,	             
+
+for each stg_business_entity_id if supplier_ecid is not null or ''
+
+then need to perform below mapping
+
+1ST CLASS GLASS,	           123,	                   client,           2d35a04a-5fdf-50d5-7750-c1c7621ddc33,           Firm
+
+
+for distinct client names need to create below mapping, for any client the related_business_entity_id should be "2d35a04a-5fdf-50d5-7750-c1c7621ddc33" and related_business_entity_role should be Firm
+BROWN,	                       456,                	   client,          2d35a04a-5fdf-50d5-7750-c1c7621ddc33,           Firm
+
+if for stg_business_entity_id if supplier_ecid is null or '' then
+
+only below mapping 
+
+3 B,	                       768,	                   supplier,               	   456,                     	client
+
+
+
+note:
     
-    print("11. After combine_flattened_results:", final_df.count())
+i have taken as example  123, 456, 768 but u have to read from transformed_df
+
+complete existing function :
+
+
+def relationship(transformed_business_entity, transformed_contacts, transformed_df):
+    # Add `business_entity_role` column based on conditions
+    transformed_df = transformed_df.withColumn(
+        "business_entity_role",
+        when(col("filter_interco") == "Y", "intercompany_supplier")
+        .when(
+            (col("stg_business_entity_id").isNotNull()) &
+            (col("stg_business_entity_id") == "2d35a04a-5fdf-50d5-7750-c1c7621ddc33"),
+            "Firm"
+        )
+         .when(
+            (col("stg_business_entity_id").isNotNull()) , "Supplier" )
+        .otherwise("")
+    )
+
+    # Add `related_business_entity_role` column based on conditions
+    transformed_df = transformed_df.withColumn(
+        "related_business_entity_role",
+        when(col("filter_interco") == "Y", "intercompany_buyer")
+        .when(
+            (col("stg_payor_business_entity_id").isNotNull()) &
+            (col("stg_payor_business_entity_id") == "2d35a04a-5fdf-50d5-7750-c1c7621ddc33"),
+            "Firm"
+        )
+         .when(
+            (col("stg_payor_business_entity_id").isNotNull()) ,    "Client")
+        .otherwise("")
+    )
+
+    #Get vendor contact names from transformed_df
+    vendor_names_df = transformed_df.select(
+        col("stg_business_entity_id"),
+        col("vendor_contact_name").alias("contact_name")
+    ).distinct()
+
+    #Joining this with transformed_contacts to get the accurate business_entity_contact_id
+    preferred_contacts = vendor_names_df.join(
+        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
+        on=["stg_business_entity_id", "contact_name"],
+        how="inner"
+    ).distinct()
+
+    # Perform a left join between `transformed_business_entity` and `transformed_contacts`
+    merged_df = transformed_business_entity.join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
+    )
+
+    # Perform an inner join between the result and `transformed_df`
+    merged_df = merged_df.join(
+        transformed_df,
+        on="stg_business_entity_id",
+        how="inner"
+    )
+
+    # Select required columns
+    merged_df = merged_df.select(
+        "stg_business_entity_id",
+        "business_entity_contact_id",
+        "stg_payor_business_entity_id",
+        lit(None).alias("related_business_entity_contact_id"),
+        "business_entity_role",
+        "related_business_entity_role",
+        "client_vendor_id",
+        "client_vendor_site_id",
+        "client_ecid",
+        "associated_tax_ids"
+    )
+
+    # Perform another join between `transformed_business_entity` and `transformed_df`
+    merged_df1 = transformed_business_entity.join(
+        transformed_df,
+        transformed_business_entity["stg_business_entity_id"] == transformed_df["stg_jpmc_business_entity_id"],
+        how="inner"
+    )
+
+    # Select required columns and add missing columns to match `merged_df`
+    merged_df1 = merged_df1.select(
+        col("stg_jpmc_business_entity_id").alias("stg_business_entity_id"),
+        lit(None).alias("business_entity_contact_id"),  # Add missing columns with default values
+        col("stg_payor_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("Firm").alias("business_entity_role"),
+        lit("Client").alias("related_business_entity_role"),
+        lit(None).alias("client_vendor_id"),
+        lit(None).alias("client_vendor_site_id"),
+        lit(None).alias("client_ecid"),
+        lit(None).alias("associated_tax_ids")
+    )
+
+    # Union the two DataFrames
+    union_df = merged_df.union(merged_df1)
+
+    # Drop duplicates
+    union_df = union_df.dropDuplicates()
+
+    # Rename column
+    union_df = union_df.withColumnRenamed("stg_payor_business_entity_id", "related_business_entity_id")
+
+    return union_df
     
-    # Show data before null filtering
-    print("12. Data before null filtering:")
-    final_df.show(10, truncate=False)
     
-    # Your null filtering logic
-    card_revenue_columns = [col for col in final_df.columns if col.startswith('card_revenue__')]
-    print("13. Card revenue columns found:", card_revenue_columns)
-    
-    if card_revenue_columns:
-        # Check each record against the filter condition
-        print("14. Checking filter condition for each record:")
-        
-        # Show which records pass the filter
-        filter_condition = col(card_revenue_columns[0]).isNotNull()
-        for card_col in card_revenue_columns[1:]:
-            filter_condition = filter_condition | col(card_col).isNotNull()
-        
-        # Apply filter
-        final_filtered_df = final_df.filter(filter_condition)
-        print("15. After filtering nulls:", final_filtered_df.count())
-        
-        print("16. Final filtered data:")
-        final_filtered_df.show(10, truncate=False)
-        
-        # Check for missing amounts in final data
-        print("17. Final check for expected amounts:")
-        for amount in expected_records:
-            count = final_filtered_df.filter(
-                col("card_revenue__1m__average_monthly_amount") == float(amount)
-            ).count()
-            if count > 0:
-                print(f"    ✓ Found amount {amount} in final data")
-            else:
-                print(f"    ✗ Missing amount {amount} in final data")
-else:
-    print("8. ERROR: card_revenue not found in flattened_dataframes!")
 
-print("=== END DEBUG ===")
+# Call the `relationship` function and assign the result to `transformed_relationship`
+transformed_relationship = relationship(transformed_business_entity, transformed_contacts, transformed_df)
 
-
-
-
-classification table
-levels to lower case
-indivisual to internal changes
-
-receivable attribute type
-
-technology used 
-
-
-1) classification table
-levels to lower case
-indivisual to internal changes
-
-2)receivable attribute type
-
-technology used 
-{'vendor_name': 'Paypal', 'category': 'payments'}
-
-receivables_attribute_type = payment_tech_used, value(fetch vendor_name from json): 
-
-
-3)change stp_ind_declined in type table 
-4)telecommunication address type from mobile to personal
-
-
-*****************************************************************
-
-Sure! Here’s a cleaned-up, clearer version of your lines:
-
----
-
-1. Classification table:
-
-* Convert levels to lowercase
-* Change “indivisual” to “internal changes”
-
-2. Receivable attribute type:
-
-Technology used example:
-
-```json
-{'vendor_name': 'Paypal', 'category': 'payments'}
-```
-
-Define `receivables_attribute_type` as `payment_tech_used`, and set the value by fetching `vendor_name` from the JSON.
-
-3. Change `stp_ind_declined` in the type table.
-
-4. Change telecommunication address type from `mobile` to `personal`.
-
----
-
-If you want, I can also help rewrite it more formally or in code/comments!
+transformed_relationship = transformed_relationship.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
+transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
