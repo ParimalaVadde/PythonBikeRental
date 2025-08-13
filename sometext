@@ -1,3 +1,9 @@
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+
 def relationship(transformed_business_entity, transformed_contacts, transformed_df):
     from pyspark.sql.functions import col, lit, when
     from pyspark.sql import DataFrame
