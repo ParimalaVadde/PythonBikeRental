@@ -1,152 +1,147 @@
-relavent functions in utils for flatten json
+def relationship(transformed_business_entity, transformed_contacts, transformed_df):
+    from pyspark.sql.functions import col, lit, when
+    from pyspark.sql import DataFrame
+    
+    # Get vendor contact names from transformed_df
+    vendor_names_df = transformed_df.select(
+        col("stg_business_entity_id"),
+        col("vendor_contact_name").alias("contact_name")
+    ).distinct()
 
-def is_empty_or_null(column_value):
-    """Helper function to check if a value is empty, null, or contains only empty structures"""
-    return (
-        col(column_value).isNull() | 
-        (col(column_value) == "") |
-        (col(column_value) == "[]") |
-        (col(column_value) == "{}") |
-        (col(column_value) == "null")
+    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
+    preferred_contacts = vendor_names_df.join(
+        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
+        on=["stg_business_entity_id", "contact_name"],
+        how="inner"
+    ).distinct()
+
+    # Perform a left join between `transformed_business_entity` and `transformed_contacts`
+    base_df = transformed_business_entity.join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
     )
 
-def flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns):
-    """
-    Flatten a struct type into individual columns
-    """
-    select_expressions = list(base_columns)
-    
-    def add_struct_fields(struct_schema, current_path, current_prefix):
-        for field in struct_schema.fields:
-            field_path = f"{current_path}.{field.name}"
-            
-            if isinstance(field.dataType, StructType):
-                # Nested struct - recurse
-                add_struct_fields(field.dataType, field_path, f"{current_prefix}__{field.name}")
-            else:
-                # Primitive field
-                alias_name = f"{current_prefix}__{field.name}"
-                select_expressions.append(col(field_path).alias(alias_name))
-    
-    add_struct_fields(schema, parsed_col_name, prefix)
-    return df.select(*select_expressions)
-
-
-def flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns):
-    """
-    Handle arrays with nested arrays (like associated_people with titles)
-    """
-    # First explode the main array
-    df_exploded = df.select(*base_columns, explode(col(parsed_col_name)).alias("person"))
-    
-    # Now explode the nested titles array
-    df_final = df_exploded.select(
-        *base_columns,
-        col("person.name").alias(f"{prefix}__name"),
-        explode(col("person.titles")).alias(f"{prefix}__title")
-    )
-    
-    return df_final
-
-
-def flatten_simple_array(df, parsed_col_name, prefix, base_columns):
-    """
-    Handle simple arrays (convert to semicolon-separated string)
-    """
-    return df.select(
-        *base_columns,
-        concat_ws(";", col(parsed_col_name)).alias(prefix)
+    # Perform an inner join between the result and `transformed_df`
+    base_df = base_df.join(
+        transformed_df,
+        on="stg_business_entity_id",
+        how="inner"
     )
 
+    # Create separate DataFrames for different relationship mappings
+    relationship_dfs = []
 
-def flatten_json_column_improved(df, column_name, config, base_columns=None):
-    """
-    Improved JSON flattening function that handles different data types correctly
-    """
-    try:
-        if base_columns is None:
-            base_columns = ["stg_business_entity_id"]
-        
-        # Check if column exists
-        if column_name not in df.columns:
-            print(f"Column {column_name} does not exist in DataFrame")
-            return df
-        
-        # Check if column has any non-null values
-        non_null_count = df.filter(col(column_name).isNotNull() & ~is_empty_or_null(column_name)).count()
-        
-        if non_null_count == 0:
-            print(f"Column {column_name} contains only null/empty values, skipping flattening")
-            return df
-        
-        schema = config['schema']
-        flatten_type = config['flatten_type']
-        prefix = config['prefix']
-        
-        # Parse JSON
-        parsed_col_name = f"{column_name}_parsed"
-        df = df.withColumn(parsed_col_name, from_json(col(column_name), schema))
-        
-        # Filter out rows where parsing failed
-        df = df.filter(col(parsed_col_name).isNotNull())
-        
-        # Handle different flatten types
-        if flatten_type == 'struct':
-            # Single nested object - flatten to columns
-            result_df = flatten_struct_columns(df, parsed_col_name, schema, prefix, base_columns)
-            
-        elif flatten_type == 'array_double_explode':
-            # Array with nested arrays (like associated_people)
-            result_df = flatten_array_with_double_explode(df, parsed_col_name, schema, prefix, base_columns)
-            
-        elif flatten_type == 'simple_array':
-            # Simple array - join with semicolon
-            result_df = flatten_simple_array(df, parsed_col_name, prefix, base_columns)
-            
-        else:
-            print(f"Unknown flatten_type: {flatten_type}")
-            return df
-        
-        return result_df
-        
-    except Exception as error:
-        print(f"Error flattening column {column_name}: {error}")
-        import traceback
-        traceback.print_exc()
-        return df
+    # 1. Supplier -> Client relationships (when client exists)
+    supplier_client_df = base_df.filter(
+        (col("client_ecid").isNotNull()) & (col("client_ecid") != "")
+    ).select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        col("client_ecid").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("Supplier").alias("business_entity_role"),
+        lit("Client").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("associated_tax_ids")
+    )
+    relationship_dfs.append(supplier_client_df)
 
-def process_all_json_columns(df, base_columns=None):
-    """
-    Process all JSON columns and return separate DataFrames
-    """
-    if base_columns is None:
-        base_columns = ["stg_business_entity_id"]
-    
-    flattened_dfs = {}
-    
-    for column_name, config in ss.JSON_FIELD_CONFIGS.items():
-        print(f"Processing {column_name}...")
-        flattened_df = flatten_json_column_improved(df, column_name, config, base_columns)
-        
-        if flattened_df.count() > 0:
-            flattened_dfs[column_name] = flattened_df
-            print(f" {column_name}: {flattened_df.count()} rows")
-        else:
-            print(f" {column_name}: No data after flattening")
-    
-    return flattened_dfs
+    # 2. Supplier -> Firm relationships (when supplier_ecid is not null/empty)
+    supplier_firm_df = base_df.filter(
+        (col("supplier_ecid").isNotNull()) & (col("supplier_ecid") != "")
+    ).select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("Client").alias("business_entity_role"),
+        lit("Firm").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("associated_tax_ids")
+    )
+    relationship_dfs.append(supplier_firm_df)
 
-def combine_flattened_results(base_df, flattened_dfs, join_key="stg_business_entity_id"):
-    """
-    Combine all flattened DataFrames back to base DataFrame
-    """
-    result_df = base_df
-    
-    for df_name, df in flattened_dfs.items():
-        if df.count() > 0:
-            print(f"Joining {df_name}...")
-            result_df = result_df.join(df, on=join_key, how="left")
-        else:
-            print(f"Skipping {df_name} - no data to join")
-    
-    return result_df
+    # 3. Client -> Firm relationships (for distinct clients)
+    # Get unique clients from the data
+    unique_clients_df = base_df.select(
+        col("client_ecid").alias("stg_business_entity_id"),
+        col("client_name")
+    ).filter(
+        (col("client_ecid").isNotNull()) & (col("client_ecid") != "")
+    ).distinct()
+
+    if unique_clients_df.count() > 0:
+        client_firm_df = unique_clients_df.select(
+            col("stg_business_entity_id"),
+            lit(None).alias("business_entity_contact_id"),
+            lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+            lit(None).alias("related_business_entity_contact_id"),
+            lit("Client").alias("business_entity_role"),
+            lit("Firm").alias("related_business_entity_role"),
+            lit(None).alias("client_vendor_id"),
+            lit(None).alias("client_vendor_site_id"),
+            col("stg_business_entity_id").alias("client_ecid"),
+            lit(None).alias("associated_tax_ids")
+        )
+        relationship_dfs.append(client_firm_df)
+
+    # 4. Handle cases where supplier_ecid is null/empty - only supplier->client mapping
+    supplier_only_df = base_df.filter(
+        ((col("supplier_ecid").isNull()) | (col("supplier_ecid") == "")) &
+        (col("client_ecid").isNotNull()) & (col("client_ecid") != "")
+    ).select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        col("client_ecid").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("Supplier").alias("business_entity_role"),
+        lit("Client").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("associated_tax_ids")
+    )
+    relationship_dfs.append(supplier_only_df)
+
+    # 5. Handle Firm relationships (existing logic for stg_jpmc_business_entity_id)
+    firm_df = transformed_business_entity.join(
+        transformed_df,
+        transformed_business_entity["stg_business_entity_id"] == transformed_df["stg_jpmc_business_entity_id"],
+        how="inner"
+    ).select(
+        col("stg_jpmc_business_entity_id").alias("stg_business_entity_id"),
+        lit(None).alias("business_entity_contact_id"),
+        col("stg_payor_business_entity_id").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("Firm").alias("business_entity_role"),
+        lit("Client").alias("related_business_entity_role"),
+        lit(None).alias("client_vendor_id"),
+        lit(None).alias("client_vendor_site_id"),
+        lit(None).alias("client_ecid"),
+        lit(None).alias("associated_tax_ids")
+    )
+    relationship_dfs.append(firm_df)
+
+    # Union all DataFrames
+    union_df = relationship_dfs[0]
+    for df in relationship_dfs[1:]:
+        union_df = union_df.union(df)
+
+    # Drop duplicates
+    union_df = union_df.dropDuplicates()
+
+    return union_df
+
+
+# Call the `relationship` function and assign the result to `transformed_relationship`
+transformed_relationship = relationship(transformed_business_entity, transformed_contacts, transformed_df)
+
+transformed_relationship = transformed_relationship.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
