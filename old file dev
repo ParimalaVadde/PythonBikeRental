@@ -1,159 +1,122 @@
-def relationship(transformed_business_entity, transformed_contacts, transformed_df):
-    from pyspark.sql import DataFrame
-    from pyspark.sql.functions import col, lit, when, coalesce
-    
-    # Get vendor contact names from transformed_df
+i m considering only main columns to explain u
+
+below is the sample data in transformed_df
+
+transformed_df
+
+vendor_name_cleaned, supplier_ecid, client_name, client_ecid, stg_business_entity_id
+4D CONCEPTS, NULL, XyAC, 221559630, c2bcfc32-a926-54d1-57a3-d509dfbdc228
+1888 MILLS, 188213211, XyAC, 221559630, 8229c16c-ab57-e4e4-0983-875afba38b0f
+
+below is the sample data in business_entity_details
+
+business_entity_details  
+by default business_entity_details will have data for jpmc. coz is a firm
+
+"business_entity_details_id","stg_business_entity_id","business_entity_name","company_structure","market_segment_type","year_incorporated","reported_annual_revenue","is_active","created_by","created_date"
+"d3c0849f-70aa-5a77-11e8-a02c5e31a18c","2d35a04a-5fdf-50d5-7750-c1c7621ddc33","jpmc","",NULL,"","",True,"PFD","2025-08-13 15:16:41.944"
+"7a699f05-9d31-d451-1c9f-f895aced9d34","8229c16c-ab57-e4e4-0983-875afba38b0f","1888 MILLS",NULL,NULL,NULL,NULL,True,"PFD","2025-08-13 15:16:41.944"
+"cd5c3a5f-bb1c-ac7b-034b-b9fe7ec9bf51","93b36423-1c9b-189e-453b-d6a712186c65","XyAC","",NULL,"","",True,"PFD","2025-08-13 15:16:41.944"
+"6e814622-c323-706b-f88b-2b8fcb0531a0","c2bcfc32-a926-54d1-57a3-d509dfbdc228","4D CONCEPTS","LLC",NULL,"2007",NULL,True,"PFD","2025-08-13 15:16:41.944"
+
+below is the sample data in business_entity_contacts
+it is not necessary that every stg_business_entity_id to have business_entity_contact_id. some might not have. in below sample data we have business_entity_contact_id for 1888 MILLS, 4D CONCEPTS
+
+business_entity_contacts
+
+"business_entity_contact_id","stg_business_entity_id","source_system_contact_id","source_system_name","contact_type","contact_name","contact_title","contact_active_indicator","contact_deactivated_date","decision_maker_indicator","decision_maker_type","is_active","created_by","created_date"
+"55594523-24c2-8977-089b-bd95e83ca74b","c2bcfc32-a926-54d1-57a3-d509dfbdc228",NULL,NULL,NULL,"LAURA STEPHENSON",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-13 15:22:20.613"
+"7cb5d5c8-0fe1-6973-c03f-6b4ec5457a35","8229c16c-ab57-e4e4-0983-875afba38b0f",NULL,NULL,NULL,"Phil Carpenter",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-08-13 15:22:20.613"
+
+
+
+now wat i want is this 
+
+stg_business_entity_id,business_entity_contact_id,stg_related_business_entity_id,related_business_entity_contact_id,business_entity_role,related_business_entity_role
+c2bcfc32-a926-54d1-57a3-d509dfbdc228,55594523-24c2-8977-089b-bd95e83ca74b,93b36423-1c9b-189e-453b-d6a712186c65,,Supplier,Client
+93b36423-1c9b-189e-453b-d6a712186c65,,2d35a04a-5fdf-50d5-7750-c1c7621ddc33,,Client,Firm
+8229c16c-ab57-e4e4-0983-875afba38b0f,7cb5d5c8-0fe1-6973-c03f-6b4ec5457a35,93b36423-1c9b-189e-453b-d6a712186c65,,Supplier,Client
+8229c16c-ab57-e4e4-0983-875afba38b0f,7cb5d5c8-0fe1-6973-c03f-6b4ec5457a35,2d35a04a-5fdf-50d5-7750-c1c7621ddc33,,Client,Firm
+
+
+in given transformed_df we have only one distinct client i.e XyAC
+so first create record for XyAC
+the stg_business_entity_id for XyAC is '93b36423-1c9b-189e-453b-d6a712186c65' these details u can get it from business_entity_details 
+so the dta looks like below , the client should be mapped to firm 
+firm will always be jpmc and jpmc stg_business_entity_id also u get it from business_entity_details 
+
+93b36423-1c9b-189e-453b-d6a712186c65,,2d35a04a-5fdf-50d5-7750-c1c7621ddc33,,Client,Firm
+
+suppose if u have 2 clients in transformed_df , 2 distinct client_name then u create first 2 records realted client and frim mapping 
+it completly depends on distinct client_name in transformed_df
+
+
+once u create records for client_name 
+
+now lets go to vendor_name_cleaned which is rename to contact_name
+
+# Get vendor contact names from transformed_df
     vendor_names_df = transformed_df.select(
         col("stg_business_entity_id"),
         col("vendor_contact_name").alias("contact_name")
     ).distinct()
+	
+	
+now in our example we have 2 contact_name i.e 
 
-    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
-    preferred_contacts = vendor_names_df.join(
-        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
-        on=["stg_business_entity_id", "contact_name"],
-        how="inner"
-    ).distinct()
+vendor_name_cleaned, supplier_ecid, client_name, client_ecid, stg_business_entity_id
+4D CONCEPTS, NULL, XyAC, 221559630, c2bcfc32-a926-54d1-57a3-d509dfbdc228
+1888 MILLS, 188213211, XyAC, 221559630, 8229c16c-ab57-e4e4-0983-875afba38b0f
 
-    # Create base DataFrame with all required columns structure
-    base_columns = [
-        "stg_business_entity_id",
-        "business_entity_contact_id", 
-        "related_business_entity_id",
-        "related_business_entity_contact_id",
-        "business_entity_role",
-        "related_business_entity_role",
-        "client_vendor_id",
-        "client_vendor_site_id", 
-        "client_ecid",
-        "associated_tax_ids"
-    ]
-    
-    # Initialize list to collect all relationship DataFrames
-    relationship_dfs = []
-    
-    # 1. Create supplier -> client relationships (when client_ecid is not null)
-    supplier_client_df = transformed_df.filter(
-        col("client_ecid").isNotNull() & (col("client_ecid") != "")
-    ).join(
-        transformed_business_entity,
-        on="stg_business_entity_id",
-        how="inner"
-    ).join(
-        preferred_contacts,
-        on="stg_business_entity_id", 
-        how="left"
-    ).select(
-        col("stg_business_entity_id"),
-        col("business_entity_contact_id"),
-        col("client_ecid").alias("related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("Supplier").alias("business_entity_role"),
-        lit("Client").alias("related_business_entity_role"),
-        col("client_vendor_id"),
-        col("client_vendor_site_id"),
-        col("client_ecid"),
-        col("associated_tax_ids")
-    )
-    
-    relationship_dfs.append(supplier_client_df)
-    
-    # 2. Create supplier -> firm relationships (when supplier_ecid is not null/empty)
-    supplier_firm_df = transformed_df.filter(
-        col("supplier_ecid").isNotNull() & (col("supplier_ecid") != "")
-    ).join(
-        transformed_business_entity,
-        on="stg_business_entity_id",
-        how="inner" 
-    ).join(
-        preferred_contacts,
-        on="stg_business_entity_id",
-        how="left"
-    ).select(
-        col("stg_business_entity_id"),
-        col("business_entity_contact_id"),
-        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("Client").alias("business_entity_role"),
-        lit("Firm").alias("related_business_entity_role"),
-        lit(None).alias("client_vendor_id"),
-        lit(None).alias("client_vendor_site_id"),
-        lit(None).alias("client_ecid"),
-        lit(None).alias("associated_tax_ids")
-    )
-    
-    relationship_dfs.append(supplier_firm_df)
-    
-    # 3. Create client -> firm relationships (for distinct clients)
-    client_firm_df = transformed_df.filter(
-        col("client_ecid").isNotNull() & (col("client_ecid") != "")
-    ).select(
-        col("client_ecid").alias("stg_business_entity_id")
-    ).distinct().withColumn(
-        "business_entity_contact_id", lit(None)
-    ).withColumn(
-        "related_business_entity_id", lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33")
-    ).withColumn(
-        "related_business_entity_contact_id", lit(None)
-    ).withColumn(
-        "business_entity_role", lit("Client")
-    ).withColumn(
-        "related_business_entity_role", lit("Firm")
-    ).withColumn(
-        "client_vendor_id", lit(None)
-    ).withColumn(
-        "client_vendor_site_id", lit(None)
-    ).withColumn(
-        "client_ecid", lit(None)
-    ).withColumn(
-        "associated_tax_ids", lit(None)
-    )
-    
-    relationship_dfs.append(client_firm_df)
-    
-    # 4. Create supplier relationships for those without supplier_ecid (null or empty)
-    # These only get supplier -> client mapping if they have client_ecid
-    supplier_no_ecid_df = transformed_df.filter(
-        (col("supplier_ecid").isNull() | (col("supplier_ecid") == "")) &
-        col("client_ecid").isNotNull() & (col("client_ecid") != "")
-    ).join(
-        transformed_business_entity,
-        on="stg_business_entity_id",
-        how="inner"
-    ).join(
-        preferred_contacts,
-        on="stg_business_entity_id",
-        how="left" 
-    ).select(
-        col("stg_business_entity_id"),
-        col("business_entity_contact_id"),
-        col("client_ecid").alias("related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("Supplier").alias("business_entity_role"),
-        lit("Client").alias("related_business_entity_role"),
-        col("client_vendor_id"),
-        col("client_vendor_site_id"),
-        col("client_ecid"),
-        col("associated_tax_ids")
-    )
-    
-    relationship_dfs.append(supplier_no_ecid_df)
-    
-    # Union all relationship DataFrames
-    union_df = relationship_dfs[0]
-    for df in relationship_dfs[1:]:
-        union_df = union_df.union(df)
-    
-    # Drop duplicates
-    union_df = union_df.dropDuplicates()
-    
-    return union_df
+for 4D CONCEPTS the stg_business_entity_id is 'c2bcfc32-a926-54d1-57a3-d509dfbdc228' which u get it from business_entity_details
 
-# Call the `relationship` function and assign the result to `transformed_relationship`
-transformed_relationship = relationship(transformed_business_entity, transformed_contacts, transformed_df)
+its a supplier 
 
-transformed_relationship = transformed_relationship.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-)
-transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
+so mapping follows as below . its client is XyAC
+c2bcfc32-a926-54d1-57a3-d509dfbdc228,55594523-24c2-8977-089b-bd95e83ca74b,93b36423-1c9b-189e-453b-d6a712186c65,,Supplier,Client
+
+since its supplier_ecid is ('', NULL, None)
+so we wont create a client to frim mapping for this
+
+but whereas for 1888 MILLS
+
+for 1888 MILLS the stg_business_entity_id is '8229c16c-ab57-e4e4-0983-875afba38b0f' which u get it from business_entity_details
+
+its a supplier 
+so mapping follows as below . its client is XyAC
+8229c16c-ab57-e4e4-0983-875afba38b0f,7cb5d5c8-0fe1-6973-c03f-6b4ec5457a35,93b36423-1c9b-189e-453b-d6a712186c65,,Supplier,Client
+
+since its supplier_ecid is not ('', NULL, None) , it has value 188213211, so we have to create client to firm mapping as well 
+8229c16c-ab57-e4e4-0983-875afba38b0f,7cb5d5c8-0fe1-6973-c03f-6b4ec5457a35,2d35a04a-5fdf-50d5-7750-c1c7621ddc33,,Client,Firm
+
+below is wat i want 
+stg_business_entity_id,business_entity_contact_id,stg_related_business_entity_id,related_business_entity_contact_id,business_entity_role,related_business_entity_role
+c2bcfc32-a926-54d1-57a3-d509dfbdc228,55594523-24c2-8977-089b-bd95e83ca74b,93b36423-1c9b-189e-453b-d6a712186c65,,Supplier,Client
+93b36423-1c9b-189e-453b-d6a712186c65,,2d35a04a-5fdf-50d5-7750-c1c7621ddc33,,Client,Firm
+8229c16c-ab57-e4e4-0983-875afba38b0f,7cb5d5c8-0fe1-6973-c03f-6b4ec5457a35,93b36423-1c9b-189e-453b-d6a712186c65,,Supplier,Client
+8229c16c-ab57-e4e4-0983-875afba38b0f,7cb5d5c8-0fe1-6973-c03f-6b4ec5457a35,2d35a04a-5fdf-50d5-7750-c1c7621ddc33,,Client,Firm
+
+
+
+
+but ur script is giving know , all incorrect data
+
+stg_business_entity_id,business_entity_contact_id,stg_related_business_entity_id,related_business_entity_contact_id,business_entity_role,related_business_entity_role,client_vendor_id,client_vendor_site_id,client_ecid,associated_tax_ids,is_active,business_entity_relationship_id
+221559630,,2d35a04a-5fdf-50d5-7750-c1c7621ddc33,,Client,Firm,,,,,TRUE,9e049308-81e8-71cf-7645-19e2b12fb0bf
+fca55c0a-40a9-d5ac-1b77-92df8f0f8643,f76da460-3dff-b265-94d8-d86eda405c27,221559630,,Supplier,Client,66574,,221559630,390257950,TRUE,a578ba80-a5c1-16d1-f6f4-a012344b0be0
+a5cb41d7-ad8e-7071-42a3-661d61073b93,74212527-3567-f454-fa9c-de3104c9cd4a,221559630,,Supplier,Client,74936,,221559630,,TRUE,c0d3f2ed-5405-797b-1164-25aed25e3169
+c34d7b15-17f2-4110-dc85-df384e3cb404,dad65744-ad27-ce16-b90b-36e8f036459e,221559630,,Supplier,Client,78273,,221559630,,TRUE,1fafd55b-efcd-5500-445b-dfe6567df8c9
+c2bcfc32-a926-54d1-57a3-d509dfbdc228,55594523-24c2-8977-089b-bd95e83ca74b,221559630,,Supplier,Client,66287,,221559630,,TRUE,9d563d1c-47ff-4195-493d-828f9d04e9d8
+8229c16c-ab57-e4e4-0983-875afba38b0f,7cb5d5c8-0fe1-6973-c03f-6b4ec5457a35,221559630,,Supplier,Client,46933,,221559630,,TRUE,66e362b6-1a03-e2f4-2822-2cc4132e85d4
+8229c16c-ab57-e4e4-0983-875afba38b0f,7cb5d5c8-0fe1-6973-c03f-6b4ec5457a35,2d35a04a-5fdf-50d5-7750-c1c7621ddc33,,Client,Firm,,,,,TRUE,aa8637a2-5d91-843d-c513-e039850fbe20
+
+y ur mapping stg_related_business_entity_id to client_ecid
+
+stg_related_business_entity_id
+2d35a04a-5fdf-50d5-7750-c1c7621ddc33
+221559630
+221559630
+
+
+note : i need all below columns in final realtionship table
+stg_business_entity_id,business_entity_contact_id,stg_related_business_entity_id,related_business_entity_contact_id,business_entity_role,related_business_entity_role,client_vendor_id,client_vendor_site_id,client_ecid,associated_tax_ids,is_active,business_entity_relationship_id
