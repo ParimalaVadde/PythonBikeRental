@@ -1,3 +1,12 @@
+# Update identifier_type column in transformed_identifiers
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_type",
+    when(col("identifier_type") == "client_ecid", "ecid")
+    .when(col("identifier_type") == "supplier_ecid", "ecid")
+    .otherwise(col("identifier_type"))
+)
+
+
 transformed_identifiers has column 'identifier_type' if the value is client_ecid or supplier_ecid then need to replace with ecid
 def relationship(transformed_business_entity, transformed_contacts, transformed_df):
     from pyspark.sql import DataFrame
