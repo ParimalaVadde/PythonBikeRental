@@ -1,189 +1,121 @@
-import json
-import hashlib
-import uuid
-import psycopg2
-import utils as utl
-import staging_schema as ss
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from pyspark.sql import SparkSession
-from awsglue.context import GlueContext
-from awsglue.job import Job
-from awsglue.dynamicframe import DynamicFrame
-from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, from_json, struct, regexp_replace
-from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
-from pyspark.sql.utils import AnalysisException
-from datetime import datetime
-from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round,size
-from pyspark.sql import DataFrame
-from functools import reduce
-from pyspark.sql.functions import col, lit, when, isnan, isnull
-from pyspark.sql.types import NullType
-from pyspark.sql.functions import lit
-import sys
-import boto3
-
-## @params: [JOB_NAME]
-args = getResolvedOptions(sys.argv, ['JOB_NAME'])
-
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-
-s3 = boto3.client("s3")
-
-# Register the UDF
-compute_uuid_udf = udf(lambda x: utl.compute_uuid(x, ss.decimal_columns), StringType())
-
-csv_file_path = 's3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/pfd_scripts/pfd_staging_pvr_test/transformed_df.csv'
-
-transformed_df = spark.read \
-                 .option("header","true") \
-                 .option("inferSchema","true") \
-                 .csv(csv_file_path)
-                 
-transformed_df.show()
-
-def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
-    """
-    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
-    Handles void data type columns by converting them to string type.
-    """
+def relationship(transformed_business_entity, transformed_contacts, transformed_df):
+    from pyspark.sql import DataFrame
+    from pyspark.sql.functions import col, lit, when, coalesce, uuid
     
-    # Check for void columns and convert them to string type
-    void_columns = [field.name for field in df.schema.fields if isinstance(field.dataType, NullType)]
-    
-    if void_columns:
-        print(f"Found void columns: {void_columns}. Converting to string type.")
-        # Convert void columns to string type with null values
-        for col_name in void_columns:
-            df = df.withColumn(col_name, lit(None).cast("string"))
-    
-    try:
-        # Ensure temp_path ends with a trailing slash
-        if not temp_path.endswith('/'):
-            temp_path += '/'
-        
-        # Coalesce to one partition and write to temp S3 directory with proper CSV options
-        df.coalesce(1).write.mode("overwrite") \
-            .option("header", "true") \
-            .option("quote", '"') \
-            .option("escape", '"') \
-            .option("quoteAll", "true") \
-            .option("multiLine", "true") \
-            .option("timestampFormat", "yyyy-MM-dd HH:mm:ss") \
-            .option("dateFormat", "yyyy-MM-dd") \
-            .csv(temp_path)
-        
-        # Initialize S3 client
-        s3 = boto3.client("s3")
-        
-        # Parse temp path
-        temp_bucket = temp_path.replace("s3://", "").split("/")[0]
-        temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
-        
-        # Remove trailing slash from prefix if present
-        if temp_prefix.endswith('/'):
-            temp_prefix = temp_prefix[:-1]
-        
-        # List objects in temp directory
-        response = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
-        
-        if 'Contents' not in response:
-            raise Exception(f"No files found in temp path: {temp_path}")
-        
-        objects = response['Contents']
-        
-        # Find the CSV part file, excluding _SUCCESS and other metadata files
-        csv_files = [
-            obj['Key'] for obj in objects 
-            if obj['Key'].endswith(".csv") and not obj['Key'].endswith("_SUCCESS")
-        ]
-        
-        if not csv_files:
-            raise Exception(f"No CSV files found in temp directory: {temp_path}")
-        
-        # Use the first (and should be only) CSV file
-        part_file = csv_files[0]
-        
-        # Copy the CSV file to the target location
-        s3.copy_object(
-            Bucket=s3_bucket,
-            CopySource={'Bucket': temp_bucket, 'Key': part_file},
-            Key=s3_key
-        )
-        
-        print(f"Successfully copied CSV to s3://{s3_bucket}/{s3_key}")
-        
-        # Clean up temp files - delete all objects in the temp directory
-        delete_objects = [{'Key': obj['Key']} for obj in objects]
-        if delete_objects:
-            s3.delete_objects(
-                Bucket=temp_bucket,
-                Delete={'Objects': delete_objects}
-            )
-            print(f"Cleaned up {len(delete_objects)} temp files")
-            
-    except Exception as e:
-        print(f"Error in write_single_csv_to_s3_fixed: {str(e)}")
-        raise
+    # Get vendor contact names from transformed_df
+    vendor_names_df = transformed_df.select(
+        col("stg_business_entity_id"),
+        col("vendor_contact_name").alias("contact_name")
+    ).distinct()
 
-# PROCESS ONLY CARD_REVENUE
-print("Processing card_revenue only...")
+    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
+    preferred_contacts = vendor_names_df.join(
+        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
+        on=["stg_business_entity_id", "contact_name"],
+        how="inner"
+    ).distinct()
 
-# Select base columns and card_revenue (don't include card_revenue in jsoncol to avoid conflicts)
-base_columns = ['stg_business_entity_id']
-card_revenue_df = transformed_df.select(base_columns + ['card_revenue'])
+    # Create a mapping from client_name to stg_business_entity_id using business_entity_details
+    client_mapping = transformed_business_entity.select(
+        col("business_entity_name").alias("client_name"),
+        col("stg_business_entity_id").alias("client_stg_business_entity_id")
+    )
 
-# Process card_revenue using the utility function
-card_revenue_config = ss.JSON_FIELD_CONFIGS['card_revenue']
-flattened_card_revenue = utl.flatten_json_column_improved(
-    card_revenue_df, 
-    'card_revenue', 
-    card_revenue_config, 
-    base_columns
-)
-
-# Check if we got any results
-if flattened_card_revenue.count() > 0:
-    print(f"Successfully flattened card_revenue: {flattened_card_revenue.count()} rows")
+    # Initialize list to collect all relationship DataFrames
+    relationship_dfs = []
     
-    # Optional: Remove rows where all card_revenue fields are null
-    card_revenue_cols = [col_name for col_name in flattened_card_revenue.columns 
-                        if col_name.startswith('card_revenue__')]
-    
-    if card_revenue_cols:
-        # Create condition to keep rows where at least one card_revenue field is not null
-        non_null_condition = None
-        for col_name in card_revenue_cols:
-            condition = col(col_name).isNotNull()
-            if non_null_condition is None:
-                non_null_condition = condition
-            else:
-                non_null_condition = non_null_condition | condition
-        
-        # Filter out completely null rows
-        final_df = flattened_card_revenue.filter(non_null_condition)
-        print(f"After removing null rows: {final_df.count()} rows")
-    else:
-        final_df = flattened_card_revenue
-    
-    # Show sample data
-    print("Sample data:")
-    final_df.show(10, truncate=False)
-    
-    # Write to S3
-    write_single_csv_to_s3_fixed(
-        final_df,
-        s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-        s3_key="pfd_scripts/pfd_staging_pvr_test/card_revenue_only.csv",
-        temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+    # 1. Create client -> firm relationships first (for distinct clients)
+    distinct_clients = transformed_df.select("client_name").distinct().filter(
+        col("client_name").isNotNull() & (col("client_name") != "")
     )
     
-else:
-    print("No data found after flattening card_revenue")
+    client_firm_df = distinct_clients.join(
+        client_mapping,
+        on="client_name",
+        how="inner"
+    ).select(
+        col("client_stg_business_entity_id").alias("stg_business_entity_id"),
+        lit(None).alias("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("Client").alias("business_entity_role"),
+        lit("Firm").alias("related_business_entity_role"),
+        lit(None).alias("client_vendor_id"),
+        lit(None).alias("client_vendor_site_id"),
+        lit(None).alias("client_ecid"),
+        lit(None).alias("associated_tax_ids")
+    )
+    
+    relationship_dfs.append(client_firm_df)
+    
+    # 2. Create supplier -> client relationships
+    # Join transformed_df with client_mapping to get client's stg_business_entity_id
+    supplier_client_base = transformed_df.join(
+        client_mapping,
+        on="client_name",
+        how="inner"
+    ).join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
+    )
+    
+    supplier_client_df = supplier_client_base.select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        col("client_stg_business_entity_id").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("Supplier").alias("business_entity_role"),
+        lit("Client").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("associated_tax_ids")
+    )
+    
+    relationship_dfs.append(supplier_client_df)
+    
+    # 3. Create supplier -> firm relationships (only when supplier_ecid is not null/empty)
+    supplier_firm_base = transformed_df.filter(
+        col("supplier_ecid").isNotNull() & (col("supplier_ecid") != "") & (col("supplier_ecid") != "NULL")
+    ).join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
+    )
+    
+    supplier_firm_df = supplier_firm_base.select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("Client").alias("business_entity_role"),
+        lit("Firm").alias("related_business_entity_role"),
+        lit(None).alias("client_vendor_id"),
+        lit(None).alias("client_vendor_site_id"),
+        lit(None).alias("client_ecid"),
+        lit(None).alias("associated_tax_ids")
+    )
+    
+    relationship_dfs.append(supplier_firm_df)
+    
+    # Union all relationship DataFrames
+    union_df = relationship_dfs[0]
+    for df in relationship_dfs[1:]:
+        union_df = union_df.union(df)
+    
+    # Drop duplicates
+    union_df = union_df.dropDuplicates()
+    
+    # Add business_entity_relationship_id with UUID
+    union_df = union_df.withColumn("business_entity_relationship_id", uuid())
+    
+    return union_df
 
-job.commit()
+# Call the `relationship` function and assign the result to `transformed_relationship`
+transformed_relationship = relationship(transformed_business_entity, transformed_contacts, transformed_df)
+
+transformed_relationship = transformed_relationship.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
