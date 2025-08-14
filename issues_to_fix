@@ -1,3 +1,4 @@
+transformed_identifiers has column 'identifier_type' if the value is client_ecid or supplier_ecid then need to replace with ecid
 def relationship(transformed_business_entity, transformed_contacts, transformed_df):
     from pyspark.sql import DataFrame
     from pyspark.sql.functions import col, lit, when, coalesce
