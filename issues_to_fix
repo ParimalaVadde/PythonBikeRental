@@ -1,3 +1,94 @@
+# Select and rename columns from `transformed_relationship`
+transformed_rel_identifiers = transformed_relationship.select(
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("client_vendor_id"),
+    col("client_vendor_site_id"),
+    col("client_ecid"),
+    col("supplier_ecid"),
+    col("associated_tax_ids")
+)
+
+# List of columns to melt for `transformed_rel_identifiers`
+transformed_rel_identifiers_columns = ["client_vendor_id", "client_vendor_site_id", "client_ecid","supplier_ecid","associated_tax_ids"]
+
+# Melt `transformed_rel_identifiers` using the `melt_dataframe` function
+transformed_rel_identifiers = utl.melt_dataframe(
+    transformed_rel_identifiers,
+    id_column="business_entity_relationship_id",
+    columns_to_melt=transformed_rel_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+
+# Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+transformed_rel_identifiers = transformed_rel_identifiers.join(
+    transformed_relationship,
+    on="business_entity_relationship_id",  # Use the common column for the join
+    how="inner"
+)
+
+transformed_rel_identifiers = transformed_rel_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("business_entity_relationship_id").alias("related_identifier")).withColumn("related_identifier_source", lit("relationship"))
+
+ 
+#transformed_rel_identifiers.show(truncate=False)
+
+relationship_key_pairs = transformed_rel_identifiers.select(
+    "identifier_type", "identifier_value"
+).distinct()
+
+# Select columns from `transformed_df` for `transformed_identifiers`
+transformed_identifiers = transformed_df.select(*ss.identifiers)
+
+# Melt `transformed_identifiers` using the `melt_dataframe` function
+melted_business_identifiers = utl.melt_dataframe(
+    transformed_identifiers,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.transformed_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+
+#Apply Anti-join using only identifier_type + identifier_value
+filtered_business_identifiers = melted_business_identifiers.alias("biz").join(
+    broadcast(relationship_key_pairs).alias("rel"),
+    on=[
+        col("biz.identifier_type") == col("rel.identifier_type"),
+        col("biz.identifier_value") == col("rel.identifier_value")
+    ],
+    how="left_anti"
+)
+
+# Final selection with source
+transformed_identifiers = filtered_business_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("stg_business_entity_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("business_entity"))
+
+
+#transformed_identifiers.show(truncate=False)
+
+
+# # Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+# transformed_identifiers = transformed_identifiers.join(
+#     transformed_rel_identifiers,
+#     on="stg_business_entity_id",  # Use the common column for the join
+#     how="left"
+# # 
+
+transformed_identifiers = transformed_identifiers.union(transformed_rel_identifiers)
+
+# Drop duplicates
+transformed_identifiers = transformed_identifiers.dropDuplicates()
+
+transformed_identifiers = transformed_identifiers.filter(
+    col("identifier_value").isNotNull()
+)
+
 # Update identifier_type column in transformed_identifiers
 transformed_identifiers = transformed_identifiers.withColumn(
     "identifier_type",
@@ -6,123 +97,16 @@ transformed_identifiers = transformed_identifiers.withColumn(
     .otherwise(col("identifier_type"))
 )
 
+transformed_identifiers = transformed_identifiers.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
 
-transformed_identifiers has column 'identifier_type' if the value is client_ecid or supplier_ecid then need to replace with ecid
-def relationship(transformed_business_entity, transformed_contacts, transformed_df):
-    from pyspark.sql import DataFrame
-    from pyspark.sql.functions import col, lit, when, coalesce
-    
-    # Get vendor contact names from transformed_df
-    vendor_names_df = transformed_df.select(
-        col("stg_business_entity_id"),
-        col("vendor_contact_name").alias("contact_name")
-    ).distinct()
 
-    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
-    preferred_contacts = vendor_names_df.join(
-        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
-        on=["stg_business_entity_id", "contact_name"],
-        how="inner"
-    ).distinct()
-    
-    print("hi 1")
-    # Print column names for debugging
-    print("transformed_business_entity columns:", transformed_business_entity.columns)
-    print("transformed_df columns:", transformed_df.columns)
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_id",
+    compute_uuid_udf(struct(*transformed_identifiers.columns))
+)
 
-    # Create a mapping from client_name to stg_business_entity_id using business_entity_details
-    client_mapping = transformed_business_entity.select(
-        col("business_entity_name").alias("client_name"),
-        col("stg_business_entity_id").alias("client_stg_business_entity_id")
-    )
-    
-    print("hi 2")
-
-    # Initialize list to collect all relationship DataFrames
-    relationship_dfs = []
-    
-    # 1. Create client -> firm relationships first (for distinct clients)
-    distinct_clients = transformed_df.select("client_name").distinct().filter(
-        col("client_name").isNotNull() & (col("client_name") != "")
-    )
-    
-    client_firm_df = distinct_clients.join(
-        client_mapping,
-        on="client_name",
-        how="inner"
-    ).select(
-        col("client_stg_business_entity_id").alias("stg_business_entity_id"),
-        lit(None).alias("business_entity_contact_id"),
-        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("Client").alias("business_entity_role"),
-        lit("Firm").alias("related_business_entity_role"),
-        lit(None).alias("client_vendor_id"),
-        lit(None).alias("client_vendor_site_id"),
-        lit(None).alias("client_ecid"),
-        lit(None).alias("associated_tax_ids")
-    )
-    
-    relationship_dfs.append(client_firm_df)
-    print("hi 3")
-    # 2. Create supplier -> client relationships
-    # Join transformed_df with client_mapping to get client's stg_business_entity_id
-    supplier_client_base = transformed_df.join(
-        client_mapping,
-        on="client_name",
-        how="inner"
-    ).join(
-        preferred_contacts,
-        on="stg_business_entity_id",
-        how="left"
-    )
-    
-    supplier_client_df = supplier_client_base.select(
-        col("stg_business_entity_id"),
-        col("business_entity_contact_id"),
-        col("client_stg_business_entity_id").alias("stg_related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("Supplier").alias("business_entity_role"),
-        lit("Client").alias("related_business_entity_role"),
-        col("client_vendor_id"),
-        col("client_vendor_site_id"),
-        col("client_ecid"),
-        col("associated_tax_ids")
-    )
-    
-    relationship_dfs.append(supplier_client_df)
-    
-    # 3. Create supplier -> firm relationships (only when supplier_ecid is not null/empty)
-    supplier_firm_base = transformed_df.filter(
-        col("supplier_ecid").isNotNull() & (col("supplier_ecid") != "") & (col("supplier_ecid") != "NULL")
-    ).join(
-        preferred_contacts,
-        on="stg_business_entity_id",
-        how="left"
-    )
-    
-    supplier_firm_df = supplier_firm_base.select(
-        col("stg_business_entity_id"),
-        col("business_entity_contact_id"),
-        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("Client").alias("business_entity_role"),
-        lit("Firm").alias("related_business_entity_role"),
-        lit(None).alias("client_vendor_id"),
-        lit(None).alias("client_vendor_site_id"),
-        lit(None).alias("client_ecid"),
-        lit(None).alias("associated_tax_ids")
-    )
-    print("hi 4")
-    relationship_dfs.append(supplier_firm_df)
-    
-    # Union all relationship DataFrames
-    union_df = relationship_dfs[0]
-    for df in relationship_dfs[1:]:
-        union_df = union_df.union(df)
-    print("hi 5")
-    # Drop duplicates
-    union_df = union_df.dropDuplicates()
-
-    print("hi 6")
-    return union_df
+# Show the resulting DataFrame
+transformed_identifiers.show(truncate=False)
