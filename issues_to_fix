@@ -1,3 +1,5 @@
+Error Category: QUERY_ERROR; Failed Line Number: 561; Spark Error Class: MISSING_COLUMN; AnalysisException: Column 'business_entity_name' does not exist. Did you mean one of the following? [stg_business_entity_id];
+
 def relationship(transformed_business_entity, transformed_contacts, transformed_df):
     from pyspark.sql import DataFrame
     from pyspark.sql.functions import col, lit, when, coalesce, uuid
