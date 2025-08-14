@@ -1,12 +1,6 @@
-Error Category: QUERY_ERROR; Failed Line Number: 561; Spark Error Class: MISSING_COLUMN; AnalysisException: Column 'business_entity_name' does not exist. Did you mean one of the following? [stg_business_entity_id];
-
-# Print column names for debugging
-    print("transformed_business_entity columns:", transformed_business_entity.columns)
-    print("transformed_df columns:", transformed_df.columns)
-
 def relationship(transformed_business_entity, transformed_contacts, transformed_df):
     from pyspark.sql import DataFrame
-    from pyspark.sql.functions import col, lit, when, coalesce, uuid
+    from pyspark.sql.functions import col, lit, when, coalesce
     
     # Get vendor contact names from transformed_df
     vendor_names_df = transformed_df.select(
@@ -20,12 +14,19 @@ def relationship(transformed_business_entity, transformed_contacts, transformed_
         on=["stg_business_entity_id", "contact_name"],
         how="inner"
     ).distinct()
+    
+    print("hi 1")
+    # Print column names for debugging
+    print("transformed_business_entity columns:", transformed_business_entity.columns)
+    print("transformed_df columns:", transformed_df.columns)
 
     # Create a mapping from client_name to stg_business_entity_id using business_entity_details
     client_mapping = transformed_business_entity.select(
         col("business_entity_name").alias("client_name"),
         col("stg_business_entity_id").alias("client_stg_business_entity_id")
     )
+    
+    print("hi 2")
 
     # Initialize list to collect all relationship DataFrames
     relationship_dfs = []
@@ -53,7 +54,7 @@ def relationship(transformed_business_entity, transformed_contacts, transformed_
     )
     
     relationship_dfs.append(client_firm_df)
-    
+    print("hi 3")
     # 2. Create supplier -> client relationships
     # Join transformed_df with client_mapping to get client's stg_business_entity_id
     supplier_client_base = transformed_df.join(
@@ -102,26 +103,16 @@ def relationship(transformed_business_entity, transformed_contacts, transformed_
         lit(None).alias("client_ecid"),
         lit(None).alias("associated_tax_ids")
     )
-    
+    print("hi 4")
     relationship_dfs.append(supplier_firm_df)
     
     # Union all relationship DataFrames
     union_df = relationship_dfs[0]
     for df in relationship_dfs[1:]:
         union_df = union_df.union(df)
-    
+    print("hi 5")
     # Drop duplicates
     union_df = union_df.dropDuplicates()
-    
-    # Add business_entity_relationship_id with UUID
-    union_df = union_df.withColumn("business_entity_relationship_id", uuid())
-    
+
+    print("hi 6")
     return union_df
-
-# Call the `relationship` function and assign the result to `transformed_relationship`
-transformed_relationship = relationship(transformed_business_entity, transformed_contacts, transformed_df)
-
-transformed_relationship = transformed_relationship.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-)
