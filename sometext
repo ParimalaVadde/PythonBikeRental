@@ -1,12 +1,6 @@
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-
-
 def relationship(transformed_business_entity, transformed_contacts, transformed_df):
-    from pyspark.sql.functions import col, lit, when
     from pyspark.sql import DataFrame
+    from pyspark.sql.functions import col, lit, when, coalesce
     
     # Get vendor contact names from transformed_df
     vendor_names_df = transformed_df.select(
@@ -20,134 +14,118 @@ def relationship(transformed_business_entity, transformed_contacts, transformed_
         on=["stg_business_entity_id", "contact_name"],
         how="inner"
     ).distinct()
+    
+    print("hi 1")
+    # Print column names for debugging
+    print("transformed_business_entity columns:", transformed_business_entity.columns)
+    print("transformed_df columns:", transformed_df.columns)
 
-    # Perform a left join between `transformed_business_entity` and `transformed_contacts`
-    base_df = transformed_business_entity.join(
+    # Create a mapping from client_name to stg_business_entity_id using business_entity_details
+    client_mapping = transformed_business_entity.select(
+        col("business_entity_name").alias("client_name"),
+        col("stg_business_entity_id").alias("client_stg_business_entity_id")
+    )
+    
+    print("hi 2")
+
+    # Initialize list to collect all relationship DataFrames
+    relationship_dfs = []
+    
+    # 1. Create client -> firm relationships first (for distinct clients)
+    distinct_clients = transformed_df.select("client_name").distinct().filter(
+        col("client_name").isNotNull() & (col("client_name") != "")
+    )
+    
+    client_firm_df = distinct_clients.join(
+        client_mapping,
+        on="client_name",
+        how="inner"
+    ).select(
+        col("client_stg_business_entity_id").alias("stg_business_entity_id"),
+        lit(None).alias("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("Client").alias("business_entity_role"),
+        lit("Firm").alias("related_business_entity_role"),
+        lit(None).alias("client_vendor_id"),
+        lit(None).alias("client_vendor_site_id"),
+        lit(None).alias("client_ecid"),
+        lit(None).alias("supplier_ecid"),
+        lit(None).alias("associated_tax_ids")
+    )
+    
+    relationship_dfs.append(client_firm_df)
+    print("hi 3")
+    # 2. Create supplier -> client relationships
+    # Join transformed_df with client_mapping to get client's stg_business_entity_id
+    supplier_client_base = transformed_df.join(
+        client_mapping,
+        on="client_name",
+        how="inner"
+    ).join(
         preferred_contacts,
         on="stg_business_entity_id",
         how="left"
     )
-
-    # Perform an inner join between the result and `transformed_df`
-    base_df = base_df.join(
-        transformed_df,
-        on="stg_business_entity_id",
-        how="inner"
-    )
-
-    # Create separate DataFrames for different relationship mappings
-    relationship_dfs = []
-
-    # 1. Supplier -> Client relationships (when client exists)
-    supplier_client_df = base_df.filter(
-        (col("client_ecid").isNotNull()) & (col("client_ecid") != "")
-    ).select(
+    
+    supplier_client_df = supplier_client_base.select(
         col("stg_business_entity_id"),
         col("business_entity_contact_id"),
-        col("client_ecid").alias("stg_related_business_entity_id"),
+        col("client_stg_business_entity_id").alias("stg_related_business_entity_id"),
         lit(None).alias("related_business_entity_contact_id"),
         lit("Supplier").alias("business_entity_role"),
         lit("Client").alias("related_business_entity_role"),
         col("client_vendor_id"),
         col("client_vendor_site_id"),
         col("client_ecid"),
+        col("supplier_ecid"),
         col("associated_tax_ids")
     )
+    
     relationship_dfs.append(supplier_client_df)
-
-    # 2. Supplier -> Firm relationships (when supplier_ecid is not null/empty)
-    supplier_firm_df = base_df.filter(
-        (col("supplier_ecid").isNotNull()) & (col("supplier_ecid") != "")
-    ).select(
+    
+    # 3. Create supplier -> firm relationships (only when supplier_ecid is not null/empty)
+    supplier_firm_base = transformed_df.filter(
+        col("supplier_ecid").isNotNull() & (col("supplier_ecid") != "") & (col("supplier_ecid") != "NULL")
+    ).join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
+    )
+    
+    supplier_firm_df = supplier_firm_base.select(
         col("stg_business_entity_id"),
         col("business_entity_contact_id"),
         lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
         lit(None).alias("related_business_entity_contact_id"),
         lit("Client").alias("business_entity_role"),
         lit("Firm").alias("related_business_entity_role"),
-        col("client_vendor_id"),
-        col("client_vendor_site_id"),
-        col("client_ecid"),
-        col("associated_tax_ids")
-    )
-    relationship_dfs.append(supplier_firm_df)
-
-    # 3. Client -> Firm relationships (for distinct clients)
-    # Get unique clients from the data
-    unique_clients_df = base_df.select(
-        col("client_ecid").alias("stg_business_entity_id"),
-        col("client_name")
-    ).filter(
-        (col("client_ecid").isNotNull()) & (col("client_ecid") != "")
-    ).distinct()
-
-    if unique_clients_df.count() > 0:
-        client_firm_df = unique_clients_df.select(
-            col("stg_business_entity_id"),
-            lit(None).alias("business_entity_contact_id"),
-            lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
-            lit(None).alias("related_business_entity_contact_id"),
-            lit("Client").alias("business_entity_role"),
-            lit("Firm").alias("related_business_entity_role"),
-            lit(None).alias("client_vendor_id"),
-            lit(None).alias("client_vendor_site_id"),
-            col("stg_business_entity_id").alias("client_ecid"),
-            lit(None).alias("associated_tax_ids")
-        )
-        relationship_dfs.append(client_firm_df)
-
-    # 4. Handle cases where supplier_ecid is null/empty - only supplier->client mapping
-    supplier_only_df = base_df.filter(
-        ((col("supplier_ecid").isNull()) | (col("supplier_ecid") == "")) &
-        (col("client_ecid").isNotNull()) & (col("client_ecid") != "")
-    ).select(
-        col("stg_business_entity_id"),
-        col("business_entity_contact_id"),
-        col("client_ecid").alias("stg_related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("Supplier").alias("business_entity_role"),
-        lit("Client").alias("related_business_entity_role"),
-        col("client_vendor_id"),
-        col("client_vendor_site_id"),
-        col("client_ecid"),
-        col("associated_tax_ids")
-    )
-    relationship_dfs.append(supplier_only_df)
-
-    # 5. Handle Firm relationships (existing logic for stg_jpmc_business_entity_id)
-    firm_df = transformed_business_entity.join(
-        transformed_df,
-        transformed_business_entity["stg_business_entity_id"] == transformed_df["stg_jpmc_business_entity_id"],
-        how="inner"
-    ).select(
-        col("stg_jpmc_business_entity_id").alias("stg_business_entity_id"),
-        lit(None).alias("business_entity_contact_id"),
-        col("stg_payor_business_entity_id").alias("stg_related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("Firm").alias("business_entity_role"),
-        lit("Client").alias("related_business_entity_role"),
         lit(None).alias("client_vendor_id"),
         lit(None).alias("client_vendor_site_id"),
         lit(None).alias("client_ecid"),
+        lit(None).alias("supplier_ecid"),
         lit(None).alias("associated_tax_ids")
     )
-    relationship_dfs.append(firm_df)
-
-    # Union all DataFrames
+    print("hi 4")
+    relationship_dfs.append(supplier_firm_df)
+    
+    # Union all relationship DataFrames
     union_df = relationship_dfs[0]
     for df in relationship_dfs[1:]:
         union_df = union_df.union(df)
-
+    print("hi 5")
     # Drop duplicates
     union_df = union_df.dropDuplicates()
 
+    print("hi 6")
     return union_df
 
-
 # Call the `relationship` function and assign the result to `transformed_relationship`
-transformed_relationship = relationship(transformed_business_entity, transformed_contacts, transformed_df)
+transformed_relationship = relationship(transformed_business_entity_details, transformed_contacts, transformed_df)
 
 transformed_relationship = transformed_relationship.withColumn(
     "is_active", 
     lit(True)  # This creates a Boolean column with True values for all rows
 )
+print("hi 7")
+transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
