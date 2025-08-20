@@ -1,27 +1,112 @@
-jira story : SDS Data Processing : Test upload functionality in staging
+# Select and rename columns from `transformed_relationship`
+transformed_rel_identifiers = transformed_relationship.select(
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("client_vendor_id"),
+    col("client_vendor_site_id"),
+    col("client_ecid"),
+    col("supplier_ecid"),
+    col("associated_tax_ids")
+)
 
-Deploy fixed code to UAT and perform functional testing of staging job for all tables in staging
+# List of columns to melt for `transformed_rel_identifiers`
+transformed_rel_identifiers_columns = ["client_vendor_id", "client_vendor_site_id", "client_ecid","supplier_ecid","associated_tax_ids"]
 
-Fix identified staging job issues and make the data pipeline operational for PFD.
+# Melt `transformed_rel_identifiers` using the `melt_dataframe` function
+transformed_rel_identifiers = utl.melt_dataframe(
+    transformed_rel_identifiers,
+    id_column="business_entity_relationship_id",
+    columns_to_melt=transformed_rel_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+
+# Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+transformed_rel_identifiers = transformed_rel_identifiers.join(
+    transformed_relationship,
+    on="business_entity_relationship_id",  # Use the common column for the join
+    how="inner"
+)
+
+transformed_rel_identifiers = transformed_rel_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("business_entity_relationship_id").alias("related_identifier")).withColumn("related_identifier_source", lit("relationship"))
 
  
+#transformed_rel_identifiers.show(truncate=False)
 
-Building the Relationship for Supplier ECID: Establish and validate the relationship between suppliers and their ECIDs to ensure accurate data mapping.
-Testing Special Characters: Verify that the system correctly handles special characters in data fields to prevent processing errors.
-Handling Empty Strings: Implement logic to appropriately manage empty strings in data inputs, ensuring they don't cause pipeline failures.
+relationship_key_pairs = transformed_rel_identifiers.select(
+    "identifier_type", "identifier_value"
+).distinct()
+
+# Select columns from `transformed_df` for `transformed_identifiers`
+transformed_identifiers = transformed_df.select(*ss.identifiers)
+
+# Melt `transformed_identifiers` using the `melt_dataframe` function
+melted_business_identifiers = utl.melt_dataframe(
+    transformed_identifiers,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.transformed_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
 
 
-sub task 1: Test Upload Functionality & Resolve Issues
-Execute and validate the upload process end‑to‑end. Identify any errors or failures and implement fixes to ensure reliable data ingestion.
+#Apply Anti-join using only identifier_type + identifier_value
+filtered_business_identifiers = melted_business_identifiers.alias("biz").join(
+    broadcast(relationship_key_pairs).alias("rel"),
+    on=[
+        col("biz.identifier_type") == col("rel.identifier_type"),
+        col("biz.identifier_value") == col("rel.identifier_value")
+    ],
+    how="left_anti"
+)
+
+# Final selection with source
+transformed_identifiers = filtered_business_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("stg_business_entity_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("business_entity"))
 
 
-sub task 2: Validate Special Character and Empty String Handling
-Test and refine the staging logic to handle special characters and empty strings in incoming data without pipeline failures.
+#transformed_identifiers.show(truncate=False)
 
-Sub-task 1: Test Upload Functionality & Resolve Issues
-Upload process tested end-to-end with issues resolved for seamless data ingestion.
 
-Sub-task 2: Validate Special Character and Empty String Handling
-Special characters and empty strings handling validated to maintain pipeline stability.
+# # Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+# transformed_identifiers = transformed_identifiers.join(
+#     transformed_rel_identifiers,
+#     on="stg_business_entity_id",  # Use the common column for the join
+#     how="left"
+# # 
 
-All upload functionality, staging jobs, and data pipeline issues have been tested and resolved, with supplier-ECID relationships, special character handling, and empty string management validated for reliable and accurate data processing.
+transformed_identifiers = transformed_identifiers.union(transformed_rel_identifiers)
+
+# Drop duplicates
+transformed_identifiers = transformed_identifiers.dropDuplicates()
+
+transformed_identifiers = transformed_identifiers.filter(
+    col("identifier_value").isNotNull()
+)
+
+# Update identifier_type column in transformed_identifiers
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_type",
+    when(col("identifier_type") == "client_ecid", "ecid")
+    .when(col("identifier_type") == "supplier_ecid", "ecid")
+    .otherwise(col("identifier_type"))
+)
+
+transformed_identifiers = transformed_identifiers.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
+
+
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_id",
+    compute_uuid_udf(struct(*transformed_identifiers.columns))
+)
+
+# Show the resulting DataFrame
+transformed_identifiers.show(truncate=False)
