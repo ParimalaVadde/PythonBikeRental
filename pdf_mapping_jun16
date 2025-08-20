@@ -6,3 +6,39 @@ bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		clie
 bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	37		538669316			TRUE	f3ab4502-07bd-db44-1f36-0d6341c0529e
 bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	671		538669316	17715908		TRUE	f3ab4502-07bd-db44-1f36-0d6341c0529e
 bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	19590		538669316		330961947	TRUE	8bb51a5c-eebe-7fa8-a99b-c96957f00cfe
+
+
+def melt_dataframe(df, id_column, columns_to_melt, melted_column_names) :
+    """
+    Melts a PySpark DataFrame by unpivoting specified columns into key-value pairs.
+
+    Args:
+        df (DataFrame): The input PySpark DataFrame.
+        id_column (str): The column to retain as the identifier.
+        columns_to_melt (list): The list of columns to melt.
+        melted_column_names (tuple): A tuple containing the names of the new columns 
+                                     (e.g., ("melted_column_name", "melted_value_name")).
+
+    Returns:
+        DataFrame: The melted PySpark DataFrame.
+    """
+    melted_dfs = []
+    melted_column_name, melted_value_name = melted_column_names
+
+    for col_name in columns_to_melt:
+        melted_df = df.select(
+            col(id_column),
+            lit(col_name).alias(melted_column_name),  # Add the column name as the melted column
+            col(col_name).alias(melted_value_name)   # Add the column value as the melted value
+        )
+        melted_dfs.append(melted_df)
+
+    # Combine all the melted DataFrames using `unionByName`
+    melted_df = melted_dfs[0]
+    for df in melted_dfs[1:]:
+        melted_df = melted_df.unionByName(df)
+
+    # Drop duplicates and filter out rows with null values in the melted value column
+    melted_df = melted_df.dropDuplicates().filter(col(melted_value_name).isNotNull())
+
+    return melted_df
