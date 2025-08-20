@@ -1,378 +1,112 @@
-import sys
-import os
-import boto3
-import json
-import hashlib
-import uuid
-import psycopg2
-import utils as utl
-import staging_schema as ss
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from pyspark.sql import SparkSession
-from awsglue.context import GlueContext
-from awsglue.job import Job
-from awsglue.dynamicframe import DynamicFrame
-from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, from_json, struct
-from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
-from pyspark.sql.utils import AnalysisException
-from datetime import datetime
-from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round, regexp_replace, size
-from pyspark.sql import DataFrame
-from functools import reduce
-from pyspark.sql.functions import col, lit, when, isnan, isnull
-from pyspark.sql.types import NullType
-from pyspark.sql.functions import lit
-
-
-## @params: [JOB_NAME]
-args = getResolvedOptions(sys.argv, ['JOB_NAME'])
-
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-
-
-s3 = boto3.client("s3")
-#s3.download_file(s3_bucket,ssl_cert_s3_path,local_ssl_cert_path)
-
-
-rds_client = boto3.client ("rds",region_name=ss.region)
-rds_token = rds_client.generate_db_auth_token(
-    DBHostname = ss.rds_host,
-    Port = ss.rds_port,
-    DBUsername = ss.db_user
-    )
-    
-pg_connection_options = {
-    "url" : f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
-    "user" : ss.db_user,
-    "password" : rds_token
-   # "db_table":source_table
-    }
-
-# Register the UDF
-compute_uuid_udf = udf(lambda x: utl.compute_uuid(x, ss.decimal_columns), StringType())
-
-def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
-    """
-    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
-    Handles void data type columns by converting them to string type.
-    """
-    
-    # Check for void columns and convert them to string type
-    void_columns = [field.name for field in df.schema.fields if isinstance(field.dataType, NullType)]
-    
-    if void_columns:
-        print(f"Found void columns: {void_columns}. Converting to string type.")
-        # Convert void columns to string type with null values
-        for col_name in void_columns:
-            df = df.withColumn(col_name, lit(None).cast("string"))
-    
-    try:
-        # Ensure temp_path ends with a trailing slash
-        if not temp_path.endswith('/'):
-            temp_path += '/'
-        
-        # Coalesce to one partition and write to temp S3 directory with proper CSV options
-        df.coalesce(1).write.mode("overwrite") \
-            .option("header", "true") \
-            .option("quote", '"') \
-            .option("escape", '"') \
-            .option("quoteAll", "true") \
-            .option("multiLine", "true") \
-            .option("timestampFormat", "yyyy-MM-dd HH:mm:ss") \
-            .option("dateFormat", "yyyy-MM-dd") \
-            .csv(temp_path)
-        
-        # Initialize S3 client
-        s3 = boto3.client("s3")
-        
-        # Parse temp path
-        temp_bucket = temp_path.replace("s3://", "").split("/")[0]
-        temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
-        
-        # Remove trailing slash from prefix if present
-        if temp_prefix.endswith('/'):
-            temp_prefix = temp_prefix[:-1]
-        
-        # List objects in temp directory
-        response = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
-        
-        if 'Contents' not in response:
-            raise Exception(f"No files found in temp path: {temp_path}")
-        
-        objects = response['Contents']
-        
-        # Find the CSV part file, excluding _SUCCESS and other metadata files
-        csv_files = [
-            obj['Key'] for obj in objects 
-            if obj['Key'].endswith(".csv") and not obj['Key'].endswith("_SUCCESS")
-        ]
-        
-        if not csv_files:
-            raise Exception(f"No CSV files found in temp directory: {temp_path}")
-        
-        # Use the first (and should be only) CSV file
-        part_file = csv_files[0]
-        
-        # Copy the CSV file to the target location
-        s3.copy_object(
-            Bucket=s3_bucket,
-            CopySource={'Bucket': temp_bucket, 'Key': part_file},
-            Key=s3_key
-        )
-        
-        print(f"Successfully copied CSV to s3://{s3_bucket}/{s3_key}")
-        
-        # Clean up temp files - delete all objects in the temp directory
-        delete_objects = [{'Key': obj['Key']} for obj in objects]
-        if delete_objects:
-            s3.delete_objects(
-                Bucket=temp_bucket,
-                Delete={'Objects': delete_objects}
-            )
-            print(f"Cleaned up {len(delete_objects)} temp files")
-            
-    except Exception as e:
-        print(f"Error in write_single_csv_to_s3_fixed: {str(e)}")
-        raise
-
-# PROCESS ONLY CARD_REVENUE
-print("Processing card_revenue only...")
-
-
-def get_landing_data():
-    try:
-        # Query to fetch data
-        query = "(SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee = 'N') AS temp_table"
-
-        # Read the query result into a Spark DataFrame
-        source_df = glueContext.read.format("jdbc").options(
-                dbtable=query,
-                **pg_connection_options
-            ).load()
-
-        # Define UDFs for computing business entity ID and buying entity ID
-        
-        
-        print("printing compute uuid bussiness entity")
-        source_df = source_df.withColumn(
-                        "stg_business_entity_id",
-                        when(
-                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
-                            ).otherwise(
-                                compute_uuid_udf(struct("vendor_name_cleaned"))
-                            )
-                            )
-                
-
-        print("stg_business_entity_id column added.")
-
-
-        source_df = source_df.withColumn(
-                "stg_buying_entity",
-            compute_uuid_udf(struct("client_name"))
-                )
-    
-        print("stg_buying_entity column added.")
-
-        print("After adding the UUID columns")
-        source_df.select("stg_business_entity_id").show()
-        # Return the Spark DataFrame
-        return source_df
-
-    except Exception as e:
-        print('Error Message is:', e)
-        return None
-        
-
-def sanitize_and_add_missing_columns(df, required_columns):
-    """
-    adds missing columns with null values.
-    
-    Args:
-        df (DataFrame): The input Spark DataFrame.
-        required_columns (list): List of required column names.
-    
-    Returns:
-        DataFrame: The updated DataFrame with sanitized column names and all required columns.
-    """
-    print("required columns", required_columns)
-    print("existing columns in pfd file",  df.columns)
-    
-    
-    # : Add missing columns with null values
-    existing_columns = df.columns
-    missing_columns = [col for col in required_columns if col not in existing_columns]
-    for col in missing_columns:
-        df = df.withColumn(col, lit(None))
-    
-    return df
-
-
-def process_mapping_and_transform_data(source_df,  output_data_path):
-    """
-    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
-    """
-        
-    mapping_file = utl.read_map_file('pfd_mapping')
-    print("Reading mapping file completed")
-       
-
-    mapping_df = spark.createDataFrame(mapping_file)
-    
-    print("Converting mapping file to Dataframe completed")
-
-    # Validate mapping DataFrame
-    if mapping_df.rdd.isEmpty():
-        raise ValueError("The mapping DataFrame is empty. Please check the mapping file.")
-    if "source_column" not in mapping_df.columns or "target_column" not in mapping_df.columns:
-        raise ValueError("The mapping DataFrame does not contain the required columns: 'source_column' and 'target_column'.")
-
-    # Initialize variables
-    column_mapping = {}
-    current_date = datetime.today().strftime("%Y-%m-%d")
-
-    # Iterate through the mapping DataFrame to create the column mapping dictionary
-    for row in mapping_df.collect():
-        source_col = str(row["source_column"]).strip().lower()
-        target_col = row["target_column"]
-        column_mapping[source_col] = target_col
-
-   # print("Column Mapping Dictionary:")
-   # print(column_mapping)
-
-    # Read the input data into a Glue DynamicFrame
-    source_df.show()
-    data = source_df
-    print("data:", data.show())
-
-    # Validate input DataFrame
-    if data.rdd.isEmpty():
-      #  raise ValueError("The input DataFrame is empty. Please check the source data.")
-      print("The input DataFrame is empty. Please check the source data.")
-
-    # Verify that all source columns exist in the input DataFrame
-    # missing_columns = [col for col in column_mapping.keys() if col not in data.columns]
-    # if missing_columns:
-    #     raise ValueError(f"The following columns are missing in the input data: {missing_columns}")
-    #  #   print("The following columns are missing in the input data",missing_columns )
-        
-    print("before transforming the data")
-
-    # Rename columns in the input DataFrame using the column mapping
-    transformed_df = data.select(
-        [col(c).alias(column_mapping[c]) if c in column_mapping else col(c) for c in data.columns]
-    )
-    # Add a new column "stg_jpmc_business_entity_id" based on the condition
-    transformed_df = transformed_df.withColumn(
-        "stg_jpmc_business_entity_id",
-        when(
-            (col("client_ecid").isNotNull()) | (col("ind_jpmc") == 'Y'),
-            lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33")
-        ).otherwise(None)
-    )
-    
-    print("after transforming the data")
-
-    print("Transformed DataFrame:")
-    #transformed_df.show()
-
-    # Validate transformed DataFrame
-    if transformed_df.rdd.isEmpty():
-        raise ValueError("The transformed DataFrame is empty after applying column mappings.")
-
-    # Convert the Spark DataFrame to a Glue DynamicFrame
-    #transformed_dynamic_frame = DynamicFrame.fromDF(transformed_df, glueContext, "transformed_dynamic_frame")
-
-
-    
-
-    print("Transformation and writing completed")
-    return transformed_df
-    
-    
-landing_tables= get_landing_data()
-
-
-# Assume `source_df` is your Spark DataFrame
-fixing_source_df = sanitize_and_add_missing_columns(landing_tables, ss.pfd_mandatory_columns)
-
-# Show the updated DataFrame
-fixing_source_df.show()
-
-
-# Check if the DataFrame is empty
-# if landing_tables is None or landing_tables.rdd.isEmpty():
-#     print("Landing data is empty. Skipping all steps and ending the job.")
-#     job.commit()  # End the job immediately
-#     exit()
-    
-#landing_tables.show()
-transformed_df = process_mapping_and_transform_data(fixing_source_df, ss.output_data_path)
-
-transformed_df.show()
-
-base_col = "stg_business_entity_id"
-
-flattened_dfs = {}
-    
-# Loop through JSON_FIELD_CONFIGS for struct & array_double_explode fields
-for col_name, config in ss.JSON_FIELD_CONFIGS.items():
-    df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
-    if df_flat is not None and df_flat.count() > 0:
-        flattened_dfs[col_name] = df_flat
-
-# Handle registered_agents separately (simple array of strings)
-reg_agents_df = (
-    transformed_df
-    .filter(~utl.is_empty_or_null("registered_agents"))
-    .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
-    .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
-    .withColumn(
-        "registered_agents",
-        when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
-    )
-    .select(ss.base_col, "registered_agents")
+# Select and rename columns from `transformed_relationship`
+transformed_rel_identifiers = transformed_relationship.select(
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("client_vendor_id"),
+    col("client_vendor_site_id"),
+    col("client_ecid"),
+    col("supplier_ecid"),
+    col("associated_tax_ids")
 )
 
-if reg_agents_df.count() > 0:
-    flattened_dfs["registered_agents"] = reg_agents_df
+# List of columns to melt for `transformed_rel_identifiers`
+transformed_rel_identifiers_columns = ["client_vendor_id", "client_vendor_site_id", "client_ecid","supplier_ecid","associated_tax_ids"]
 
-# Combine all results
-transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
-
-# Write to S3
-write_single_csv_to_s3_fixed(
-    final_df,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-    s3_key="pfd_scripts/pfd_staging_pvr_test/all_flattened_combined.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+# Melt `transformed_rel_identifiers` using the `melt_dataframe` function
+transformed_rel_identifiers = utl.melt_dataframe(
+    transformed_rel_identifiers,
+    id_column="business_entity_relationship_id",
+    columns_to_melt=transformed_rel_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
 )
 
 
-job.commit()
+# Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+transformed_rel_identifiers = transformed_rel_identifiers.join(
+    transformed_relationship,
+    on="business_entity_relationship_id",  # Use the common column for the join
+    how="inner"
+)
+
+transformed_rel_identifiers = transformed_rel_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("business_entity_relationship_id").alias("related_identifier")).withColumn("related_identifier_source", lit("relationship"))
+
+ 
+#transformed_rel_identifiers.show(truncate=False)
+
+relationship_key_pairs = transformed_rel_identifiers.select(
+    "identifier_type", "identifier_value"
+).distinct()
+
+# Select columns from `transformed_df` for `transformed_identifiers`
+transformed_identifiers = transformed_df.select(*ss.identifiers)
+
+# Melt `transformed_identifiers` using the `melt_dataframe` function
+melted_business_identifiers = utl.melt_dataframe(
+    transformed_identifiers,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.transformed_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
 
 
+#Apply Anti-join using only identifier_type + identifier_value
+filtered_business_identifiers = melted_business_identifiers.alias("biz").join(
+    broadcast(relationship_key_pairs).alias("rel"),
+    on=[
+        col("biz.identifier_type") == col("rel.identifier_type"),
+        col("biz.identifier_value") == col("rel.identifier_value")
+    ],
+    how="left_anti"
+)
+
+# Final selection with source
+transformed_identifiers = filtered_business_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("stg_business_entity_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("business_entity"))
 
 
-***************************************************************************
+#transformed_identifiers.show(truncate=False)
 
-#Remove duplicates
-    transformed_revenue = transformed_revenue.dropDuplicates()
-    
-    #Rename "card_revenue__end_date" → "end_date"
-    revenue_value_columns = ["end_date" if col == "card_revenue__end_date" else col for col in expected_revenue_columns]
-    
-    #Build condition: At least one of these columns must be non-null
-    non_null_condition = None
-    for col_name in revenue_value_columns:
-        cond = col(col_name).isNotNull()
-        non_null_condition = cond if non_null_condition is None else (non_null_condition | cond)
-    
-    #Filter out rows where all these revenue columns are NULL
-    transformed_revenue = transformed_revenue.filter(non_null_condition)
+
+# # Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+# transformed_identifiers = transformed_identifiers.join(
+#     transformed_rel_identifiers,
+#     on="stg_business_entity_id",  # Use the common column for the join
+#     how="left"
+# # 
+
+transformed_identifiers = transformed_identifiers.union(transformed_rel_identifiers)
+
+# Drop duplicates
+transformed_identifiers = transformed_identifiers.dropDuplicates()
+
+transformed_identifiers = transformed_identifiers.filter(
+    col("identifier_value").isNotNull()
+)
+
+# Update identifier_type column in transformed_identifiers
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_type",
+    when(col("identifier_type") == "client_ecid", "ecid")
+    .when(col("identifier_type") == "supplier_ecid", "ecid")
+    .otherwise(col("identifier_type"))
+)
+
+transformed_identifiers = transformed_identifiers.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
+
+
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_id",
+    compute_uuid_udf(struct(*transformed_identifiers.columns))
+)
+
+# Show the resulting DataFrame
+transformed_identifiers.show(truncate=False)
