@@ -1,262 +1,333 @@
-import sys
-import boto3
-import json
-import hashlib
-import uuid
-import psycopg2
-import utils as utl
-import staging_schema as ss
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from pyspark.sql import SparkSession
-from awsglue.context import GlueContext
-from awsglue.job import Job
-from awsglue.dynamicframe import DynamicFrame
-from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date
-from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
-from pyspark.sql.utils import AnalysisException
-from datetime import datetime
-from pyspark.sql.functions import when, lit, col, explode,from_json
-from pyspark.sql.functions import  concat_ws,current_timestamp
+def relationship(transformed_business_entity, transformed_contacts, transformed_df):
+    
+    # Get vendor contact names from transformed_df
+    vendor_names_df = transformed_df.select(
+        col("stg_business_entity_id"),
+        col("vendor_contact_name").alias("contact_name")
+    ).distinct()
 
+    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
+    preferred_contacts = vendor_names_df.join(
+        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
+        on=["stg_business_entity_id", "contact_name"],
+        how="inner"
+    ).distinct()
+    
+    print("hi 1")
+    # Print column names for debugging
+    print("transformed_business_entity columns:", transformed_business_entity.columns)
+    print("transformed_df columns:", transformed_df.columns)
 
-
-
-
-
-## @params: [JOB_NAME]
-args = getResolvedOptions(sys.argv, ['JOB_NAME'])
-
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-
-
-
-
-
-
-
-s3 = boto3.client("s3")
-#s3.download_file(s3_bucket,ssl_cert_s3_path,local_ssl_cert_path)
-
-
-rds_client = boto3.client ("rds",region_name=ss.region)
-rds_token = rds_client.generate_db_auth_token(
-    DBHostname = ss.rds_host,
-    Port = ss.rds_port,
-    DBUsername = ss.db_user
+    # Create a mapping from client_name to stg_business_entity_id using business_entity_details
+    client_mapping = transformed_business_entity.select(
+        col("business_entity_name").alias("client_name"),
+        col("stg_business_entity_id").alias("client_stg_business_entity_id")
     )
     
-pg_connection_options = {
-    "url" : f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
-    "user" : ss.db_user,
-    "password" : rds_token
-   # "db_table":source_table
-    }
+    print("hi 2")
+
+    # Initialize list to collect all relationship DataFrames
+    relationship_dfs = []
     
-
-
-
-# Register the UDF
-compute_uuid_udf = udf(utl.compute_uuid, StringType())
+    # 1. Create client -> firm relationships first (for distinct clients)
+    # Filter out empty/null stg_business_entity_id and join with transformed_df to get required columns
+    distinct_clients = transformed_df.select(
+        "client_name", 
+        "stg_business_entity_id",
+        "client_vendor_id",
+        "client_vendor_site_id", 
+        "client_ecid",
+        "supplier_ecid",
+        "associated_tax_ids"
+    ).filter(
+        col("client_name").isNotNull() & 
+        (col("client_name") != "") &
+        col("stg_business_entity_id").isNotNull() & 
+        (col("stg_business_entity_id") != "") &
+        (col("stg_business_entity_id") != "null") &
+        (col("stg_business_entity_id") != "none")
+    ).distinct()
     
-
-
-    
-
-
-truncate = utl.truncate_tables(ss.rds_host,ss.rds_port,ss.db_name,ss.db_user,rds_token,ss.ssl_cert_s3_path)
-
-def get_landing_data():
-    try:
-        # Query to fetch data
-        query = "(SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee = 'N') AS temp_table"
-
-        # Read the query result into a Spark DataFrame
-        source_df = glueContext.read.format("jdbc").options(
-                dbtable=query,
-                **pg_connection_options
-            ).load()
-
-        # Define UDFs for computing business entity ID and buying entity ID
-        
-        
-
-        source_df = source_df.withColumn(
-                        "stg_business_entity_id",
-                        when(
-                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
-                            ).otherwise(
-                                compute_uuid_udf(concat_ws(",", col("vendor_name_cleaned")))
-                            )
-                            )
-                
-
-                    
-        print("stg_business_entity_id column added.")
-
-
-        source_df = source_df.withColumn(
-                "stg_buying_entity",
-            compute_uuid_udf(concat_ws(",", col("buying_entity")))
-                )
-                
-        print("stg_buying_entity column added.")
-
-        print("After adding the UUID columns")
-        source_df.select("stg_business_entity_id").show()
-        # Return the Spark DataFrame
-        return source_df
-
-    except Exception as e:
-        print('Error Message is:', e)
-        return None
-        
-
-
-def process_mapping_and_transform_data(source_df, mapping_file_path, output_data_path):
-    """
-    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
-    """
-    # Read the mapping file into a Glue DynamicFrame
-    mapping_df = glueContext.create_dynamic_frame.from_options(
-        connection_type="s3",
-        connection_options={"paths": [mapping_file_path]},
-        format="csv",
-        format_options={"withHeader": True}
-    ).toDF()
-
-    print("Reading mapping file completed")
-
-    # Validate mapping DataFrame
-    if mapping_df.rdd.isEmpty():
-        raise ValueError("The mapping DataFrame is empty. Please check the mapping file.")
-    if "source_column" not in mapping_df.columns or "target_column" not in mapping_df.columns:
-        raise ValueError("The mapping DataFrame does not contain the required columns: 'source_column' and 'target_column'.")
-
-    # Initialize variables
-    column_mapping = {}
-    current_date = datetime.today().strftime("%Y-%m-%d")
-
-    # Iterate through the mapping DataFrame to create the column mapping dictionary
-    for row in mapping_df.collect():
-        source_col = str(row["source_column"]).strip().lower()
-        target_col = row["target_column"]
-        column_mapping[source_col] = target_col
-
-   # print("Column Mapping Dictionary:")
-   # print(column_mapping)
-
-    # Read the input data into a Glue DynamicFrame
-    source_df.show()
-    data = source_df
-    print("data:", data.show())
-
-    # Validate input DataFrame
-    if data.rdd.isEmpty():
-      #  raise ValueError("The input DataFrame is empty. Please check the source data.")
-      print("The input DataFrame is empty. Please check the source data.")
-
-    # Verify that all source columns exist in the input DataFrame
-    # missing_columns = [col for col in column_mapping.keys() if col not in data.columns]
-    # if missing_columns:
-    #     raise ValueError(f"The following columns are missing in the input data: {missing_columns}")
-    #  #   print("The following columns are missing in the input data",missing_columns )
-        
-    print("before transforming the data")
-
-    # Rename columns in the input DataFrame using the column mapping
-    transformed_df = data.select(
-        [col(c).alias(column_mapping[c]) if c in column_mapping else col(c) for c in data.columns]
-    )
-    # Add a new column "stg_jpmc_business_entity_id" based on the condition
-    transformed_df = transformed_df.withColumn(
-        "stg_jpmc_business_entity_id",
-        when(
-            (col("client_ecid").isNotNull()) | (col("ind_jpmc") == 'Y'),
-            lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33")
-        ).otherwise(None)
+    client_firm_df = distinct_clients.join(
+        client_mapping,
+        on="client_name",
+        how="inner"
+    ).select(
+        col("client_stg_business_entity_id").alias("stg_business_entity_id"),
+        lit(None).alias("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("client").alias("business_entity_role"),
+        lit("firm").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("supplier_ecid"),
+        col("associated_tax_ids")
     )
     
-    print("after transforming the data")
-
-    print("Transformed DataFrame:")
-    #transformed_df.show()
-
-    # Validate transformed DataFrame
-    if transformed_df.rdd.isEmpty():
-        raise ValueError("The transformed DataFrame is empty after applying column mappings.")
-
-    # Convert the Spark DataFrame to a Glue DynamicFrame
-    #transformed_dynamic_frame = DynamicFrame.fromDF(transformed_df, glueContext, "transformed_dynamic_frame")
-
-
+    relationship_dfs.append(client_firm_df)
+    print("hi 3")
     
-
-    print("Transformation and writing completed")
-    return transformed_df
-    
-    
-landing_tables= get_landing_data()
-landing_tables.show()
-transformed_df = process_mapping_and_transform_data(landing_tables,ss.mapping_file_path, ss.output_data_path)
-
-
-from pyspark.sql import DataFrame
-import os
-
-def write_single_csv_to_s3(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
-    """
-    Writes a Spark DataFrame as a single CSV file with a specific name to S3.
-
-    Args:
-        df (DataFrame): The Spark DataFrame.
-        s3_bucket (str): The S3 bucket name (without `s3://`).
-        s3_key (str): The full S3 key for the final CSV file (e.g. `folder/my_file.csv`).
-        temp_path (str): Temporary S3 folder (e.g. `s3://my-bucket/tmp-folder/`)
-    """
-    # Coalesce to one partition and write to temp S3 directory
-    df.coalesce(1).write.mode("overwrite").option("header", True).csv(temp_path)
-
-    # Initialize boto3
-    s3 = boto3.client("s3")
-
-    # Extract bucket and prefix from temp path
-    temp_bucket = temp_path.replace("s3://", "").split("/")[0]
-    temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
-
-    # List objects in temp S3 folder to find the part file
-    objects = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
-    part_file = next(
-        obj['Key'] for obj in objects.get('Contents', []) if obj['Key'].endswith(".csv")
+    # 2. Create supplier -> client relationships
+    # Filter out empty/null stg_business_entity_id
+    supplier_client_base = transformed_df.filter(
+        col("stg_business_entity_id").isNotNull() & 
+        (col("stg_business_entity_id") != "") &
+        (col("stg_business_entity_id") != "null") &
+        (col("stg_business_entity_id") != "none")
+    ).join(
+        client_mapping,
+        on="client_name",
+        how="inner"
+    ).join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
     )
-
-    # Copy part file to desired S3 location with custom name
-    s3.copy_object(
-        Bucket=s3_bucket,
-        CopySource={'Bucket': temp_bucket, 'Key': part_file},
-        Key=s3_key
+    
+    supplier_client_df = supplier_client_base.select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        col("client_stg_business_entity_id").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("supplier").alias("business_entity_role"),
+        lit("buyer").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("supplier_ecid"),
+        col("associated_tax_ids")
     )
+    
+    relationship_dfs.append(supplier_client_df)
+    
+    # 3. Create supplier -> firm relationships (only when supplier_ecid is not null/empty)
+    supplier_firm_base = transformed_df.filter(
+        col("supplier_ecid").isNotNull() & 
+        (col("supplier_ecid") != "") & 
+        (col("supplier_ecid") != "NULL") &
+        col("stg_business_entity_id").isNotNull() & 
+        (col("stg_business_entity_id") != "") &
+        (col("stg_business_entity_id") != "null") &
+        (col("stg_business_entity_id") != "none")
+    ).join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
+    )
+    
+    supplier_firm_df = supplier_firm_base.select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("client").alias("business_entity_role"),
+        lit("firm").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("supplier_ecid"),
+        col("associated_tax_ids")
+    )
+    print("hi 4")
+    relationship_dfs.append(supplier_firm_df)
+    
+    # Union all relationship DataFrames
+    union_df = relationship_dfs[0]
+    for df in relationship_dfs[1:]:
+        union_df = union_df.union(df)
+    print("hi 5")
+    
+    # Drop duplicates
+    union_df = union_df.dropDuplicates()
 
-    # Optionally delete temp files
-    for obj in objects.get('Contents', []):
-        s3.delete_object(Bucket=temp_bucket, Key=obj['Key'])
+    print("hi 6")
+    return union_df
 
-# Usage:
-write_single_csv_to_s3(
-    transformed_df,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-by081rbjj1vo",
-    s3_key="upsert/pfd_staging/transformed_df.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/pfd_staging/_tmp"
+# Call the `relationship` function and assign the result to `transformed_relationship`
+transformed_relationship = relationship(transformed_business_entity_details, transformed_contacts, transformed_df)
+
+transformed_relationship = transformed_relationship.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
+print("hi 7")
+
+# Remove the line that renames "related_business_entity_id" since it doesn't exist in our schema
+# transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
+
+# Check for void data types before proceeding
+print("Data types in transformed_relationship:")
+for col_name, col_type in transformed_relationship.dtypes:
+    print(f"{col_name}: {col_type}")
+print("hi 8")
+
+# Find columns with void data type
+void_columns = [col_name for col_name, col_type in transformed_relationship.dtypes if col_type == 'void']
+print(f"Void columns found: {void_columns}")
+print("hi 9")
+
+if void_columns:
+    print(f"Fixing void columns: {void_columns}")
+    for void_col in void_columns:
+        transformed_relationship = transformed_relationship.withColumn(
+            void_col, 
+            lit(None).cast(StringType())  # Cast void to nullable string
+        )
+
+# Generate UUID for business_entity_relationship_id
+transformed_relationship_columns = [
+    col for col in transformed_relationship.columns 
+    if col not in ['client_ecid', 'client_vendor_id', 'client_vendor_site_id', 'supplier_ecid']
+]
+
+transformed_relationship = transformed_relationship.withColumn(
+    "business_entity_relationship_id",
+    compute_uuid_udf(struct(*[col(c) for c in transformed_relationship_columns]))
+)
+# transformed_relationship = transformed_relationship.withColumn(
+#     "business_entity_relationship_id",
+#     compute_uuid_udf(struct(*transformed_relationship.columns))
+# )
+
+# Show distinct rows in the resulting DataFrame
+transformed_relationship.distinct().show(truncate=False)
+
+# Select and rename columns from `transformed_relationship`
+transformed_rel_identifiers = transformed_relationship.select(
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("client_vendor_id"),
+    col("client_vendor_site_id"),
+    col("client_ecid"),
+    col("supplier_ecid"),
+    col("associated_tax_ids")
 )
 
-write_single_csv_to_s3(
-    landing_tables,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-by081rbjj1vo",
-    s3_key="upsert/pfd_staging/source_df.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/pfd_staging/_tmp"
+# List of columns to melt for `transformed_rel_identifiers`
+transformed_rel_identifiers_columns = ["client_vendor_id", "client_vendor_site_id", "client_ecid","supplier_ecid","associated_tax_ids"]
+
+# Melt `transformed_rel_identifiers` using the `melt_dataframe` function
+transformed_rel_identifiers = utl.melt_dataframe(
+    transformed_rel_identifiers,
+    id_column="business_entity_relationship_id",
+    columns_to_melt=transformed_rel_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
 )
+
+
+# Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+transformed_rel_identifiers = transformed_rel_identifiers.join(
+    transformed_relationship,
+    on="business_entity_relationship_id",  # Use the common column for the join
+    how="inner"
+)
+
+transformed_rel_identifiers = transformed_rel_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("business_entity_relationship_id").alias("related_identifier")).withColumn("related_identifier_source", lit("relationship"))
+
+ 
+#transformed_rel_identifiers.show(truncate=False)
+
+relationship_key_pairs = transformed_rel_identifiers.select(
+    "identifier_type", "identifier_value"
+).distinct()
+
+# Select columns from `transformed_df` for `transformed_identifiers`
+transformed_identifiers = transformed_df.select(*ss.identifiers)
+
+# Melt `transformed_identifiers` using the `melt_dataframe` function
+melted_business_identifiers = utl.melt_dataframe(
+    transformed_identifiers,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.transformed_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+
+#Apply Anti-join using only identifier_type + identifier_value
+filtered_business_identifiers = melted_business_identifiers.alias("biz").join(
+    broadcast(relationship_key_pairs).alias("rel"),
+    on=[
+        col("biz.identifier_type") == col("rel.identifier_type"),
+        col("biz.identifier_value") == col("rel.identifier_value")
+    ],
+    how="left_anti"
+)
+
+# Final selection with source
+transformed_identifiers = filtered_business_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("stg_business_entity_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("business_entity"))
+
+
+#transformed_identifiers.show(truncate=False)
+
+
+# # Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+# transformed_identifiers = transformed_identifiers.join(
+#     transformed_rel_identifiers,
+#     on="stg_business_entity_id",  # Use the common column for the join
+#     how="left"
+# # 
+
+transformed_identifiers = transformed_identifiers.union(transformed_rel_identifiers)
+
+# Drop duplicates
+transformed_identifiers = transformed_identifiers.dropDuplicates()
+
+transformed_identifiers = transformed_identifiers.filter(
+    col("identifier_value").isNotNull()
+)
+
+# Update identifier_type column in transformed_identifiers
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_type",
+    when(col("identifier_type") == "client_ecid", "ecid")
+    .when(col("identifier_type") == "supplier_ecid", "ecid")
+    .otherwise(col("identifier_type"))
+)
+
+transformed_identifiers = transformed_identifiers.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
+
+
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_id",
+    compute_uuid_udf(struct(*transformed_identifiers.columns))
+)
+
+# Show the resulting DataFrame
+transformed_identifiers.show(truncate=False)
+
+
+
+identifiers logic is not working as expected
+
+this is the data in transformed_relationship
+
+stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid	associated_tax_ids	is_active	business_entity_relationship_id
+bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	40763		538669316			TRUE	f3ab4502-07bd-db44-1f36-0d6341c0529e
+bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	17217		538669316	344352238		TRUE	f3ab4502-07bd-db44-1f36-0d6341c0529e
+bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	37829		538669316			TRUE	f3ab4502-07bd-db44-1f36-0d6341c0529e
+bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	23		538669316		411234968	TRUE	69d855f0-8e11-2d59-d09f-99c76b0fbfcf
+bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	37		538669316			TRUE	f3ab4502-07bd-db44-1f36-0d6341c0529e
+bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	671		538669316	17715908		TRUE	f3ab4502-07bd-db44-1f36-0d6341c0529e
+bb47d9f7-c631-a592-a734-8221082535bf		2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm	19590		538669316		330961947	TRUE	8bb51a5c-eebe-7fa8-a99b-c96957f00cfe
+
+
+for this stg_business_entity_id bb47d9f7-c631-a592-a734-8221082535bf there is not even single record data in transformed_identifiers
+
+sample data in transformed_identifiers
+identifier_type	identifier_value	related_identifier	related_identifier_source	is_active	identifier_id
+client_vendor_id	36113	e641ba79-48a0-56af-79b1-1d4e8f970ab3	business_entity	TRUE	605b25e6-4ced-823a-2c37-bfe0047311e8
+ecid	538669316	fc6485bc-d819-155f-d780-0021902f1d60	business_entity	TRUE	5991af84-df96-e3e0-f6de-20977dd75c46
+ecid	538669316	bcea1d44-3b0e-b1c4-90f4-0522c177aef6	business_entity	TRUE	909e74d1-4348-b59c-b1df-78419d26a34b
+ecid	538669316	b4d67cfd-bde7-fe3c-f491-9576fd82955e	business_entity	TRUE	285e52db-4bca-8254-4bd6-91736702f3ad
