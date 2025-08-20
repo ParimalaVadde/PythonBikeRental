@@ -1,5 +1,13 @@
-# Select and rename columns from `transformed_relationship`
-transformed_rel_identifiers = transformed_relationship.select(
+# FIRST STAGE: Filter out records where supplier_ecid is null, empty, or None
+# Apply this filter to transformed_relationship before any processing
+filtered_transformed_relationship = transformed_relationship.filter(
+    col("supplier_ecid").isNotNull() & 
+    (col("supplier_ecid") != "") & 
+    (col("supplier_ecid") != "None")  # Add this if you have string "None" values
+)
+
+# Select and rename columns from `filtered_transformed_relationship` (instead of original)
+transformed_rel_identifiers = filtered_transformed_relationship.select(
     col("stg_business_entity_id"),
     col("business_entity_relationship_id"),
     col("client_vendor_id"),
@@ -20,10 +28,9 @@ transformed_rel_identifiers = utl.melt_dataframe(
     melted_column_names=("identifier_type", "identifier_value")
 )
 
-
-# Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+# Perform a left join between `transformed_identifiers` and `filtered_transformed_relationship` (use filtered version)
 transformed_rel_identifiers = transformed_rel_identifiers.join(
-    transformed_relationship,
+    filtered_transformed_relationship,  # Use filtered version here too
     on="business_entity_relationship_id",  # Use the common column for the join
     how="inner"
 )
@@ -31,9 +38,9 @@ transformed_rel_identifiers = transformed_rel_identifiers.join(
 transformed_rel_identifiers = transformed_rel_identifiers.select(
     col("identifier_type"),
     col("identifier_value"),
-    col("business_entity_relationship_id").alias("related_identifier")).withColumn("related_identifier_source", lit("relationship"))
+    col("business_entity_relationship_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("relationship"))
 
- 
 #transformed_rel_identifiers.show(truncate=False)
 
 relationship_key_pairs = transformed_rel_identifiers.select(
@@ -50,7 +57,6 @@ melted_business_identifiers = utl.melt_dataframe(
     columns_to_melt=ss.transformed_identifiers_columns,
     melted_column_names=("identifier_type", "identifier_value")
 )
-
 
 #Apply Anti-join using only identifier_type + identifier_value
 filtered_business_identifiers = melted_business_identifiers.alias("biz").join(
@@ -69,22 +75,15 @@ transformed_identifiers = filtered_business_identifiers.select(
     col("stg_business_entity_id").alias("related_identifier")
 ).withColumn("related_identifier_source", lit("business_entity"))
 
-
 #transformed_identifiers.show(truncate=False)
 
-
-# # Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
-# transformed_identifiers = transformed_identifiers.join(
-#     transformed_rel_identifiers,
-#     on="stg_business_entity_id",  # Use the common column for the join
-#     how="left"
-# # 
-
+# Union the two datasets
 transformed_identifiers = transformed_identifiers.union(transformed_rel_identifiers)
 
 # Drop duplicates
 transformed_identifiers = transformed_identifiers.dropDuplicates()
 
+# Filter out null identifier_values (keep this as final cleanup)
 transformed_identifiers = transformed_identifiers.filter(
     col("identifier_value").isNotNull()
 )
@@ -101,7 +100,6 @@ transformed_identifiers = transformed_identifiers.withColumn(
     "is_active", 
     lit(True)  # This creates a Boolean column with True values for all rows
 )
-
 
 transformed_identifiers = transformed_identifiers.withColumn(
     "identifier_id",
