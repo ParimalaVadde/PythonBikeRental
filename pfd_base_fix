@@ -60,3 +60,28 @@ transformed_rel_identifiers = transformed_rel_identifiers.select(
     col("identifier_value"),
     col("stg_business_entity_id"),
     col("business_entity_relationship_id").alias("related_identifier")).withColumn("related_identifier_source", lit("relationship"))
+
+
+****************************************************************
+
+
+identifiers = ["stg_business_entity_id", "tax_id", "dba", "google_places_id", "enigma_id", "enigma_business_id", "client_vendor_id", "client_vendor_site_id", "client_ecid", "supplier_ecid"]
+
+
+
+
+stg_payor_business_entity_id ecid
+
+# Select columns from `transformed_df` for `transformed_identifiers`
+transformed_df_be = (transformed_df.select("stg_payor_business_entity_id","client_ecid")).distinct().withColumnRenamed("stg_payor_business_entity_id", "stg_business_entity_id")
+transformed_identifiers = transformed_df.select(*ss.identifiers)
+melted_business_identifiers_v1 = utl.melt_dataframe(
+    transformed_identifiers,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.transformed_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+melted_business_identifiers = transformed_df_be.union(melted_business_identifiers_v1)
+
+melted_business_identifiers = melted_business_identifiers.dropDuplicates()
