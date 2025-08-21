@@ -47,3 +47,16 @@ transformed_identifiers = transformed_identifiers.withColumn(
 
 # Show the resulting DataFrame
 transformed_identifiers.show(truncate=False)
+
+
+
+
+
+
+*************************************************************************************
+
+transformed_rel_identifiers = transformed_rel_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id").alias("related_identifier")).withColumn("related_identifier_source", lit("relationship"))
