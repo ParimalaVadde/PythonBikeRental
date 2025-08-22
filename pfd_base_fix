@@ -28,3 +28,38 @@ melted_business_identifiers_v2 = utl.melt_dataframe(
 melted_business_identifiers = stack(combine) these 2 dfs vertically melted_business_identifiers_v1 and melted_business_identifiers_v2
 
 melted_business_identifiers = melted_business_identifiers.dropDuplicates()
+
+
+
+*****************************************************************
+
+identifiers = ["stg_business_entity_id", "tax_id", "dba", "google_places_id", "enigma_id", "enigma_business_id", "client_vendor_id", "client_vendor_site_id", "client_ecid", "supplier_ecid"]
+
+# Select columns from transformed_df for transformed_identifiers
+transformed_df_be = (transformed_df.select("stg_payor_business_entity_id","client_ecid")
+                    .distinct()
+                    .withColumnRenamed("stg_payor_business_entity_id", "stg_business_entity_id"))
+
+# Fix: Complete the select operation (remove .union if not needed)
+transformed_identifiers = transformed_df.select(*identifiers)
+
+# Define the columns to melt (excluding the ID column)
+columns_to_melt = [col for col in identifiers if col != "stg_business_entity_id"]
+
+melted_business_identifiers_v1 = utl.melt_dataframe(
+    transformed_identifiers,
+    id_column="stg_business_entity_id",
+    columns_to_melt=columns_to_melt,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+melted_business_identifiers_v2 = utl.melt_dataframe(
+    transformed_df_be,
+    id_column="stg_business_entity_id",
+    columns_to_melt=["client_ecid"],
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+# Fix: Use proper union syntax
+melted_business_identifiers = melted_business_identifiers_v1.union(melted_business_identifiers_v2)
+melted_business_identifiers = melted_business_identifiers.dropDuplicates()
