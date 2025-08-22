@@ -238,3 +238,25 @@ in out output i need below cols
     last_updated_date    timestamp,
     created_by           varchar,
     created_date         timestamp
+
+
+**********************************************************************************************************************************************
+
+SELECT 
+    bed.stg_business_entity_id,
+    bed.business_entity_name,
+    bed.company_structure,
+    bed.market_segment_type,
+    bed.industry_type,
+    bed.year_incorporated,
+    bed.reported_annual_revenue,
+    bed.is_active,
+    bed.last_updated_by,
+    bed.last_updated_date,
+    bed.created_by,
+    bed.created_date,
+    bed.business_validation_reason
+FROM sds_staging.business_entity_details bed
+LEFT JOIN sds_staging.business_entity be 
+    ON bed.stg_business_entity_id = be.stg_business_entity_id
+WHERE be.stg_business_entity_id IS NULL;
