@@ -1,80 +1,16 @@
-# Select columns from `transformed_df` for `transformed_identifiers`
-transformed_identifiers = transformed_df.select(*ss.identifiers)
-
-# Melt `transformed_identifiers` using the `melt_dataframe` function
-melted_business_identifiers = utl.melt_dataframe(
-    transformed_identifiers,
-    id_column="stg_business_entity_id",
-    columns_to_melt=ss.transformed_identifiers_columns,
-    melted_column_names=("identifier_type", "identifier_value")
-)
-
-# SOLUTION 1: Remove the anti-join - include all business entity identifiers
-transformed_identifiers = melted_business_identifiers.select(
-    col("identifier_type"),
-    col("identifier_value"),
-    col("stg_business_entity_id").alias("related_identifier")
-).withColumn("related_identifier_source", lit("business_entity"))
-
-# Filter out null identifier values before union
-transformed_identifiers = transformed_identifiers.filter(
-    col("identifier_value").isNotNull()
-)
-
-# Union with relationship identifiers
-transformed_identifiers = transformed_identifiers.union(transformed_rel_identifiers)
-
-# Drop duplicates
-transformed_identifiers = transformed_identifiers.dropDuplicates()
-
-# Update identifier_type column in transformed_identifiers
-transformed_identifiers = transformed_identifiers.withColumn(
-    "identifier_type",
-    when(col("identifier_type") == "client_ecid", "ecid")
-    .when(col("identifier_type") == "supplier_ecid", "ecid")
-    .otherwise(col("identifier_type"))
-)
-
-transformed_identifiers = transformed_identifiers.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-)
-
-transformed_identifiers = transformed_identifiers.withColumn(
-    "identifier_id",
-    compute_uuid_udf(struct(*transformed_identifiers.columns))
-)
-
-# Show the resulting DataFrame
-transformed_identifiers.show(truncate=False)
-
-
-
-
-
-
-*************************************************************************************
-
-transformed_rel_identifiers = transformed_rel_identifiers.select(
-    col("identifier_type"),
-    col("identifier_value"),
-    col("stg_business_entity_id"),
-    col("business_entity_relationship_id").alias("related_identifier")).withColumn("related_identifier_source", lit("relationship"))
-
-
-****************************************************************
-
-
 identifiers = ["stg_business_entity_id", "tax_id", "dba", "google_places_id", "enigma_id", "enigma_business_id", "client_vendor_id", "client_vendor_site_id", "client_ecid", "supplier_ecid"]
 
 
 
 
-stg_payor_business_entity_id ecid
+
 
 # Select columns from `transformed_df` for `transformed_identifiers`
 transformed_df_be = (transformed_df.select("stg_payor_business_entity_id","client_ecid")).distinct().withColumnRenamed("stg_payor_business_entity_id", "stg_business_entity_id")
-transformed_identifiers = transformed_df.select(*ss.identifiers)
+
+
+
+transformed_identifiers = transformed_df.select(*ss.identifiers).union
 melted_business_identifiers_v1 = utl.melt_dataframe(
     transformed_identifiers,
     id_column="stg_business_entity_id",
@@ -82,6 +18,13 @@ melted_business_identifiers_v1 = utl.melt_dataframe(
     melted_column_names=("identifier_type", "identifier_value")
 )
 
-melted_business_identifiers = transformed_df_be.union(melted_business_identifiers_v1)
+melted_business_identifiers_v2 = utl.melt_dataframe(
+    transformed_df_be,
+    id_column="stg_business_entity_id",
+    columns_to_melt=["client_ecid"],
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+melted_business_identifiers = stack(combine) these 2 dfs vertically melted_business_identifiers_v1 and melted_business_identifiers_v2
 
 melted_business_identifiers = melted_business_identifiers.dropDuplicates()
