@@ -179,3 +179,62 @@ transformed_identifiers = transformed_identifiers.withColumn(
 
 # Show the resulting DataFrame
 transformed_identifiers.show(truncate=False)
+
+
+************************************************************************************************************
+
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity_details
+(
+    stg_business_entity_id   varchar not null primary key,
+    business_entity_name varchar,
+    company_structure         varchar,
+    market_segment_type  varchar,
+    industry_type        varchar,
+	year_incorporated varchar,
+	reported_annual_revenue  numeric,
+    is_active            boolean,
+    last_updated_by      varchar,
+    last_updated_date    timestamp,
+    created_by           varchar,
+    created_date         timestamp,
+	business_validation_reason varchar
+);
+
+
+CREATE TABLE IF NOT EXISTS sds_staging.business_entity
+(
+    stg_business_entity_id   varchar not null primary key,
+    source_system_id       varchar,
+    source_system_name     varchar,
+    hierarchy_identifier varchar,
+    hierarchy_level      varchar,
+    hierarchy_role       varchar,
+    parent_id            varchar,
+    is_active            boolean,
+    last_updated_by      varchar,
+    last_updated_date    timestamp,
+    created_by           varchar,
+    created_date         timestamp
+);
+
+
+there are 509 records in sds_staging.business_entity
+
+but in sds_staging.business_entity_details there are 510
+
+so write sql queries to know which record is extra in sds_staging.business_entity_details
+
+in out output i need below cols
+
+    stg_business_entity_id   varchar not null primary key,
+    source_system_id       varchar,
+    source_system_name     varchar,
+    hierarchy_identifier varchar,
+    hierarchy_level      varchar,
+    hierarchy_role       varchar,
+    parent_id            varchar,
+    is_active            boolean,
+    last_updated_by      varchar,
+    last_updated_date    timestamp,
+    created_by           varchar,
+    created_date         timestamp
