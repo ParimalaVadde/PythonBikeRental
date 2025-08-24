@@ -16,3 +16,25 @@ stg_business_entity_id                    business_entity_contact_id
 9627106c-b400-cc56-9a9c-5ca465375b74		821c9632-5325-5e18-abe8-3e7dd798360f
 9627106c-b400-cc56-9a9c-5ca465375b74		821c9632-5325-5e18-abe8-3e7dd798360f
 
+***************************************************
+
+SELECT 
+    stg_business_entity_id, 
+    business_entity_contact_id
+FROM 
+    sds_staging.business_entity_relationships
+WHERE 
+    stg_business_entity_id IN (
+        SELECT 
+            stg_business_entity_id
+        FROM 
+            sds_staging.business_entity_relationships
+        WHERE 
+            business_entity_contact_id IS NOT NULL
+        GROUP BY 
+            stg_business_entity_id
+        HAVING 
+            COUNT(DISTINCT business_entity_contact_id) > 1
+    )
+ORDER BY 
+    stg_business_entity_id;
