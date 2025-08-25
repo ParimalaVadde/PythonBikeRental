@@ -174,3 +174,25 @@ transformed_rel_identifiers = transformed_rel_identifiers.join(
 
 see here watever records are present in transformed_rel_identifiers only for those records neeed be joined with transformed_relationship
 but not inner
+
+*************************************************************************************************************
+
+
+# Get vendor contact names from transformed_df
+    vendor_names_df = transformed_df.select(
+        col("stg_business_entity_id"),
+        col("vendor_contact_name").alias("contact_name")
+    ).distinct()
+
+    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
+    preferred_contacts = vendor_names_df.join(
+        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
+        on=["stg_business_entity_id", "contact_name"],
+        how="inner"
+    ).distinct()
+    
+    
+    
+does it consider only exact matching contact_name records of vendor_names_df and join with transformed_contacts
+
+inner means is it same?
