@@ -99,3 +99,65 @@ wat means
 in people_contacts if same contact_name is in vendor_contacts_final then we have consider people_contacts record not contact_name
 
 how we make these changes efficiently
+
+***********************************************************************************************************
+
+# Transform contacts from associated_people data
+people_contacts = (transformed_json_df
+              .select(*ss.contacts)
+              .distinct()
+              .filter(
+                  (col("associated_people__name").isNotNull() & 
+                   (trim(col("associated_people__name")) != "") & 
+                   (col("associated_people__name") != "none")) |
+                  (col("associated_people__titles").isNotNull() & 
+                   (trim(col("associated_people__titles")) != "") & 
+                   (col("associated_people__titles") != "none"))
+              )
+              .withColumnRenamed("associated_people__name", "contact_name")
+              .withColumnRenamed("associated_people__titles", "contact_title"))
+
+# Process vendor contacts - ONLY if vendor_contact_name is not null
+vendor_contacts_raw = transformed_df.select(*ss.vendor_contact).distinct()
+vendor_contacts_filtered = vendor_contacts_raw.filter(col("vendor_contact_name").isNotNull())
+
+# Check if there are any non-null vendor contacts
+vendor_contact_count = vendor_contacts_filtered.count()
+
+if vendor_contact_count > 0:
+    vendor_contacts_prepared = vendor_contacts_filtered.select(
+        col("stg_business_entity_id"),
+        col("vendor_contact_name").alias("contact_name"),
+        lit(None).cast("string").alias("contact_title")
+    )
+    
+    # This compares using uppercase but keeps original case in final data
+    people_contact_names_upper = people_contacts.select(upper(col("contact_name")).alias("contact_name_upper")).distinct()
+    
+    unique_vendor_contacts = vendor_contacts_prepared.join(
+         people_contact_names_upper,
+         upper(col("contact_name")) == col("contact_name_upper"),
+         how="left_anti"
+     )
+     # The original contact_name column remains unchanged
+    
+    # Union people_contacts (priority) with unique vendor contacts
+    all_contacts = people_contacts.unionByName(unique_vendor_contacts)
+else:
+    # Use only the people contacts data
+    all_contacts = people_contacts
+
+# Only keep contacts that actually have contact names
+transformed_contacts = all_contacts.filter(col("contact_name").isNotNull())
+
+transformed_contacts = transformed_contacts.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
+
+# Generate UUIDs only for valid contacts
+if transformed_contacts.count() > 0:
+    transformed_contacts = transformed_contacts.withColumn(
+        "business_entity_contact_id",
+        compute_uuid_udf(struct(*transformed_contacts.columns))
+    )
