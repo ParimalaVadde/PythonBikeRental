@@ -161,3 +161,16 @@ if transformed_contacts.count() > 0:
         "business_entity_contact_id",
         compute_uuid_udf(struct(*transformed_contacts.columns))
     )
+
+******************************************************************************************
+
+# Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+transformed_rel_identifiers = transformed_rel_identifiers.join(
+    transformed_relationship,
+    on="business_entity_relationship_id",  # Use the common column for the join
+    how="inner"
+)
+
+
+see here watever records are present in transformed_rel_identifiers only for those records neeed be joined with transformed_relationship
+but not inner
