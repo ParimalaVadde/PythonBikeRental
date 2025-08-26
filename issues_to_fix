@@ -52,3 +52,32 @@ transformed_df_iden = transformed_df_iden1.join(
     col("business_entity_relationship_id"),
     col("client_ecid")
 )
+
+
+
+*******************************************************************************************************
+
+business_entity_role	related_business_entity_role
+supplier	buyer
+client	firm
+
+
+in below df need to filter out when business_entity_role ='client' and related_business_entity_role = 'firm' then we shouldn't consider , then in final selection it should have only
+col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("client_vendor_id"),
+    col("client_vendor_site_id"),
+    #col("client_ecid"),
+    col("supplier_ecid")
+
+# Select and rename columns from `transformed_relationship`
+transformed_rel_identifiers = transformed_relationship.select(
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("client_vendor_id"),
+    col("client_vendor_site_id"),
+    #col("client_ecid"),
+    col("supplier_ecid"),
+	col("business_entity_role"),
+	col("related_business_entity_role")
+)
