@@ -25,3 +25,30 @@ transformed_df_iden1 = (transformed_df.select("stg_payor_business_entity_id","cl
 transformed_df_iden = here i need to select business_entity_relationship_id from transformed_rel_identifiers where stg_business_entity_id of transformed_rel_identifiers  == stg_payor_business_entity_id of transformed_df_iden1
 
 final transformed_df_iden should have business_entity_relationship_id,client_ecid
+
+
+************************************************************
+
+# Select and rename columns from `transformed_relationship`
+transformed_rel_identifiers = transformed_relationship.select(
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("client_vendor_id"),
+    col("client_vendor_site_id"),
+    #col("client_ecid"),
+    col("supplier_ecid")
+)
+
+transformed_df_iden1 = (transformed_df.select("stg_payor_business_entity_id","client_ecid")
+                    .distinct()
+                      )
+
+# Join to get business_entity_relationship_id where stg_business_entity_id matches stg_payor_business_entity_id
+transformed_df_iden = transformed_df_iden1.join(
+    transformed_rel_identifiers.select("stg_business_entity_id", "business_entity_relationship_id"),
+    col("stg_payor_business_entity_id") == col("stg_business_entity_id"),
+    how="inner"
+).select(
+    col("business_entity_relationship_id"),
+    col("client_ecid")
+)
