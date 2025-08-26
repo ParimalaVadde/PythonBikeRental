@@ -5,3 +5,23 @@
 "62ebe96b-5f4d-c331-394f-fc0b1f011e1c","52d58a5b-63f2-15ec-14a8-e37e7e96e20d","bb47d9f7-c631-a592-a734-8221082535bf","","supplier","buyer","99","","538669316","","true","b4075826-3d9f-9f52-a93f-3b9b98953cb8"
 "55047de8-7edc-c7ea-16d4-b254183b0162","045d61a9-7d18-13e0-0204-a96d0cd4b691","bb47d9f7-c631-a592-a734-8221082535bf","","supplier","buyer","38891","","538669316","","true","37d07920-3f32-fccb-0c7b-d937963266ab"
 "4dac8aef-e73b-32be-d1af-29a095d2774f","6231d5a4-3856-cda7-8a90-fcc230aff15b","bb47d9f7-c631-a592-a734-8221082535bf","","supplier","buyer","32184","","538669316","632475079","true","34f2c0b6-be8a-47a5-6cdf-55c1b63768b6"
+
+
+
+# Select and rename columns from `transformed_relationship`
+transformed_rel_identifiers = transformed_relationship.select(
+    col("stg_business_entity_id"),
+    col("business_entity_relationship_id"),
+    col("client_vendor_id"),
+    col("client_vendor_site_id"),
+    #col("client_ecid"),
+    col("supplier_ecid")
+)
+
+transformed_df_iden1 = (transformed_df.select("stg_payor_business_entity_id","client_ecid")
+                    .distinct()
+                      )
+					  
+transformed_df_iden = here i need to select business_entity_relationship_id from transformed_rel_identifiers where stg_business_entity_id of transformed_rel_identifiers  == stg_payor_business_entity_id of transformed_df_iden1
+
+final transformed_df_iden should have business_entity_relationship_id,client_ecid
