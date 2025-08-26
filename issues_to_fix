@@ -81,3 +81,31 @@ transformed_rel_identifiers = transformed_relationship.select(
 	col("business_entity_role"),
 	col("related_business_entity_role")
 )
+
+************************************************************
+
+# Select and rename columns from `transformed_relationship`
+transformed_rel_identifiers = (transformed_relationship
+    .select(
+        col("stg_business_entity_id"),
+        col("business_entity_relationship_id"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        #col("client_ecid"),
+        col("supplier_ecid"),
+        col("business_entity_role"),
+        col("related_business_entity_role")
+    )
+    .filter(
+        ~((col("business_entity_role") == "client") & 
+          (col("related_business_entity_role") == "firm"))
+    )
+    .select(
+        col("stg_business_entity_id"),
+        col("business_entity_relationship_id"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        #col("client_ecid"),
+        col("supplier_ecid")
+    )
+)
