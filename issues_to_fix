@@ -256,3 +256,41 @@ supplier_client_base = transformed_df.filter(
 **************************************
 
 Error Category: QUERY_ERROR; Failed Line Number: 659; AnalysisException: Reference 'stg_business_entity_id' is ambiguous, could be: stg_business_entity_id, stg_business_entity_id.
+
+
+
+**********************************************
+
+
+# Alias the dataframes before join
+df = transformed_df.alias("df")
+pc = preferred_contacts.alias("pc")
+
+supplier_client_base = df.filter(
+    col("df.stg_business_entity_id").isNotNull() & 
+    (col("df.stg_business_entity_id") != "") & 
+    (col("df.stg_business_entity_id") != "null") & 
+    (col("df.stg_business_entity_id") != "none")
+).join(
+    client_mapping.alias("cm"),
+    df["client_name"] == col("cm.client_name"),
+    how="inner"
+).join(
+    pc,
+    (df["stg_business_entity_id"] == pc["stg_business_entity_id"]) &
+    (df["vendor_contact_name"] == pc["contact_name"]),
+    how="left"
+)
+
+supplier_client_df = supplier_client_base.select(
+    df["stg_business_entity_id"],
+    pc["business_entity_contact_id"],
+    col("cm.client_stg_business_entity_id").alias("stg_related_business_entity_id"),
+    lit(None).alias("related_business_entity_contact_id"),
+    lit("supplier").alias("business_entity_role"),
+    lit("buyer").alias("related_business_entity_role"),
+    df["client_vendor_id"],
+    df["client_vendor_site_id"],
+    df["client_ecid"],
+    df["supplier_ecid"]
+)
