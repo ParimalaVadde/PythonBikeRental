@@ -174,3 +174,11 @@ SELECT * FROM sds_staging.business_entity_relationships
 
 SELECT * FROM sds_staging.business_entity_contacts
 business_entity_contact_id
+
+**************************************************************************************************************************
+
+SELECT r.business_entity_contact_id
+FROM sds_staging.business_entity_relationships r
+LEFT JOIN sds_staging.business_entity_contacts c
+    ON r.business_entity_contact_id = c.business_entity_contact_id
+WHERE c.business_entity_contact_id IS NULL;
