@@ -229,3 +229,25 @@ write_single_csv_to_s3_fixed(
     s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_relationship.csv",
     temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
 )
+
+
+*****************************************
+
+from pyspark.sql.functions import col
+
+# Supplier -> client relationships
+supplier_client_base = transformed_df.filter(
+    col("stg_business_entity_id").isNotNull() & 
+    (col("stg_business_entity_id") != "") & 
+    (col("stg_business_entity_id") != "null") & 
+    (col("stg_business_entity_id") != "none")
+).join(
+    client_mapping,
+    on="client_name",
+    how="inner"
+).join(
+    preferred_contacts,
+    (transformed_df["stg_business_entity_id"] == preferred_contacts["stg_business_entity_id"]) &
+    (transformed_df["vendor_contact_name"] == preferred_contacts["contact_name"]),
+    how="left"
+)
