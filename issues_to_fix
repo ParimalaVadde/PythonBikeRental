@@ -1,148 +1,38 @@
-"stg_business_entity_id","business_entity_contact_id","stg_related_business_entity_id","related_business_entity_contact_id","business_entity_role","related_business_entity_role","client_vendor_id","client_vendor_site_id","client_ecid","supplier_ecid","is_active","business_entity_relationship_id"
-"6907859a-25a0-38dd-4ede-5f79fecc16e1","03b2f645-ffb1-265f-e15c-400972fcf5c3","bb47d9f7-c631-a592-a734-8221082535bf","","supplier","buyer","17217","","538669316","344352238","true","921f286d-144b-6ccf-8cab-5d2cc394f7be"
-"4dac8aef-e73b-32be-d1af-29a095d2774f","8776f2fa-298f-b8a9-1c71-d346861b3495","bb47d9f7-c631-a592-a734-8221082535bf","","supplier","buyer","32184","","538669316","632475079","true","4bf882e5-aa03-5f0f-dd7b-9ec61f18f5b3"
-"bc6cc4b0-244e-5d6b-e907-e30b61ac0c06","b7586821-8c2a-6139-87db-228edbd03d2e","bb47d9f7-c631-a592-a734-8221082535bf","","supplier","buyer","35356","","538669316","","true","20e7a07d-a672-48fb-cab4-81583d94acdf"
-"62ebe96b-5f4d-c331-394f-fc0b1f011e1c","52d58a5b-63f2-15ec-14a8-e37e7e96e20d","bb47d9f7-c631-a592-a734-8221082535bf","","supplier","buyer","99","","538669316","","true","b4075826-3d9f-9f52-a93f-3b9b98953cb8"
-"55047de8-7edc-c7ea-16d4-b254183b0162","045d61a9-7d18-13e0-0204-a96d0cd4b691","bb47d9f7-c631-a592-a734-8221082535bf","","supplier","buyer","38891","","538669316","","true","37d07920-3f32-fccb-0c7b-d937963266ab"
-"4dac8aef-e73b-32be-d1af-29a095d2774f","6231d5a4-3856-cda7-8a90-fcc230aff15b","bb47d9f7-c631-a592-a734-8221082535bf","","supplier","buyer","32184","","538669316","632475079","true","34f2c0b6-be8a-47a5-6cdf-55c1b63768b6"
+transformed_df
+analysis_task_id	sds_upload_name	analysis_external_reference_id	client_name	upload_user	sds_upload_ts	sds_note	unique_payment_row	request_id	user_request_id	request_time	file_uploaded_ts	analysis_stage	period_start_date	period_end_date	client_ecid	request_name	analysis_conducted_dt	note	shared_with_users	source	request_user	vendor_name	business_entity_name	client_vendor_id	client_vendor_site_id	country	vendor_hq_country	state_province	postal_code	street_line_1	street_line_2	city	primary_phone_number	personal	email	website	vendor_contact_name	tax_id	dba	vendor_ultimate_parent_name	annual_spend	sum_of_payments	count_of_payments	count_of_invoices	reported_annual_revenue	payment_ccy	payment_mode	payment_terms	payment_term_days	payment_terms_discount_ind	payment_terms_discount_rate	payment_terms_discount_days	actual_days_payment_outstanding	vendor_cat_clientdef_1	vendor_cat_clientdef_2	vendor_cat_clientdef_3	vendor_cat_clientdef_4	vendor_cat_userdef_1	vendor_cat_userdef_2	vendor_cat_userdef_3	vendor_cat_userdef_4	sds_supplier_id	validation_type	match_strength_name	match_strength_address	match_strength_country	match_strength_state	match_strength_postcode	average_vendor_dso	average_vendor_dpo	average_vendor_dio	level-1	level-2	level-3	scf_industry_sector_dso_25	scf_industry_sector_dso_50	scf_industry_sector_dso_75	scf_industry_group_dso_25	scf_industry_group_dso_50	scf_industry_group_dso_75	filter_analyzable	filter_adjustable	filter_monetizable	filter_country	filter_employee	trust	govt	real_estate	utilities	insurance	fi	filter_interco	filter_individual	do_not_campaign	payment_preference	moody	vendor_credit_rating_moody_date	sp	vendor_credit_rating_sp_date	vendor_credit_rating_recent	credit_revolver_rate	cost_of_goods_sold	ind_jpmc	supplier_ecid	enrolled_scf_supplier	scf_buyerlist	scf_throughput_usd	scf_avg_spread	scf_avg_payment_terms	scf_rate_proposed	scf_rate_offered	scf_esg_discount	scf_ind_decline	vendor_card_tier	enrolled_vc_supplier	vc_concierge	virtual_card_vcn	spend_on_jpmc_vc	vc_enrollment_duration_years	vcn_payment_accepted	vc_buyercount	vc_interchange_amt	cms_enrolled	businessbank_enrolled	stp_partnerships	vc_campaigned_previously	vc_acceptance_tier_legacy	vc_acceptance_tier_model	vc_acceptance_tier_userdefined	vc_campaign_count	vc_campaign_accepts	jpmc_cc_payment_accepted	jpmc_cc_spend	jpmc_cc_enrolled_years	jpmc_cc_buyer_count	match_confidence	matched_level_2	matched_level_3_summary	matched_level_3_lineitem	matched_fleet_ind	matched_data_quality	matched_mcc	google_places_id	enigma_id	Enigma_business_id	year_incorporated	registered_agents	associated_people	industries	company_structure	associated_tax_ids	technologies	has_online_payments	card_revenue	card_transactions_stability	supplier_segmentation	rebate_rate	stg_business_entity_id	stg_payor_business_entity_id	ind_virtualcard_campaign_count	google_flag	ind_card_match	stg_codelist	product_segmentation_applicable	google_place_id	cms_subacct_enrolled	stg_jpmc_business_entity_id
+d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26	SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37	d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27	SAILDRONE INC	u856923	2024-07-19T12:00:00.000Z		CITY OF ALAMEDA168ACH	d8c5ff84-1ca5-4dfd-9266-f89ff4a07c25	SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37	1.75494E+12		ANALYSIS_FINAL	2024-07-19T12:00:00.000Z	2025-07-14T12:00:00.000Z	538669316	SAILDRONE INC 2025-08 15244  CB v2	20250811	SAILDRONE INC 2025-08 15244  CB v2   DAP file, unknown as pay type with same supplier updated to lik	N792158, E056214	Commercial Card	E057348	CITY OF ALAMEDA	CITY ALAMEDA	168		US	US	CA	94501	4745 MANGELS BLVD		Alameda					City of Alameda (Fe				1322572.09	1322572.09	22				ACH																									Government	Municipal	Municipal-City										Y	N	N	Y	N	N	N	N	N	N										N		N																		N	N		Y				1	0					Medium	Yes	Yes	Yes			7523														Government	0.005	8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	bb47d9f7-c631-a592-a734-8221082535bf								2d35a04a-5fdf-50d5-7750-c1c7621ddc33
+d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26	SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37	d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27	SAILDRONE INC	u856923	2024-07-19T12:00:00.000Z		CITY OF ALAMEDA2080Check	d8c5ff84-1ca5-4dfd-9266-f89ff4a07c25	SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37	1.75494E+12		ANALYSIS_FINAL	2024-07-19T12:00:00.000Z	2025-07-14T12:00:00.000Z	538669316	SAILDRONE INC 2025-08 15244  CB v2	20250811	SAILDRONE INC 2025-08 15244  CB v2   DAP file, unknown as pay type with same supplier updated to lik	N792158, E056214	Commercial Card	E057348	CITY OF ALAMEDA	CITY ALAMEDA	2080		US	US	CA	94501	950 W MALL SQ		ALAMEDA			SFox@riverrockreg.c	https://www.alamedaca.gov/Departments/Public-Works-Department	City of Alameda (Re		ALAMEDA CITY OF		26229.08	26229.08	5				Check																									Government	Municipal	Municipal-City										Y	N	N	Y	N	N	N	N	N	N										N		N																		N	N		Y				1	0					Medium	Yes	Yes	Yes			7523		E0024f192000021dc		2017	['JOHN S TOUNGER']	[{'name': 'AARON CLEMENTS', 'titles': ['CHIEF FINANCIAL OFFICER']}, {'name': 'LUCY FARBER', 'titles'	{'classification_description': 'city government office', 'classification_type': 'enigma_description'		320536529			{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'aver	{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'days	Government	0.005	8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	bb47d9f7-c631-a592-a734-8221082535bf								2d35a04a-5fdf-50d5-7750-c1c7621ddc33
+
+
+preferred_contacts
+
+stg_business_entity_id	contact_name	contact_title	is_active	business_entity_contact_id
+8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	City of Alameda (Fe		TRUE	dcb1398e-5825-dc60-8bd4-bc9ef14349e5
+8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	City of Alameda (Re		TRUE	2379dc1d-0d17-ffc2-3f6a-1cd5e4aecdf7
+
+
+transformed_relationship
+
+stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid	is_active	business_entity_relationship_id
+8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	dcb1398e-5825-dc60-8bd4-bc9ef14349e5	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	2080		538669316		TRUE	59e6e6e5-f7ac-0a5e-3be0-d5f8c935c282
+8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	2379dc1d-0d17-ffc2-3f6a-1cd5e4aecdf7	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	2080		538669316		TRUE	5e1c7fb6-4feb-0f85-991f-b6ae7fdcae41
+8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	dcb1398e-5825-dc60-8bd4-bc9ef14349e5	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	168		538669316		TRUE	59e6e6e5-f7ac-0a5e-3be0-d5f8c935c282
+8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	2379dc1d-0d17-ffc2-3f6a-1cd5e4aecdf7	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	168		538669316		TRUE	5e1c7fb6-4feb-0f85-991f-b6ae7fdcae41
 
 
 
-# Select and rename columns from `transformed_relationship`
-transformed_rel_identifiers = transformed_relationship.select(
-    col("stg_business_entity_id"),
-    col("business_entity_relationship_id"),
-    col("client_vendor_id"),
-    col("client_vendor_site_id"),
-    #col("client_ecid"),
-    col("supplier_ecid")
-)
+but expected output in transformed_relationship is based on business_entity_contact_id,contact_name , if we map them with transformed_df
 
-transformed_df_iden1 = (transformed_df.select("stg_payor_business_entity_id","client_ecid")
-                    .distinct()
-                      )
-					  
-transformed_df_iden = here i need to select business_entity_relationship_id from transformed_rel_identifiers where stg_business_entity_id of transformed_rel_identifiers  == stg_payor_business_entity_id of transformed_df_iden1
+stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid	is_active	business_entity_relationship_id
+8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	2379dc1d-0d17-ffc2-3f6a-1cd5e4aecdf7	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	2080		538669316		TRUE	5e1c7fb6-4feb-0f85-991f-b6ae7fdcae41
+8473f193-8721-4fe0-87d8-ec4a3c3bbdd0	dcb1398e-5825-dc60-8bd4-bc9ef14349e5	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	168		538669316		TRUE	59e6e6e5-f7ac-0a5e-3be0-d5f8c935c282
 
-final transformed_df_iden should have business_entity_relationship_id,client_ecid
+existing code
 
-
-************************************************************
-
-# Select and rename columns from `transformed_relationship`
-transformed_rel_identifiers = transformed_relationship.select(
-    col("stg_business_entity_id"),
-    col("business_entity_relationship_id"),
-    col("client_vendor_id"),
-    col("client_vendor_site_id"),
-    #col("client_ecid"),
-    col("supplier_ecid")
-)
-
-transformed_df_iden1 = (transformed_df.select("stg_payor_business_entity_id","client_ecid")
-                    .distinct()
-                      )
-
-# Join to get business_entity_relationship_id where stg_business_entity_id matches stg_payor_business_entity_id
-transformed_df_iden = transformed_df_iden1.join(
-    transformed_rel_identifiers.select("stg_business_entity_id", "business_entity_relationship_id"),
-    col("stg_payor_business_entity_id") == col("stg_business_entity_id"),
-    how="inner"
-).select(
-    col("business_entity_relationship_id"),
-    col("client_ecid")
-)
-
-
-
-*******************************************************************************************************
-
-business_entity_role	related_business_entity_role
-supplier	buyer
-client	firm
-
-
-in below df need to filter out when business_entity_role ='client' and related_business_entity_role = 'firm' then we shouldn't consider , then in final selection it should have only
-col("stg_business_entity_id"),
-    col("business_entity_relationship_id"),
-    col("client_vendor_id"),
-    col("client_vendor_site_id"),
-    #col("client_ecid"),
-    col("supplier_ecid")
-
-# Select and rename columns from `transformed_relationship`
-transformed_rel_identifiers = transformed_relationship.select(
-    col("stg_business_entity_id"),
-    col("business_entity_relationship_id"),
-    col("client_vendor_id"),
-    col("client_vendor_site_id"),
-    #col("client_ecid"),
-    col("supplier_ecid"),
-	col("business_entity_role"),
-	col("related_business_entity_role")
-)
-
-************************************************************
-
-# Select and rename columns from `transformed_relationship`
-transformed_rel_identifiers = (transformed_relationship
-    .select(
-        col("stg_business_entity_id"),
-        col("business_entity_relationship_id"),
-        col("client_vendor_id"),
-        col("client_vendor_site_id"),
-        #col("client_ecid"),
-        col("supplier_ecid"),
-        col("business_entity_role"),
-        col("related_business_entity_role")
-    )
-    .filter(
-        ~((col("business_entity_role") == "client") & 
-          (col("related_business_entity_role") == "firm"))
-    )
-    .select(
-        col("stg_business_entity_id"),
-        col("business_entity_relationship_id"),
-        col("client_vendor_id"),
-        col("client_vendor_site_id"),
-        #col("client_ecid"),
-        col("supplier_ecid")
-    )
-)
-
-
-*************************************************************
-
-Error Category: INVALID_ARGUMENT_ERROR; Failed Line Number: 999; AttributeError: 'tuple' object has no attribute '_jdf'
-
-def relationship(transformed_business_entity,ss, transformed_df,compute_uuid_udf):
-    
-    # Process vendor contacts - ONLY if vendor_contact_name is not null
-    vendor_contacts_raw = transformed_df.select(*ss.vendor_contact).distinct()
-    vendor_contacts_filtered = vendor_contacts_raw.filter(col("vendor_contact_name").isNotNull())
-    
-    
-    vendor_contacts_final = vendor_contacts_filtered.select(
-    	col("stg_business_entity_id"),
-    	col("vendor_contact_name").alias("contact_name"),
-    	lit(None).cast("string").alias("contact_title")
-    )
-    
-    
-    # Only keep contacts that actually have contact names
-    transformed_contacts = vendor_contacts_final.filter(col("contact_name").isNotNull())
-    
-    transformed_contacts = transformed_contacts.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-    )
-    
-    # Generate UUIDs only for valid contacts
-    if transformed_contacts.count() > 0:
-        transformed_contacts = transformed_contacts.withColumn(
-            "business_entity_contact_id",
-            compute_uuid_udf(struct(*transformed_contacts.columns))
-        )
+def relationship(transformed_business_entity, transformed_contacts, transformed_df):
+    from pyspark.sql import DataFrame
+    from pyspark.sql.functions import col, lit, when, coalesce, isnan
+    from pyspark.sql.types import StringType
     
     # # Get vendor contact names from transformed_df
     # vendor_names_df = transformed_df.select(
@@ -150,9 +40,24 @@ def relationship(transformed_business_entity,ss, transformed_df,compute_uuid_udf
     #     col("vendor_contact_name").alias("contact_name")
     # ).distinct()
 
-    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
-    preferred_contacts = transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
+    # # Joining this with transformed_contacts to get the accurate business_entity_contact_id
+    # preferred_contacts = vendor_names_df.join(
+    #     transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
+    #     on=["stg_business_entity_id", "contact_name"],
+    #     how="inner"
+    # ).distinct()
+    
+    # Only keep contacts that actually have contact names
+    # transformed_contacts = transformed_contacts.filter(col("contact_name").isNotNull())
+
+    # # Generate UUIDs only for valid contacts
+    # if transformed_contacts.count() > 0:
+    #     transformed_contacts = transformed_contacts.withColumn(
+    #         "business_entity_contact_id",
+    #         compute_uuid_udf(struct(*transformed_contacts.columns))
+    #     )
         
+    preferred_contacts = transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id")
     
     # Print column names for debugging
     print("transformed_business_entity columns:", transformed_business_entity.columns)
@@ -163,77 +68,164 @@ def relationship(transformed_business_entity,ss, transformed_df,compute_uuid_udf
         col("business_entity_name").alias("client_name"),
         col("stg_business_entity_id").alias("client_stg_business_entity_id")
     )
+    
+
+    # Initialize list to collect all relationship DataFrames
+    relationship_dfs = []
+    
+    # 1. Create client -> firm relationships first (for distinct clients)
+    # Filter out empty/null stg_business_entity_id and join with transformed_df to get required columns
+    distinct_clients = transformed_df.select(
+        "client_name", 
+        "stg_business_entity_id",
+        "client_vendor_id",
+        "client_vendor_site_id", 
+        "client_ecid",
+        "supplier_ecid"
+    ).filter(
+        col("client_name").isNotNull() & 
+        (col("client_name") != "") &
+        col("stg_business_entity_id").isNotNull() & 
+        (col("stg_business_entity_id") != "") &
+        (col("stg_business_entity_id") != "null") &
+        (col("stg_business_entity_id") != "none")
+    ).distinct()
+    
+    client_firm_df = distinct_clients.join(
+        client_mapping,
+        on="client_name",
+        how="inner"
+    ).select(
+        col("client_stg_business_entity_id").alias("stg_business_entity_id"),
+        lit(None).alias("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("client").alias("business_entity_role"),
+        lit("firm").alias("related_business_entity_role"),
+        lit(None).alias("client_vendor_id"),
+        lit(None).alias("client_vendor_site_id"),
+        lit(None).alias("client_ecid"),
+        lit(None).alias("supplier_ecid")
+    )
+    
+    relationship_dfs.append(client_firm_df)
+    
+    # 2. Create supplier -> client relationships
+    # Filter out empty/null stg_business_entity_id
+    supplier_client_base = transformed_df.filter(
+        col("stg_business_entity_id").isNotNull() & 
+        (col("stg_business_entity_id") != "") &
+        (col("stg_business_entity_id") != "null") &
+        (col("stg_business_entity_id") != "none")
+    ).join(
+        client_mapping,
+        on="client_name",
+        how="inner"
+    ).join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
+    )
+    
+    supplier_client_df = supplier_client_base.select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        col("client_stg_business_entity_id").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("supplier").alias("business_entity_role"),
+        lit("buyer").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("supplier_ecid")
+    )
+    
+    relationship_dfs.append(supplier_client_df)
+    
+    # 3. Create supplier -> firm relationships (only when supplier_ecid is not null/empty)
+    supplier_firm_base = transformed_df.filter(
+        col("supplier_ecid").isNotNull() & 
+        (col("supplier_ecid") != "") & 
+        (col("supplier_ecid") != "NULL") &
+        col("stg_business_entity_id").isNotNull() & 
+        (col("stg_business_entity_id") != "") &
+        (col("stg_business_entity_id") != "null") &
+        (col("stg_business_entity_id") != "none")
+    ).join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
+    )
+    
+    supplier_firm_df = supplier_firm_base.select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("client").alias("business_entity_role"),
+        lit("firm").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("supplier_ecid")
+    )
+
+    relationship_dfs.append(supplier_firm_df)
+    
+    # Union all relationship DataFrames
+    union_df = relationship_dfs[0]
+    for df in relationship_dfs[1:]:
+        union_df = union_df.union(df)
+    
+    # Drop duplicates
+    union_df = union_df.dropDuplicates()
 
 
-*********************************************************************************************************************************************************************************
+    return union_df
+	
+# Call the `relationship` function and assign the result to `transformed_relationship`
+transformed_relationship = relationship(transformed_business_entity_details, transformed_contacts, transformed_df)
 
-business_entity_contact_id
-SELECT * FROM sds_staging.business_entity_relationships
-
-
-
-SELECT * FROM sds_staging.business_entity_contacts
-business_entity_contact_id
-
-**************************************************************************************************************************
-
-SELECT r.business_entity_contact_id
-FROM sds_staging.business_entity_relationships r
-LEFT JOIN sds_staging.business_entity_contacts c
-    ON r.business_entity_contact_id = c.business_entity_contact_id
-WHERE c.business_entity_contact_id IS NULL;
+transformed_relationship = transformed_relationship.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
 
 
+# Remove the line that renames "related_business_entity_id" since it doesn't exist in our schema
+# transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
 
-***************************************************************************************************************************
+# Check for void data types before proceeding
+print("Data types in transformed_relationship:")
+for col_name, col_type in transformed_relationship.dtypes:
+    print(f"{col_name}: {col_type}")
 
-this is the df
+# Find columns with void data type
+void_columns = [col_name for col_name, col_type in transformed_relationship.dtypes if col_type == 'void']
+print(f"Void columns found: {void_columns}")
 
-stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid
-496cf9d8-332e-1ab7-1ad3-d8f599690753	e3ce5eca-bfc4-38b4-a92a-3b6ebe36a241	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	32510		538669316	
-902f5ee2-7aee-225d-976c-00e7542266b2	fd22cd31-bd47-35e3-500a-075bf5617dbf	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	43338		538669316	
+if void_columns:
+    print(f"Fixing void columns: {void_columns}")
+    for void_col in void_columns:
+        transformed_relationship = transformed_relationship.withColumn(
+            void_col, 
+            lit(None).cast(StringType())  # Cast void to nullable string
+        )
 
-
-here i want to derive another df from above df in pyspark
-
-if stg_business_entity_id,stg_related_business_entity_id,business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid are eactly same
-
-
-i want all columns in above df
-i.e
-stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid
-
-*****************************************************************************************************************************************************************************************
-
-
-from pyspark.sql import functions as F
-
-# List of columns to check for duplicates
-group_cols = [
-    "stg_business_entity_id",
-    "stg_related_business_entity_id",
-    "business_entity_role",
-    "related_business_entity_role",
-    "client_vendor_id",
-    "client_vendor_site_id",
-    "client_ecid",
-    "supplier_ecid"
+# Generate UUID for business_entity_relationship_id
+transformed_relationship_columns = [
+    col for col in transformed_relationship.columns 
+    if col not in ['client_ecid', 'client_vendor_id', 'client_vendor_site_id', 'supplier_ecid']
 ]
 
-# Step 1: Find duplicate groups by grouping and filtering
-duplicate_groups = df.groupBy(group_cols) \
-    .count() \
-    .filter(F.col("count") > 1) \
-    .drop("count")
+transformed_relationship = transformed_relationship.withColumn(
+    "business_entity_relationship_id",
+    compute_uuid_udf(struct(*[col(c) for c in transformed_relationship_columns]))
+)
 
-# Step 2: Join original df with duplicate groups to get full rows
-duplicate_rows = df.join(duplicate_groups, on=group_cols, how="inner")
-
-# duplicate_rows now contains all rows where those columns are duplicated
-duplicate_rows.show()
-
-
-
-i want all columns in above df
-i.e
-stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid
+write_single_csv_to_s3_fixed(
+    transformed_relationship,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_relationship.csv",
+    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
+)
