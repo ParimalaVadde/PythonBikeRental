@@ -163,3 +163,14 @@ def relationship(transformed_business_entity,ss, transformed_df,compute_uuid_udf
         col("business_entity_name").alias("client_name"),
         col("stg_business_entity_id").alias("client_stg_business_entity_id")
     )
+
+
+*********************************************************************************************************************************************************************************
+
+business_entity_contact_id
+SELECT * FROM sds_staging.business_entity_relationships
+
+
+
+SELECT * FROM sds_staging.business_entity_contacts
+business_entity_contact_id
