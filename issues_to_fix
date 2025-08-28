@@ -251,3 +251,8 @@ supplier_client_base = transformed_df.filter(
     (transformed_df["vendor_contact_name"] == preferred_contacts["contact_name"]),
     how="left"
 )
+
+
+**************************************
+
+Error Category: QUERY_ERROR; Failed Line Number: 659; AnalysisException: Reference 'stg_business_entity_id' is ambiguous, could be: stg_business_entity_id, stg_business_entity_id.
