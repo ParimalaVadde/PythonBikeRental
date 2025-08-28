@@ -109,3 +109,57 @@ transformed_rel_identifiers = (transformed_relationship
         col("supplier_ecid")
     )
 )
+
+
+*************************************************************
+
+Error Category: INVALID_ARGUMENT_ERROR; Failed Line Number: 999; AttributeError: 'tuple' object has no attribute '_jdf'
+
+def relationship(transformed_business_entity,ss, transformed_df,compute_uuid_udf):
+    
+    # Process vendor contacts - ONLY if vendor_contact_name is not null
+    vendor_contacts_raw = transformed_df.select(*ss.vendor_contact).distinct()
+    vendor_contacts_filtered = vendor_contacts_raw.filter(col("vendor_contact_name").isNotNull())
+    
+    
+    vendor_contacts_final = vendor_contacts_filtered.select(
+    	col("stg_business_entity_id"),
+    	col("vendor_contact_name").alias("contact_name"),
+    	lit(None).cast("string").alias("contact_title")
+    )
+    
+    
+    # Only keep contacts that actually have contact names
+    transformed_contacts = vendor_contacts_final.filter(col("contact_name").isNotNull())
+    
+    transformed_contacts = transformed_contacts.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+    
+    # Generate UUIDs only for valid contacts
+    if transformed_contacts.count() > 0:
+        transformed_contacts = transformed_contacts.withColumn(
+            "business_entity_contact_id",
+            compute_uuid_udf(struct(*transformed_contacts.columns))
+        )
+    
+    # # Get vendor contact names from transformed_df
+    # vendor_names_df = transformed_df.select(
+    #     col("stg_business_entity_id"),
+    #     col("vendor_contact_name").alias("contact_name")
+    # ).distinct()
+
+    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
+    preferred_contacts = transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
+        
+    
+    # Print column names for debugging
+    print("transformed_business_entity columns:", transformed_business_entity.columns)
+    print("transformed_df columns:", transformed_df.columns)
+
+    # Create a mapping from client_name to stg_business_entity_id using business_entity_details
+    client_mapping = transformed_business_entity.select(
+        col("business_entity_name").alias("client_name"),
+        col("stg_business_entity_id").alias("client_stg_business_entity_id")
+    )
