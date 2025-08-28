@@ -182,3 +182,23 @@ FROM sds_staging.business_entity_relationships r
 LEFT JOIN sds_staging.business_entity_contacts c
     ON r.business_entity_contact_id = c.business_entity_contact_id
 WHERE c.business_entity_contact_id IS NULL;
+
+
+
+***************************************************************************************************************************
+
+this is the df
+
+stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid
+496cf9d8-332e-1ab7-1ad3-d8f599690753	e3ce5eca-bfc4-38b4-a92a-3b6ebe36a241	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	32510		538669316	
+902f5ee2-7aee-225d-976c-00e7542266b2	fd22cd31-bd47-35e3-500a-075bf5617dbf	bb47d9f7-c631-a592-a734-8221082535bf		supplier	buyer	43338		538669316	
+
+
+here i want to derive another df from above df in pyspark
+
+if stg_business_entity_id,stg_related_business_entity_id,business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid are eactly same
+
+
+i want all columns in above df
+i.e
+stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid
