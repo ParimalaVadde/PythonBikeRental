@@ -294,3 +294,45 @@ supplier_client_df = supplier_client_base.select(
     df["client_ecid"],
     df["supplier_ecid"]
 )
+
+
+**********************************************************************************************************************
+
+
+
+seems like this function is not working as expected technology_used column is null. or '' still it is consider df.count > 0 and trying to join
+
+def combine_flattened_results(base_df, flattened_dfs, join_key=ss.base_col):
+    """
+    Combine all flattened DataFrames back to base DataFrame using LEFT JOIN 
+    but filter out rows with no actual data.
+    """
+    result_df = base_df.select(join_key).distinct()
+    
+    for df_name, df in flattened_dfs.items():
+        if df.count() > 0:
+            print(f"Joining {df_name}...")
+            result_df = result_df.join(df, on=join_key, how="left")
+        else:
+            print(f"Skipping {df_name} - no data to join")
+    
+    # Identify non-key columns
+    non_key_cols = [c for c in result_df.columns if c != join_key]
+    
+    # Filter out rows where all other columns are NULL or empty
+    condition = None
+    for c in non_key_cols:
+        col_cond = (
+            col(c).isNotNull() &
+            (col(c) != "") &
+            (col(c) != "[]") &
+            (col(c) != "{}")
+        )
+        condition = col_cond if condition is None else (condition | col_cond)
+    
+    if condition is not None:
+        result_df = result_df.filter(condition)
+
+    result_df = result_df.dropDuplicates()
+    
+    return result_df
