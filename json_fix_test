@@ -1,188 +1,54 @@
-output data
-stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid	associated_tax_ids	is_active	business_entity_relationship_id
-cfb7de69-f7f8-4ae0-9601-921f08c76335	0c9ba445-b956-16ad-30c0-bd54d9234080	2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm						TRUE	5c44c5c6-ec21-8b21-96c2-40e2765bc485
-945f6f89-e66c-051b-f5dc-be3f5ecf386e	fd476e62-0b7c-d033-7887-f8db07752bd3	2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm						TRUE	f63352b9-301b-b81e-1d06-83c306cd4746
-d21bb537-725d-603e-e2db-adf9c3d1e291	394380cd-b393-bda6-f42b-5ffe8122d200	2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm						TRUE	3b245a4c-e9c2-9427-8b52-2286df3c9a64
-5c5731c5-524f-9645-6d77-7b745c0019af	b3e5ca5e-5f86-9ef2-3b8b-33fa79685d1f	2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm						TRUE	914e0c31-6766-e442-6b56-393d05cf1713
-df73f762-a884-6ace-0179-5c4f8b944874	749f6e51-76bd-6805-cbc6-85db35598f0f	2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm						TRUE	40219a4b-833d-b033-44f2-8164ea23664c
-3a7bd3e2-360a-3d29-eea4-36fcfb7e44c7	75974b5c-db9d-e766-4b13-74d7fa965b3f	2d35a04a-5fdf-50d5-7750-c1c7621ddc33		client	firm						TRUE	1bbca937-3150-7bcb-d218-ae1a4d1c5730
+# Step 1: Split into json_to_flatten and json_not_flatten
+json_to_flatten = []
+json_not_flatten = []
 
-
-for 
-business_entity_role	related_business_entity_role
-client	firm
-
-below columns are null/emptyclient_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid	associated_tax_ids
-				
-but i want data to be populated for below columns taking from transformed_df
-client_vendor_id	client_vendor_site_id	client_ecid	supplier_ecid	associated_tax_ids
-				
-
-also if stg_business_entity_id is '', null, none then we shouldignore such records in final transformed_relationship
-
-
-def relationship(transformed_business_entity, transformed_contacts, transformed_df):
-    from pyspark.sql import DataFrame
-    from pyspark.sql.functions import col, lit, when, coalesce
-    
-    # Get vendor contact names from transformed_df
-    vendor_names_df = transformed_df.select(
-        col("stg_business_entity_id"),
-        col("vendor_contact_name").alias("contact_name")
-    ).distinct()
-
-    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
-    preferred_contacts = vendor_names_df.join(
-        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
-        on=["stg_business_entity_id", "contact_name"],
-        how="inner"
-    ).distinct()
-    
-    print("hi 1")
-    # Print column names for debugging
-    print("transformed_business_entity columns:", transformed_business_entity.columns)
-    print("transformed_df columns:", transformed_df.columns)
-
-    # Create a mapping from client_name to stg_business_entity_id using business_entity_details
-    client_mapping = transformed_business_entity.select(
-        col("business_entity_name").alias("client_name"),
-        col("stg_business_entity_id").alias("client_stg_business_entity_id")
+for i in jsoncol:
+    if i == ss.base_col:
+        continue
+    non_null_count = (
+        transformed_df.filter((col(i).isNotNull()) & (col(i) != ""))
+        .limit(1).count()
     )
-    
-    print("hi 2")
+    if non_null_count > 0:
+        json_to_flatten.append(i)
+    else:
+        json_not_flatten.append(i)
 
-    # Initialize list to collect all relationship DataFrames
-    relationship_dfs = []
-    
-    # 1. Create client -> firm relationships first (for distinct clients)
-    distinct_clients = transformed_df.select("client_name").distinct().filter(
-        col("client_name").isNotNull() & (col("client_name") != "")
-    )
-    
-    client_firm_df = distinct_clients.join(
-        client_mapping,
-        on="client_name",
-        how="inner"
-    ).select(
-        col("client_stg_business_entity_id").alias("stg_business_entity_id"),
-        lit(None).alias("business_entity_contact_id"),
-        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("client").alias("business_entity_role"),
-        lit("firm").alias("related_business_entity_role"),
-        lit(None).alias("client_vendor_id"),
-        lit(None).alias("client_vendor_site_id"),
-        lit(None).alias("client_ecid"),
-        lit(None).alias("supplier_ecid"),
-        lit(None).alias("associated_tax_ids")
-    )
-    
-    relationship_dfs.append(client_firm_df)
-    print("hi 3")
-    # 2. Create supplier -> client relationships
-    # Join transformed_df with client_mapping to get client's stg_business_entity_id
-    supplier_client_base = transformed_df.join(
-        client_mapping,
-        on="client_name",
-        how="inner"
-    ).join(
-        preferred_contacts,
-        on="stg_business_entity_id",
-        how="left"
-    )
-    
-    supplier_client_df = supplier_client_base.select(
-        col("stg_business_entity_id"),
-        col("business_entity_contact_id"),
-        col("client_stg_business_entity_id").alias("stg_related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("buyer").alias("business_entity_role"),
-        lit("supplier").alias("related_business_entity_role"),
-        col("client_vendor_id"),
-        col("client_vendor_site_id"),
-        col("client_ecid"),
-        col("supplier_ecid"),
-        col("associated_tax_ids")
-    )
-    
-    relationship_dfs.append(supplier_client_df)
-    
-    # 3. Create supplier -> firm relationships (only when supplier_ecid is not null/empty)
-    supplier_firm_base = transformed_df.filter(
-        col("supplier_ecid").isNotNull() & (col("supplier_ecid") != "") & (col("supplier_ecid") != "NULL")
-    ).join(
-        preferred_contacts,
-        on="stg_business_entity_id",
-        how="left"
-    )
-    
-    supplier_firm_df = supplier_firm_base.select(
-        col("stg_business_entity_id"),
-        col("business_entity_contact_id"),
-        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
-        lit(None).alias("related_business_entity_contact_id"),
-        lit("client").alias("business_entity_role"),
-        lit("firm").alias("related_business_entity_role"),
-        lit(None).alias("client_vendor_id"),
-        lit(None).alias("client_vendor_site_id"),
-        lit(None).alias("client_ecid"),
-        lit(None).alias("supplier_ecid"),
-        lit(None).alias("associated_tax_ids")
-    )
-    print("hi 4")
-    relationship_dfs.append(supplier_firm_df)
-    
-    # Union all relationship DataFrames
-    union_df = relationship_dfs[0]
-    for df in relationship_dfs[1:]:
-        union_df = union_df.union(df)
-    print("hi 5")
-    # Drop duplicates
-    union_df = union_df.dropDuplicates()
 
-    print("hi 6")
-    return union_df
+# Step 2: Flatten only required JSON fields
+if len(json_to_flatten) > 0:
+    JSON_FIELD_CONFIGS_v1 = {k: v for k, v in JSON_FIELD_CONFIGS.items() if k in json_to_flatten}
 
-# Call the `relationship` function and assign the result to `transformed_relationship`
-transformed_relationship = relationship(transformed_business_entity_details, transformed_contacts, transformed_df)
+    for col_name, config in JSON_FIELD_CONFIGS_v1.items():
+        df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
+        if df_flat is not None and df_flat.count() > 0:
+            flattened_dfs[col_name] = df_flat
 
-transformed_relationship = transformed_relationship.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-)
-print("hi 7")
-transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
-
-# Check for void data types before proceeding
-print("Data types in transformed_relationship:")
-for col_name, col_type in transformed_relationship.dtypes:
-    print(f"{col_name}: {col_type}")
-print("hi 8")
-# Find columns with void data type
-void_columns = [col_name for col_name, col_type in transformed_relationship.dtypes if col_type == 'void']
-print(f"Void columns found: {void_columns}")
-print("hi 9")
-if void_columns:
-    print(f"Fixing void columns: {void_columns}")
-    for void_col in void_columns:
-        transformed_relationship = transformed_relationship.withColumn(
-            void_col, 
-            lit(None).cast(StringType())  # Cast void to nullable string
+    # Handle registered_agents separately
+    reg_agents_df = (
+        transformed_df
+        .filter(~utl.is_empty_or_null("registered_agents"))
+        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+        .withColumn("registered_agents",
+            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
         )
+        .select(ss.base_col, "registered_agents")
+    )
+    if reg_agents_df.count() > 0:
+        flattened_dfs["registered_agents"] = reg_agents_df
 
-transformed_relationship_columns = [
-    col for col in transformed_relationship.columns 
-    if col not in ['client_ecid', 'client_vendor_id', 'client_vendor_site_id', 'supplier_ecid']
-]
+    transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
 
-transformed_relationship = transformed_relationship.withColumn(
-    "business_entity_relationship_id",
-    compute_uuid_udf(struct(*[col(c) for c in transformed_relationship_columns]))
-)
-print("hi 10")
-write_single_csv_to_s3_fixed(
-transformed_relationship,
-s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-s3_key="pfd_scripts/pfd_staging_pvr_test/transformed_relationship.csv",
-temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
-)
+
+# Step 3: Handle json_not_flatten → add null columns
+if len(json_not_flatten) > 0:
+    for i in json_not_flatten:
+        if i not in json_col_dict.keys():
+            transformed_json_df = transformed_json_df.withColumn(i, lit(None))
+        else:
+            mapped_name = json_col_dict[i]
+            required_cols = getattr(ss, mapped_name)
+            for c in required_cols:
+                if c != ss.base_col:
+                    transformed_json_df = transformed_json_df.withColumn(c, lit(None))
