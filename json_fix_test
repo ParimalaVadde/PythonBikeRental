@@ -124,3 +124,7 @@ if transformed_json_df is None:
 ********************************************
 
 Error Category: INVALID_ARGUMENT_ERROR; Failed Line Number: 378; NameError: name 'transformed_json_df' is not defined
+
+
+
+ transformed_json_df = transformed_df.select(ss.base_col).limit(0)
