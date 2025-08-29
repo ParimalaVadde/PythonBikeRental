@@ -113,3 +113,9 @@ if len(json_not_flatten) > 0:
                 if c != ss.base_col:
                     transformed_json_df = transformed_json_df.withColumn(c, lit(None))
 
+
+(*******************************************************************************************************************
+
+# If no JSON fields were flattened, at least keep base_col
+if transformed_json_df is None:
+    transformed_json_df = transformed_df.select(ss.base_col).distinct()
