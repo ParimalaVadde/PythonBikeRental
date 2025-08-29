@@ -167,3 +167,21 @@ def relationship(transformed_business_entity,ss, transformed_df,compute_uuid_udf
 
 
     return union_df
+
+
+ # Step 5: Add business_entity_contact_id (always exists)
+    if transformed_contacts.count() > 0:
+        # Generate UUIDs for valid contacts
+        transformed_contacts = transformed_contacts.withColumn(
+            "business_entity_contact_id",
+            compute_uuid_udf(struct(*transformed_contacts.columns))
+        )
+    else:
+        # Ensure schema compatibility: add empty columns
+        transformed_contacts = vendor_contacts_raw.select(
+            col("stg_business_entity_id"),
+            lit(None).cast("string").alias("contact_name"),
+            lit(None).cast("string").alias("contact_title"),
+            lit(True).cast("boolean").alias("is_active"),
+            lit(None).cast("string").alias("business_entity_contact_id")
+        ).limit(0)   # makes it empty but with schema
