@@ -425,4 +425,98 @@ if len(json_not_flatten) > 0:
             get i value from json_col_dict
             sppose i is  'associated_people' get its value which is 'contacts'
             so watever columns in ss.contacts expect base_col = "stg_business_entity_id", need to add all these cols in transformed_json_df as nulls
-         
+
+
+
+
+
+
+*****************************************************************************************
+
+
+# Configuration mapping
+JSON_FIELD_CONFIGS = {
+    'card_revenue': {
+        'schema': card_revenue_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_revenue'
+    },
+    'card_transactions_stability': {
+        'schema': card_transactions_stability_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_transactions_stability'
+    },
+    'associated_people': {
+        'schema': associated_people_schema,
+        'flatten_type': 'array_double_explode',  # Array with nested array (titles)
+        'prefix': 'associated_people'
+    },
+    'industries': {
+        'schema': industries_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'industries'
+    },
+    'technologies': {
+        'schema': technologies_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'technologies'
+    }
+}
+
+
+jsoncol = ["stg_business_entity_id", "registered_agents", "associated_people", "industries", "technologies", "card_revenue", "card_transactions_stability"]
+
+json_col_dict = {'associated_people' : 'contacts', 'card_revenue':'revenue', 'card_transactions_stability':'transaction_stability'}
+
+json_col = [i if i != ss.base_col for i in jsoncol]
+
+first we have to check in transformed_df if all values of columns(json_col) are null or '' then we have to append such cols in json_not_flatten else in json_to_flatten
+
+for i in json_col:
+	if transformed_df[i].count == 0:
+		json_not_flatten.append(i)
+	else:
+		json_to_flatten.append(i)
+
+
+base_col = "stg_business_entity_id"
+
+ss.contacts = ["stg_business_entity_id", "associated_people__name", "associated_people__titles"]
+ss.revenue = ["stg_business_entity_id", "card_revenue__end_date", "card_revenue__1m__start_date", "card_revenue__1m__average_monthly_amount", "card_revenue__3m__start_date", "card_revenue__3m__average_monthly_amount", "card_revenue__12m__start_date", "card_revenue__12m__average_monthly_amount"]
+ss.transaction_stability = ["stg_business_entity_id", "card_transactions_stability__end_date", "card_transactions_stability__1m__start_date", "card_transactions_stability__1m__days_present", "card_transactions_stability__1m__weeks_present", "card_transactions_stability__1m__months_present", "card_transactions_stability__1m__daily_coverage_ratio", "card_transactions_stability__1m__weekly_coverage_ratio", "card_transactions_stability__1m__monthly_coverage_ratio", "card_transactions_stability__3m__start_date", "card_transactions_stability__3m__days_present", "card_transactions_stability__3m__weeks_present", "card_transactions_stability__3m__months_present", "card_transactions_stability__3m__daily_coverage_ratio", "card_transactions_stability__3m__weekly_coverage_ratio", "card_transactions_stability__3m__monthly_coverage_ratio", "card_transactions_stability__12m__start_date", "card_transactions_stability__12m__days_present", "card_transactions_stability__12m__weeks_present", "card_transactions_stability__12m__months_present", "card_transactions_stability__12m__daily_coverage_ratio", "card_transactions_stability__12m__weekly_coverage_ratio", "card_transactions_stability__12m__monthly_coverage_ratio"]
+
+
+if len(json_to_flatten) > 0:
+    here we have to define JSON_FIELD_CONFIGS_v1 from JSON_FIELD_CONFIGS only for keys which are present in json_to_flatten
+	for col_name, config in ss.JSON_FIELD_CONFIGS_v1.items():
+		df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
+		if df_flat is not None and df_flat.count() > 0:
+			flattened_dfs[col_name] = df_flat
+
+	# Handle registered_agents separately (simple array of strings)
+	reg_agents_df = (
+		transformed_df
+		.filter(~utl.is_empty_or_null("registered_agents"))
+		.withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+		.withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+		.withColumn(
+			"registered_agents",
+			when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
+		)
+		.select(ss.base_col, "registered_agents")
+	)
+
+	if reg_agents_df.count() > 0:
+		flattened_dfs["registered_agents"] = reg_agents_df
+
+	# Combine all results
+	transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
+    
+if len(json_not_flatten) > 0:
+    for i in json_not_flatten:
+        if i not in json_col_dict.keys():
+            need to add 'i' col as null in transformed_json_df
+        else:
+            get i value from json_col_dict
+            sppose i is  'associated_people' get its value which is 'contacts'
+            so watever columns in ss.contacts expect base_col = "stg_business_entity_id", need to add all these cols in transformed_json_df as nulls
