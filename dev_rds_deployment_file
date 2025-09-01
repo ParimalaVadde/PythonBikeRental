@@ -1,3 +1,44 @@
+
+if len(json_to_flatten) > 0:
+    # ✅ Handle JSON_FIELD_CONFIGS-driven columns
+    json_fields_to_flatten = [c for c in json_to_flatten if c in ss.JSON_FIELD_CONFIGS]
+
+    if json_fields_to_flatten:
+        JSON_FIELD_CONFIGS_v1 = {k: v for k, v in ss.JSON_FIELD_CONFIGS.items() if k in json_fields_to_flatten}
+
+        for col_name, config in JSON_FIELD_CONFIGS_v1.items():
+            df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
+            if df_flat is not None and df_flat.count() > 0:
+                flattened_dfs[col_name] = df_flat
+
+    # ✅ Handle registered_agents separately
+    if "registered_agents" in json_to_flatten:
+        reg_agents_df = (
+            transformed_df
+            .filter(~utl.is_empty_or_null("registered_agents"))
+            .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+            .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+            .withColumn(
+                "registered_agents",
+                when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
+            )
+            .select(ss.base_col, "registered_agents")
+        )
+        if reg_agents_df.count() > 0:
+            flattened_dfs["registered_agents"] = reg_agents_df
+
+    # ✅ Combine results
+    transformed_json_df = utl.combine_flattened_results(
+        transformed_df.select(ss.base_col).distinct(),
+        flattened_dfs
+    )
+else:
+    transformed_json_df = transformed_df.select(ss.base_col).limit(0)
+
+
+
+
+******
 # Configuration mapping
 JSON_FIELD_CONFIGS = {
     'card_revenue': {
@@ -144,3 +185,13 @@ this part for registered_agents_json should execute only if json_to_flatten has 
     )
     if reg_agents_df.count() > 0:
         flattened_dfs["registered_agents"] = reg_agents_df
+
+
+
+
+
+
+
+
+*****************************
+
