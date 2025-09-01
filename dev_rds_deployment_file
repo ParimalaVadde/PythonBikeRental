@@ -1,188 +1,146 @@
-import json
-import hashlib
-import uuid
-import psycopg2
-import utils as utl
-import staging_schema as ss
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from pyspark.sql import SparkSession
-from awsglue.context import GlueContext
-from awsglue.job import Job
-from awsglue.dynamicframe import DynamicFrame
-from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, from_json, struct, regexp_replace
-from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
-from pyspark.sql.utils import AnalysisException
-from datetime import datetime
-from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round,size
-from pyspark.sql import DataFrame
-from functools import reduce
-from pyspark.sql.functions import col, lit, when, isnan, isnull
-from pyspark.sql.types import NullType
-from pyspark.sql.functions import lit
-import sys
-import boto3
+# Configuration mapping
+JSON_FIELD_CONFIGS = {
+    'card_revenue': {
+        'schema': card_revenue_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_revenue'
+    },
+    'card_transactions_stability': {
+        'schema': card_transactions_stability_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'card_transactions_stability'
+    },
+    'associated_people': {
+        'schema': associated_people_schema,
+        'flatten_type': 'array_double_explode',  # Array with nested array (titles)
+        'prefix': 'associated_people'
+    },
+    'industries': {
+        'schema': industries_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'industries'
+    },
+    'technologies': {
+        'schema': technologies_schema,
+        'flatten_type': 'struct',  # Single nested object
+        'prefix': 'technologies'
+    }
+}
 
+jsoncol = ["stg_business_entity_id", "registered_agents", "associated_people", "industries", "technologies", "card_revenue", "card_transactions_stability"]
 
-## @params: [JOB_NAME]
-args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+json_col_dict = {'associated_people' : 'contacts', 'card_revenue':'revenue', 'card_transactions_stability':'transaction_stability'}
 
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-
-
-s3 = boto3.client("s3")
-#s3.download_file(s3_bucket,ssl_cert_s3_path,local_ssl_cert_path)
-
-
-
-# Register the UDF
-compute_uuid_udf = udf(lambda x: utl.compute_uuid(x, ss.decimal_columns), StringType())
-
-
-csv_file_path = 's3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/pfd_scripts/pfd_staging_pvr_test/transformed_df.csv'
-
-transformed_df = spark.read \
-                 .option("header","true") \
-                 .option("inferSchema","true") \
-                 .csv(csv_file_path)
-                 
-transformed_df.show()
-
-
-def write_single_csv_to_s3_fixed(df: DataFrame, s3_bucket: str, s3_key: str, temp_path: str):
-    """
-    Writes a Spark DataFrame as a single CSV file with proper escaping to S3.
-    Handles void data type columns by converting them to string type.
-    """
+flattened_dfs = {}
     
-    # Check for void columns and convert them to string type
-    void_columns = [field.name for field in df.schema.fields if isinstance(field.dataType, NullType)]
-    
-    if void_columns:
-        print(f"Found void columns: {void_columns}. Converting to string type.")
-        # Convert void columns to string type with null values
-        for col_name in void_columns:
-            df = df.withColumn(col_name, lit(None).cast("string"))
-    
-    # Alternative approach: Drop void columns entirely (uncomment if you prefer this)
-    # if void_columns:
-    #     print(f"Dropping void columns: {void_columns}")
-    #     df = df.drop(*void_columns)
-    
-    try:
-        # Ensure temp_path ends with a trailing slash
-        if not temp_path.endswith('/'):
-            temp_path += '/'
-        
-        # Coalesce to one partition and write to temp S3 directory with proper CSV options
-        df.coalesce(1).write.mode("overwrite") \
-            .option("header", "true") \
-            .option("quote", '"') \
-            .option("escape", '"') \
-            .option("quoteAll", "true") \
-            .option("multiLine", "true") \
-            .option("timestampFormat", "yyyy-MM-dd HH:mm:ss") \
-            .option("dateFormat", "yyyy-MM-dd") \
-            .csv(temp_path)
-        
-        # Initialize S3 client
-        s3 = boto3.client("s3")
-        
-        # Parse temp path
-        temp_bucket = temp_path.replace("s3://", "").split("/")[0]
-        temp_prefix = "/".join(temp_path.replace("s3://", "").split("/")[1:])
-        
-        # Remove trailing slash from prefix if present
-        if temp_prefix.endswith('/'):
-            temp_prefix = temp_prefix[:-1]
-        
-        # List objects in temp directory
-        response = s3.list_objects_v2(Bucket=temp_bucket, Prefix=temp_prefix)
-        
-        if 'Contents' not in response:
-            raise Exception(f"No files found in temp path: {temp_path}")
-        
-        objects = response['Contents']
-        
-        # Find the CSV part file, excluding _SUCCESS and other metadata files
-        csv_files = [
-            obj['Key'] for obj in objects 
-            if obj['Key'].endswith(".csv") and not obj['Key'].endswith("_SUCCESS")
-        ]
-        
-        if not csv_files:
-            raise Exception(f"No CSV files found in temp directory: {temp_path}")
-        
-        # Use the first (and should be only) CSV file
-        part_file = csv_files[0]
-        
-        # Copy the CSV file to the target location
-        s3.copy_object(
-            Bucket=s3_bucket,
-            CopySource={'Bucket': temp_bucket, 'Key': part_file},
-            Key=s3_key
-        )
-        
-        print(f"Successfully copied CSV to s3://{s3_bucket}/{s3_key}")
-        
-        # Clean up temp files - delete all objects in the temp directory
-        delete_objects = [{'Key': obj['Key']} for obj in objects]
-        if delete_objects:
-            s3.delete_objects(
-                Bucket=temp_bucket,
-                Delete={'Objects': delete_objects}
-            )
-            print(f"Cleaned up {len(delete_objects)} temp files")
-            
-    except Exception as e:
-        print(f"Error in write_single_csv_to_s3_fixed: {str(e)}")
-        raise
+# Step 1: Split into json_to_flatten and json_not_flatten
+json_to_flatten = []
+json_not_flatten = []
 
+json_col = [i for i in ss.jsoncol if i != ss.base_col]
 
-
-# Flatten the JSON columns
-jsoncol = ['stg_business_entity_id','card_revenue']
-transformed_json_df = transformed_df.select(jsoncol)
-
-# Process all JSON columns
-flattened_dataframes = utl.process_all_json_columns(transformed_json_df)
-
-# For columns that need to be kept in main table (like registered_agents)
-# Handle them separately:
-if 'registered_agents' in transformed_json_df.columns:
-    transformed_json_df = transformed_json_df.withColumn(
-        "registered_agents",
-        when(
-            ~utl.is_empty_or_null("registered_agents"),
-            concat_ws(";", from_json(col("registered_agents"), ArrayType(StringType())))
-        ).otherwise(lit(None))
+for i in json_col:
+    non_null_count = (
+        transformed_df.filter((col(i).isNotNull()) & (col(i) != ""))
+        .limit(1).count()
     )
+    if non_null_count > 0:
+        json_to_flatten.append(i)
+    else:
+        json_not_flatten.append(i)
+        
+print("************json_to_flatten******************",json_to_flatten)
+print("******************json_not_flatten************",json_not_flatten)
 
-# Combine everything
-# final_df = utl.combine_flattened_results(
-#     transformed_json_df.select("stg_business_entity_id", "registered_agents"), 
-#     flattened_dataframes
-# )
+# Step 2: Flatten only required JSON fields
+if len(json_to_flatten) > 0:
+    JSON_FIELD_CONFIGS_v1 = {k: v for k, v in ss.JSON_FIELD_CONFIGS.items() if k in json_to_flatten}
 
-final_df = utl.combine_flattened_results(
-    transformed_json_df.select("stg_business_entity_id"), 
-    flattened_dataframes
-)
-print("*********************",flattened_dataframes.columns)
-# Use the fixed CSV writing function
-write_single_csv_to_s3_fixed(
-    final_df,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-    s3_key="pfd_scripts/pfd_staging_pvr_test/final_df.csv",
-    temp_path="s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp"
-)
+    for col_name, config in JSON_FIELD_CONFIGS_v1.items():
+        df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
+        if df_flat is not None and df_flat.count() > 0:
+            flattened_dfs[col_name] = df_flat
 
-job.commit()
+    # Handle registered_agents separately
+    reg_agents_df = (
+        transformed_df
+        .filter(~utl.is_empty_or_null("registered_agents"))
+        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+        .withColumn("registered_agents",
+            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
+        )
+        .select(ss.base_col, "registered_agents")
+    )
+    if reg_agents_df.count() > 0:
+        flattened_dfs["registered_agents"] = reg_agents_df
+
+    transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
+else:
+    transformed_json_df = transformed_df.select(ss.base_col).limit(0)
+    
+# Step 3: Handle json_not_flatten → add null columns
+if len(json_not_flatten) > 0:
+    for i in json_not_flatten:
+        if i not in ss.json_col_dict.keys():
+            transformed_json_df = transformed_json_df.withColumn(i, lit(None))
+        else:
+            mapped_name = ss.json_col_dict[i]        # e.g. "contacts"
+            required_cols = getattr(ss, mapped_name)  # e.g. ss.contacts
+            for c in required_cols:
+                if c != ss.base_col:
+                    transformed_json_df = transformed_json_df.withColumn(c, lit(None))
+                    
+                    
+             
+             
+if json_to_flatten = ["registered_agents"] or if json_to_flatten = ["registered_agents", "associated_people"], basically if json_to_flatten contains "registered_agents"
 
 
-Error Category: QUERY_ERROR; Failed Line Number: 178; AnalysisException: Found duplicate column(s) when inserting into s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/upsert/pfd_staging/_tmp: `card_revenue`
+when it enter in to below loop
+
+
+if len(json_to_flatten) > 0:
+    JSON_FIELD_CONFIGS_v1 = {k: v for k, v in ss.JSON_FIELD_CONFIGS.items() if k in json_to_flatten}
+
+    for col_name, config in JSON_FIELD_CONFIGS_v1.items():
+        df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
+        if df_flat is not None and df_flat.count() > 0:
+            flattened_dfs[col_name] = df_flat
+
+    # Handle registered_agents separately
+    reg_agents_df = (
+        transformed_df
+        .filter(~utl.is_empty_or_null("registered_agents"))
+        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+        .withColumn("registered_agents",
+            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
+        )
+        .select(ss.base_col, "registered_agents")
+    )
+    if reg_agents_df.count() > 0:
+        flattened_dfs["registered_agents"] = reg_agents_df
+
+    transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
+else:
+    transformed_json_df = transformed_df.select(ss.base_col).limit(0)
+    
+*********************************************************************************************************************************************************************************    
+this part for registered_agents_json should execute only if json_to_flatten has "registered_agents" else no
+
+
+
+# Handle registered_agents separately
+    reg_agents_df = (
+        transformed_df
+        .filter(~utl.is_empty_or_null("registered_agents"))
+        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+        .withColumn("registered_agents",
+            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
+        )
+        .select(ss.base_col, "registered_agents")
+    )
+    if reg_agents_df.count() > 0:
+        flattened_dfs["registered_agents"] = reg_agents_df
