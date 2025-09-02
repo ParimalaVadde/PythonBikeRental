@@ -1,197 +1,29 @@
-
-if len(json_to_flatten) > 0:
-    # ✅ Handle JSON_FIELD_CONFIGS-driven columns
-    json_fields_to_flatten = [c for c in json_to_flatten if c in ss.JSON_FIELD_CONFIGS]
-
-    if json_fields_to_flatten:
-        JSON_FIELD_CONFIGS_v1 = {k: v for k, v in ss.JSON_FIELD_CONFIGS.items() if k in json_fields_to_flatten}
-
-        for col_name, config in JSON_FIELD_CONFIGS_v1.items():
-            df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
-            if df_flat is not None and df_flat.count() > 0:
-                flattened_dfs[col_name] = df_flat
-
-    # ✅ Handle registered_agents separately
-    if "registered_agents" in json_to_flatten:
-        reg_agents_df = (
-            transformed_df
-            .filter(~utl.is_empty_or_null("registered_agents"))
-            .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
-            .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
-            .withColumn(
-                "registered_agents",
-                when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
-            )
-            .select(ss.base_col, "registered_agents")
-        )
-        if reg_agents_df.count() > 0:
-            flattened_dfs["registered_agents"] = reg_agents_df
-
-    # ✅ Combine results
-    transformed_json_df = utl.combine_flattened_results(
-        transformed_df.select(ss.base_col).distinct(),
-        flattened_dfs
-    )
-else:
-    transformed_json_df = transformed_df.select(ss.base_col).limit(0)
+B2B Payables X-Business Supplier DirectoryXBSD-1748
+SDS Data Processing : Fix issues for staging in coming prod deployment
 
 
 
+Description:
+main jira story:
+Fix identified main job issues and make the data pipeline operational for PFD
+Upload functionality 
 
-******
-# Configuration mapping
-JSON_FIELD_CONFIGS = {
-    'card_revenue': {
-        'schema': card_revenue_schema,
-        'flatten_type': 'struct',  # Single nested object
-        'prefix': 'card_revenue'
-    },
-    'card_transactions_stability': {
-        'schema': card_transactions_stability_schema,
-        'flatten_type': 'struct',  # Single nested object
-        'prefix': 'card_transactions_stability'
-    },
-    'associated_people': {
-        'schema': associated_people_schema,
-        'flatten_type': 'array_double_explode',  # Array with nested array (titles)
-        'prefix': 'associated_people'
-    },
-    'industries': {
-        'schema': industries_schema,
-        'flatten_type': 'struct',  # Single nested object
-        'prefix': 'industries'
-    },
-    'technologies': {
-        'schema': technologies_schema,
-        'flatten_type': 'struct',  # Single nested object
-        'prefix': 'technologies'
-    }
-}
+acceptance criteria:
 
-jsoncol = ["stg_business_entity_id", "registered_agents", "associated_people", "industries", "technologies", "card_revenue", "card_transactions_stability"]
-
-json_col_dict = {'associated_people' : 'contacts', 'card_revenue':'revenue', 'card_transactions_stability':'transaction_stability'}
-
-flattened_dfs = {}
-    
-# Step 1: Split into json_to_flatten and json_not_flatten
-json_to_flatten = []
-json_not_flatten = []
-
-json_col = [i for i in ss.jsoncol if i != ss.base_col]
-
-for i in json_col:
-    non_null_count = (
-        transformed_df.filter((col(i).isNotNull()) & (col(i) != ""))
-        .limit(1).count()
-    )
-    if non_null_count > 0:
-        json_to_flatten.append(i)
-    else:
-        json_not_flatten.append(i)
-        
-print("************json_to_flatten******************",json_to_flatten)
-print("******************json_not_flatten************",json_not_flatten)
-
-# Step 2: Flatten only required JSON fields
-if len(json_to_flatten) > 0:
-    JSON_FIELD_CONFIGS_v1 = {k: v for k, v in ss.JSON_FIELD_CONFIGS.items() if k in json_to_flatten}
-
-    for col_name, config in JSON_FIELD_CONFIGS_v1.items():
-        df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
-        if df_flat is not None and df_flat.count() > 0:
-            flattened_dfs[col_name] = df_flat
-
-    # Handle registered_agents separately
-    reg_agents_df = (
-        transformed_df
-        .filter(~utl.is_empty_or_null("registered_agents"))
-        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
-        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
-        .withColumn("registered_agents",
-            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
-        )
-        .select(ss.base_col, "registered_agents")
-    )
-    if reg_agents_df.count() > 0:
-        flattened_dfs["registered_agents"] = reg_agents_df
-
-    transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
-else:
-    transformed_json_df = transformed_df.select(ss.base_col).limit(0)
-    
-# Step 3: Handle json_not_flatten → add null columns
-if len(json_not_flatten) > 0:
-    for i in json_not_flatten:
-        if i not in ss.json_col_dict.keys():
-            transformed_json_df = transformed_json_df.withColumn(i, lit(None))
-        else:
-            mapped_name = ss.json_col_dict[i]        # e.g. "contacts"
-            required_cols = getattr(ss, mapped_name)  # e.g. ss.contacts
-            for c in required_cols:
-                if c != ss.base_col:
-                    transformed_json_df = transformed_json_df.withColumn(c, lit(None))
-                    
-                    
-             
-             
-if json_to_flatten = ["registered_agents"] or if json_to_flatten = ["registered_agents", "associated_people"], basically if json_to_flatten contains "registered_agents"
+Perform upload functional testing of Main job for all tables in main
 
 
-when it enter in to below loop
+sub tasks:
+
+DEV-staging issue:client_ecid is getting populated as relationship so not visible in UI
+description:
+client_ecid is getting populated as relationship so not visible in UI
 
 
-if len(json_to_flatten) > 0:
-    JSON_FIELD_CONFIGS_v1 = {k: v for k, v in ss.JSON_FIELD_CONFIGS.items() if k in json_to_flatten}
+UAT:staging issue:One business_entity has multiple ecids
+description:
+UAT:staging issue:One business_entity has multiple ecids
 
-    for col_name, config in JSON_FIELD_CONFIGS_v1.items():
-        df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
-        if df_flat is not None and df_flat.count() > 0:
-            flattened_dfs[col_name] = df_flat
-
-    # Handle registered_agents separately
-    reg_agents_df = (
-        transformed_df
-        .filter(~utl.is_empty_or_null("registered_agents"))
-        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
-        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
-        .withColumn("registered_agents",
-            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
-        )
-        .select(ss.base_col, "registered_agents")
-    )
-    if reg_agents_df.count() > 0:
-        flattened_dfs["registered_agents"] = reg_agents_df
-
-    transformed_json_df = utl.combine_flattened_results(transformed_df.select(ss.base_col).distinct(), flattened_dfs)
-else:
-    transformed_json_df = transformed_df.select(ss.base_col).limit(0)
-    
-*********************************************************************************************************************************************************************************    
-this part for registered_agents_json should execute only if json_to_flatten has "registered_agents" else no
-
-
-
-# Handle registered_agents separately
-    reg_agents_df = (
-        transformed_df
-        .filter(~utl.is_empty_or_null("registered_agents"))
-        .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
-        .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
-        .withColumn("registered_agents",
-            when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
-        )
-        .select(ss.base_col, "registered_agents")
-    )
-    if reg_agents_df.count() > 0:
-        flattened_dfs["registered_agents"] = reg_agents_df
-
-
-
-
-
-
-
-
-*****************************
-
+UAT:staging issue:One business_entity has multiple associated taxids
+description:
+One business_entity has multiple associated taxids
