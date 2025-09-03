@@ -1,53 +1,14 @@
-Absolutely. Below are **corrected descriptions** and **separate closing comments** for the **main Jira story** and **each sub-task** — ready to be used when closing out the ticket in Jira.
-
----
-
-## 🟦 **Main Jira Story: XBSD-1748**
-
-### ✅ **Corrected Description:**
-
-Fix SDS data pipeline issues in staging to ensure successful processing and UI visibility for Payment File Diagnostics (PFD). Address upload issues, mapping inconsistencies, and multiple identifier relationships across all main job tables.
-
-### ✅ **Closing Comment:**
-
-All main job and upload issues for PFD have been resolved. The data pipeline now processes all tables as expected. Upload functionality verified, and data is correctly reflected in the UI. Ready for production deployment.
-
----
-
-## 🟨 **Sub-Task 1: DEV – client\_ecid UI Visibility Issue**
-
-### ✅ **Corrected Description:**
-
-In the staging environment, `client_ecid` was being stored as a relationship field, preventing it from being displayed in the UI. This needed correction to ensure visibility.
-
-### ✅ **Closing Comment:**
-
-Mapping of `client_ecid` has been corrected. It is now stored in a UI-visible format and displays correctly in the staging environment. Issue resolved.
-
----
-
-## 🟨 **Sub-Task 2: UAT – Multiple ECIDs per Business Entity**
-
-### ✅ **Corrected Description:**
-
-A single `business_entity` was incorrectly linked to multiple `ecid` values in staging, violating expected 1:1 mapping rules.
-
-### ✅ **Closing Comment:**
-
-Data transformation logic has been updated to enforce a one-to-one mapping between `business_entity` and `ecid`. Existing staging data corrected. Issue resolved.
-
----
-
-## 🟨 **Sub-Task 3: UAT – Multiple Tax IDs per Business Entity**
-
-### ✅ **Corrected Description:**
-
-Some `business_entity` records in staging were associated with multiple `taxid` values, which is inconsistent with business rules.
-
-### ✅ **Closing Comment:**
-
-Staging logic updated to ensure only one `taxid` per `business_entity` where required. Validated and cleaned affected records. Issue resolved.
-
----
-
-Let me know if you’d like to bulk update these directly into Jira via a CSV, or if you need them formatted for a release note or email summary.
+is this yntax correct ?
+	
+business_entity_details_schema = [
+    "CAST(business_entity_details_id AS STRING) AS business_entity_details_id",  # Cast to STRING
+    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",          # Cast to STRING
+    "CAST(lower(business_entity_name AS STRING)) AS business_entity_name",              # Cast to STRING
+    "CAST(company_structure AS STRING) AS company_structure",                    # Cast to STRING
+   # "CAST(market_segment_type AS STRING) AS market_segment_type",                # Cast to STRING
+    "CAST(year_incorporated AS STRING) AS year_incorporated",                    # Cast to STRING
+    "CAST(reported_annual_revenue AS STRING) AS reported_annual_revenue",        # Cast to STRING
+    "CAST(is_active AS BOOLEAN) AS is_active",
+    "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
+    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
+    ]
