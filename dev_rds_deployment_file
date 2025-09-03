@@ -1,14 +1,36 @@
-is this yntax correct ?
-	
-business_entity_details_schema = [
-    "CAST(business_entity_details_id AS STRING) AS business_entity_details_id",  # Cast to STRING
-    "CAST(stg_business_entity_id AS STRING) AS stg_business_entity_id",          # Cast to STRING
-    "CAST(lower(business_entity_name AS STRING)) AS business_entity_name",              # Cast to STRING
-    "CAST(company_structure AS STRING) AS company_structure",                    # Cast to STRING
-   # "CAST(market_segment_type AS STRING) AS market_segment_type",                # Cast to STRING
-    "CAST(year_incorporated AS STRING) AS year_incorporated",                    # Cast to STRING
-    "CAST(reported_annual_revenue AS STRING) AS reported_annual_revenue",        # Cast to STRING
+physical_address_schema = [
+    "CAST(physical_address_id AS STRING) AS physical_address_id",              # Cast to STRING
+    "CAST(related_identifier AS STRING) AS related_identifier",                # Cast to STRING
+    "CAST(related_identifier_source AS STRING) AS related_identifier_source",  # Cast to STRING
+    "CAST(lower(physical_address_type) AS STRING) AS physical_address_type",          # Cast to STRING
+    "CAST(lower(street_line_1) AS STRING) AS street_line_1",                          # Cast to STRING
+    "CAST(lower(street_line_2) AS STRING) AS street_line_2",                          # Cast to STRING
+  #  "CAST(street_line_3 AS STRING) AS street_line_3",                          # Cast to STRING
+    "CAST(lower(country) AS STRING) AS country",                                      # Cast to STRING
+    "CAST(lower(city) AS STRING) AS city",                                            # Cast to STRING
+    "CAST(lower(state_province) AS STRING) AS state_province",                        # Cast to STRING
+    "CAST(postal_code AS STRING) AS postal_code",                              # Cast to STRING
+  #  "CAST(location_name AS STRING) AS location_name",                          # Cast to STRING
+  #  "CAST(site_identifier AS STRING) AS site_identifier",                      # Cast to STRING
     "CAST(is_active AS BOOLEAN) AS is_active",
-    "CAST('PFD' AS STRING) AS created_by",                                       # Add constant value for created_by
-    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                     # Add current timestamp for created_date
+    "CAST('PFD' AS STRING) AS created_by",                                     # Add constant value for created_by
+    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                   # Add current timestamp for created_date
     ]
+	
+
+
+
+
+transformed_business_entity_details = transformed_business_entity_details.filter(
+    col("stg_business_entity_id").isNotNull() & col("business_entity_details_id").isNotNull()
+).selectExpr(*ss.business_entity_details_schema).distinct()
+
+
+
+currently the transformed_business_entity_details has beow duplicate records just that city is lower and upper case . but this shouldn't happen while loading
+can we lower case all names and remove duplicates before loading 
+
+
+"physical_address_id","related_identifier","related_identifier_source","physical_address_type","street_line_1","street_line_2","street_line_3","country","city","state_province","postal_code","location_name","site_identifier","is_active","created_by","created_date"
+"d99edaae-ad3e-9962-6215-7c9c7be161b4","aacca8bc-b37a-efa0-c533-aaf84f4bcdb9","business_entity","billing","PO BOX 15124",NULL,NULL,"US","ALBANY","NY","12212-5124",NULL,NULL,True,"PFD","2025-09-03 08:53:48.68"
+"d99edaae-ad3e-9962-6215-7c9c7be161b4","aacca8bc-b37a-efa0-c533-aaf84f4bcdb9","business_entity","billing","PO BOX 15124",NULL,NULL,"US","Albany","NY","12212-5124",NULL,NULL,True,"PFD","2025-09-03 08:53:48.68"
