@@ -1,22 +1,19 @@
-Perfect 👍 then it should be clearly stated in the email so they know the overwrite is happening *because of their current logic*.
-
-Here’s the refined version for you to send:
+Got it 👍 you want it short and to the point, like a quick mail/chat to the PFD team.
+Here’s a polished version in that style:
 
 ---
 
-**Subject:** File Overwrite Issue in S3 Uploads
+**Subject:** Missing File in Yesterday’s Upload
 
-Hi Team,
+Hi Robbie,
 
-We noticed an issue with the source file uploads to your S3 bucket. As per your current logic, any uploaded file is named **`analysis_<datetime>`**. When two files are uploaded at the same time, the generated filenames differ only by milliseconds, causing one file to be overwritten.
+In yesterday’s upload, two files (*total\_energies* and *orvadirect*) were uploaded at the same time by Andy. However, we see only *orvadirect* present in the PFD S3 bucket, so only that file got processed.
 
-For example, in yesterday’s upload, only the *OrvaDirect* file was present while the *Total Energies* file was overwritten. As a result, only one file was processed.
-
-Requesting you to kindly look into this and fix the issue — either by introducing a unique naming convention or by ensuring a time gap (at least 2–5 minutes) between uploads.
+Could you please look into this issue?
 
 Thanks,
 \[Your Name]
 
 ---
 
-Want me to make this **more formal (like escalation to management)** or keep it **neutral and collaborative**?
+Do you want me to also **add a note about the `analysis_<datetime>` logic** in this short version, or keep it strictly incident-focused?
