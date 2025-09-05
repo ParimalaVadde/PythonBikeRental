@@ -1,36 +1,22 @@
-physical_address_schema = [
-    "CAST(physical_address_id AS STRING) AS physical_address_id",              # Cast to STRING
-    "CAST(related_identifier AS STRING) AS related_identifier",                # Cast to STRING
-    "CAST(related_identifier_source AS STRING) AS related_identifier_source",  # Cast to STRING
-    "CAST(lower(physical_address_type) AS STRING) AS physical_address_type",          # Cast to STRING
-    "CAST(lower(street_line_1) AS STRING) AS street_line_1",                          # Cast to STRING
-    "CAST(lower(street_line_2) AS STRING) AS street_line_2",                          # Cast to STRING
-  #  "CAST(street_line_3 AS STRING) AS street_line_3",                          # Cast to STRING
-    "CAST(lower(country) AS STRING) AS country",                                      # Cast to STRING
-    "CAST(lower(city) AS STRING) AS city",                                            # Cast to STRING
-    "CAST(lower(state_province) AS STRING) AS state_province",                        # Cast to STRING
-    "CAST(postal_code AS STRING) AS postal_code",                              # Cast to STRING
-  #  "CAST(location_name AS STRING) AS location_name",                          # Cast to STRING
-  #  "CAST(site_identifier AS STRING) AS site_identifier",                      # Cast to STRING
-    "CAST(is_active AS BOOLEAN) AS is_active",
-    "CAST('PFD' AS STRING) AS created_by",                                     # Add constant value for created_by
-    "CAST(current_timestamp() AS TIMESTAMP) AS created_date"                   # Add current timestamp for created_date
-    ]
-	
+Perfect 👍 then it should be clearly stated in the email so they know the overwrite is happening *because of their current logic*.
 
+Here’s the refined version for you to send:
 
+---
 
+**Subject:** File Overwrite Issue in S3 Uploads
 
-transformed_business_entity_details = transformed_business_entity_details.filter(
-    col("stg_business_entity_id").isNotNull() & col("business_entity_details_id").isNotNull()
-).selectExpr(*ss.business_entity_details_schema).distinct()
+Hi Team,
 
+We noticed an issue with the source file uploads to your S3 bucket. As per your current logic, any uploaded file is named **`analysis_<datetime>`**. When two files are uploaded at the same time, the generated filenames differ only by milliseconds, causing one file to be overwritten.
 
+For example, in yesterday’s upload, only the *OrvaDirect* file was present while the *Total Energies* file was overwritten. As a result, only one file was processed.
 
-currently the transformed_business_entity_details has beow duplicate records just that city is lower and upper case . but this shouldn't happen while loading
-can we lower case all names and remove duplicates before loading 
+Requesting you to kindly look into this and fix the issue — either by introducing a unique naming convention or by ensuring a time gap (at least 2–5 minutes) between uploads.
 
+Thanks,
+\[Your Name]
 
-"physical_address_id","related_identifier","related_identifier_source","physical_address_type","street_line_1","street_line_2","street_line_3","country","city","state_province","postal_code","location_name","site_identifier","is_active","created_by","created_date"
-"d99edaae-ad3e-9962-6215-7c9c7be161b4","aacca8bc-b37a-efa0-c533-aaf84f4bcdb9","business_entity","billing","PO BOX 15124",NULL,NULL,"US","ALBANY","NY","12212-5124",NULL,NULL,True,"PFD","2025-09-03 08:53:48.68"
-"d99edaae-ad3e-9962-6215-7c9c7be161b4","aacca8bc-b37a-efa0-c533-aaf84f4bcdb9","business_entity","billing","PO BOX 15124",NULL,NULL,"US","Albany","NY","12212-5124",NULL,NULL,True,"PFD","2025-09-03 08:53:48.68"
+---
+
+Want me to make this **more formal (like escalation to management)** or keep it **neutral and collaborative**?
