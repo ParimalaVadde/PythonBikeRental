@@ -96,3 +96,72 @@ transformed_rel_identifiers = client_firm_data.union(supplier_buyer_data)
 # Display the result
 transformed_rel_identifiers.show()
 
+
+
+***********************************************************************************************************************************************************************************************************************
+
+
+transformed_df
+
+sample data in transformed_df
+
+"analysis_task_id","sds_upload_name","analysis_external_reference_id","client_name","upload_user","sds_upload_ts","sds_note","unique_payment_row","request_id","user_request_id","request_time","file_uploaded_ts","analysis_stage","period_start_date","period_end_date","client_ecid","request_name","analysis_conducted_dt","note","shared_with_users","source","request_user","vendor_name","business_entity_name","client_vendor_id","client_vendor_site_id","country","vendor_hq_country","state_province","postal_code","street_line_1","street_line_2","city","primary_phone_number","personal","email","website","vendor_contact_name","tax_id","dba","vendor_ultimate_parent_name","annual_spend","sum_of_payments","count_of_payments","count_of_invoices","reported_annual_revenue","payment_ccy","payment_mode","payment_terms","payment_term_days","payment_terms_discount_ind","payment_terms_discount_rate","payment_terms_discount_days","actual_days_payment_outstanding","vendor_cat_clientdef_1","vendor_cat_clientdef_2","vendor_cat_clientdef_3","vendor_cat_clientdef_4","vendor_cat_userdef_1","vendor_cat_userdef_2","vendor_cat_userdef_3","vendor_cat_userdef_4","sds_supplier_id","validation_type","match_strength_name","match_strength_address","match_strength_country","match_strength_state","match_strength_postcode","average_vendor_dso","average_vendor_dpo","average_vendor_dio","level-1","level-2","level-3","scf_industry_sector_dso_25","scf_industry_sector_dso_50","scf_industry_sector_dso_75","scf_industry_group_dso_25","scf_industry_group_dso_50","scf_industry_group_dso_75","filter_analyzable","filter_adjustable","filter_monetizable","filter_country","filter_employee","trust","govt","real_estate","utilities","insurance","fi","filter_interco","filter_individual","do_not_campaign","payment_preference","moody","vendor_credit_rating_moody_date","sp","vendor_credit_rating_sp_date","vendor_credit_rating_recent","credit_revolver_rate","cost_of_goods_sold","ind_jpmc","supplier_ecid","enrolled_scf_supplier","scf_buyerlist","scf_throughput_usd","scf_avg_spread","scf_avg_payment_terms","scf_rate_proposed","scf_rate_offered","scf_esg_discount","scf_ind_decline","vendor_card_tier","enrolled_vc_supplier","vc_concierge","virtual_card_vcn","spend_on_jpmc_vc","vc_enrollment_duration_years","vcn_payment_accepted","vc_buyercount","vc_interchange_amt","cms_enrolled","businessbank_enrolled","stp_partnerships","vc_campaigned_previously","vc_acceptance_tier_legacy","vc_acceptance_tier_model","vc_acceptance_tier_userdefined","vc_campaign_count","vc_campaign_accepts","jpmc_cc_payment_accepted","jpmc_cc_spend","jpmc_cc_enrolled_years","jpmc_cc_buyer_count","match_confidence","matched_level_2","matched_level_3_summary","matched_level_3_lineitem","matched_fleet_ind","matched_data_quality","matched_mcc","google_places_id","enigma_id","Enigma_business_id","year_incorporated","registered_agents","associated_people","industries","company_structure","associated_tax_ids","technologies","has_online_payments","card_revenue","card_transactions_stability","supplier_segmentation","rebate_rate","stg_business_entity_id","stg_payor_business_entity_id","ind_virtualcard_campaign_count","google_flag","ind_card_match","stg_codelist","product_segmentation_applicable","google_place_id","cms_subacct_enrolled","stg_jpmc_business_entity_id"
+"d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","SAILDRONE INC","u856923","2024-07-19T12:00:00.000Z","","VETUSMAXWELL INC20365ACH","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c25","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","1754941717251","","ANALYSIS_FINAL","2024-07-19T12:00:00.000Z","2025-07-14T12:00:00.000Z","538669316","SAILDRONE INC 2025-08 15244  CB v2","20250811","SAILDRONE INC 2025-08 15244  CB v2   DAP file, unknown as pay type with same supplier updated to lik","N792158, E056214","Commercial Card","E057348","VETUSMAXWELL INC","VETUSMAXWELL","20365","","US","","MD","21076","7251 NATIONAL DR","","HANOVER","1-410-712-0740","","TBush@vetus.com","https://www.vetus.com/en/maxwell-marine","VetusMaxwell, Inc.","","VETUSMAXWELL INC","","891","891","2","","","","ACH","","","","","","","","","","","","","","","","","","","","","","","","","Consumer Staples","Consumer Staples Distribution & Retail","Distribution/Wholesale","20.7156","33.02967","45.80051","3.23438","13.55591","25.94025","","","","Y","N","N","N","N","N","N","N","N","N","","","","","","","","","","N","","N","","","","","","","","","","N","","","0","0","","0","","N","N","","","","","","","","Y","330.25","3","1","High","Yes","Yes","","","","5013","","E000031e000010bd","","1973","['C T CORPORATION SYSTEM', 'BARRY J EBAUGH', 'JAN L KAHN', 'PAUL SWEENEY ESQUIRE', 'SECRETARY OF STA","[{'name': 'JOHN MARDALL', 'titles': ['CONTACT NAME', 'PRESIDENT']}, {'name': 'CHRISTOPHER DEBOY', 't","{'classification_description': 'distribution service', 'classification_type': 'enigma_description'}","CORPORATION","520983250","","","{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'aver","{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'days","Tail-end solutions","0.015","cd462368-2a0c-4ec9-9ee7-c8c172b79acc","bb47d9f7-c631-a592-a734-8221082535bf","","","","","","","","2d35a04a-5fdf-50d5-7750-c1c7621ddc33"
+"d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","SAILDRONE INC","u856923","2024-07-19T12:00:00.000Z","","ECOACT INCORPORATED16379ACH","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c25","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","1754941717251","","ANALYSIS_FINAL","2024-07-19T12:00:00.000Z","2025-07-14T12:00:00.000Z","538669316","SAILDRONE INC 2025-08 15244  CB v2","20250811","SAILDRONE INC 2025-08 15244  CB v2   DAP file, unknown as pay type with same supplier updated to lik","N792158, E056214","Commercial Card","E057348","ECOACT INCORPORATED","ECOACT","16379","","US","","TX","75093","5920 WINDHAVEN PKWY","","Plano","1-682-978-8622","","accountsreceivable@","","EcoAct Incorporated","","","","48300","48300","2","","","","ACH","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","Y","N","N","N","N","N","N","N","N","N","","","","","","","","","","N","","N","","","","","","","","","","","","","","","","","","N","N","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","No card match","0.015","0c9efbb6-baa8-9249-92a0-0ffb86979009","bb47d9f7-c631-a592-a734-8221082535bf","","","","","","","","2d35a04a-5fdf-50d5-7750-c1c7621ddc33"
+"d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","SAILDRONE INC","u856923","2024-07-19T12:00:00.000Z","","KHK USA1321ACH","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c25","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","1754941717251","","ANALYSIS_FINAL","2024-07-19T12:00:00.000Z","2025-07-14T12:00:00.000Z","538669316","SAILDRONE INC 2025-08 15244  CB v2","20250811","SAILDRONE INC 2025-08 15244  CB v2   DAP file, unknown as pay type with same supplier updated to lik","N792158, E056214","Commercial Card","E057348","KHK USA","KHK USA","1321","","US","","NY","11501","259 ELM PL","","MINEOLA","1-516-248-3850","","","https://www.khkgears.us/","KHK USA","","KHK USA","","15390","15390","2","","","","ACH","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","Y","N","N","N","N","N","N","N","N","N","","","","","","","","","","N","","N","","","","","","","","","","N","","","0","0","","0","","N","N","","","","","","","","Y","10639.19","1","24","High","Yes","Yes","","","","5085","","E0000313a600004439","","","['BRIAN DENGEL']","[]","{'classification_description': 'industrial equipment supplier', 'classification_type': 'enigma_descr","CORPORATION","364805891","{'vendor_name': 'Paypal', 'category': 'payments'}","","{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'aver","{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'days","Tail-end solutions","0.015","7c9d4298-9bcd-af0b-c401-4fca03c3f80b","bb47d9f7-c631-a592-a734-8221082535bf","","","","","","","","2d35a04a-5fdf-50d5-7750-c1c7621ddc33"
+
+
+
+
+
+
+product_segmentation_applicable
+stg_codelist
+
+
+
+sample values in product_segmentation_applicable
+
+
+STG1b
+STG1b
+STG1b
+PPBG;STG1b
+
+
+
+
+
+
+
+
+
+
+STG1b
+
+
+
+sample values in stg_codelist
+PPBH
+
+PPBG;STG1a
+
+
+
+
+
+
+
+
+
+
+
+STP2b
+
+PPBG
+
+
+
+need to merge product_segmentation_applicable and stg_codelist to product_segmentation_applicable
+example : if product_segmentation_applicable= 'STP1" and stg_codelist  =STG1"
+then product_segmentation_applicable = "STP1;STG1"
