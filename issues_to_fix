@@ -165,3 +165,25 @@ PPBG
 need to merge product_segmentation_applicable and stg_codelist to product_segmentation_applicable
 example : if product_segmentation_applicable= 'STP1" and stg_codelist  =STG1"
 then product_segmentation_applicable = "STP1;STG1"
+
+
+
+*********************************************************************************************************************************************************
+
+
+# Your PySpark Solution (BETTER)
+from pyspark.sql.functions import split, array_union, array_distinct, concat_ws, col, when, array
+
+transformed_df = transformed_df.withColumn(
+    "product_segmentation_applicable",
+    concat_ws(";", 
+        array_distinct(
+            array_union(
+                when(col("product_segmentation_applicable").isNotNull(), 
+                     split(col("product_segmentation_applicable"), ";")).otherwise(array()),
+                when(col("stg_codelist").isNotNull(), 
+                     split(col("stg_codelist"), ";")).otherwise(array())
+            )
+        )
+    )
+)
