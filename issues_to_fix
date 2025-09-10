@@ -44,3 +44,55 @@ then we have to union both
 
 
 
+*********************************************************************************************************************************************************************************************
+
+
+
+# Create dataset for client-firm relationships
+client_firm_data = (transformed_relationship
+    .filter(
+        (col("business_entity_role") == "client") & 
+        (col("related_business_entity_role") == "firm")
+    )
+    .select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        col("stg_related_business_entity_id"),
+        col("related_business_entity_contact_id"),
+        col("business_entity_role"),
+        col("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("is_active"),
+        col("business_entity_relationship_id"),
+        lit(None).cast("string").alias("supplier_ecid")  # Add null supplier_ecid for union compatibility
+    )
+)
+
+# Create dataset for supplier-buyer relationships
+supplier_buyer_data = (transformed_relationship
+    .filter(
+        (col("business_entity_role") == "supplier") & 
+        (col("related_business_entity_role") == "buyer")
+    )
+    .select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        col("stg_related_business_entity_id"),
+        col("related_business_entity_contact_id"),
+        col("business_entity_role"),
+        col("related_business_entity_role"),
+        lit(None).cast("string").alias("client_vendor_id"),      # Add null client_vendor_id for union compatibility
+        lit(None).cast("string").alias("client_vendor_site_id"), # Add null client_vendor_site_id for union compatibility
+        col("is_active"),
+        col("business_entity_relationship_id"),
+        col("supplier_ecid")
+    )
+)
+
+# Union both datasets
+transformed_rel_identifiers = client_firm_data.union(supplier_buyer_data)
+
+# Display the result
+transformed_rel_identifiers.show()
+
