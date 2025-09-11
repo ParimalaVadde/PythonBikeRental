@@ -187,3 +187,18 @@ transformed_df = transformed_df.withColumn(
         )
     )
 )
+
+
+
+# Convert empty strings to null
+transformed_df = transformed_df.withColumn(
+    "product_segmentation_applicable",
+    when((col("product_segmentation_applicable").isNull()) | 
+         (trim(col("product_segmentation_applicable")) == ""), None)
+    .otherwise(col("product_segmentation_applicable"))
+).withColumn(
+    "stg_codelist", 
+    when((col("stg_codelist").isNull()) | 
+         (trim(col("stg_codelist")) == ""), None)
+    .otherwise(col("stg_codelist"))
+)
