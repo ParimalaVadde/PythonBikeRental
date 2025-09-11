@@ -214,3 +214,10 @@ but whenever receivables_attribute_value = '' or None then we have discard such 
 
 receivables_attribute_type
 receivables_attribute_value
+
+***************************************************************************
+
+filtered_df = transformed_melt_payment_profile_attribute.filter(
+    (col("receivables_attribute_value").isNotNull()) & 
+    (col("receivables_attribute_value") != "")
+)
