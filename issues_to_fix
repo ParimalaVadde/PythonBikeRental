@@ -202,3 +202,15 @@ transformed_df = transformed_df.withColumn(
          (trim(col("stg_codelist")) == ""), None)
     .otherwise(col("stg_codelist"))
 )
+
+
+88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888
+
+
+transformed_melt_payment_profile_attribute is a pyspark df
+
+transformed_melt_payment_profile_attribute it has following columns along with other cols
+but whenever receivables_attribute_value = '' or None then we have discard such records in pyspark
+
+receivables_attribute_type
+receivables_attribute_value
