@@ -1,10 +1,41 @@
-Today i hv to provide kt on staging 
-
-basically our source is pfd (payment file diagnostic) ,they provide source which will have spend data
-
-like lets say we have buyer 'a' wat all transactions done by A with its suppliers
-
-we get source file with following columns 
+today i need to give kt on uuid. so can write lines about wat is uuidwhy its required
+its significance
 
 
-task_id	sds_upload_name	sds_upload_id	client_name	upload_user	sds_upload_ts	sds_note	Unique Payment Row	Request Id	User Request Id	request_time	file_uploaded_ts	analysis_type	business_start_date	business_end_date	client_ecid	request_name	file_uploaded_dt	note	Shared With Users	source	request_user	Vendor Name	vendor_name_cleaned	Vendor Id	Site Id	Vendor Country	vendor_hq_country	Vendor State	Vendor Postcode	Vendor Address Ln 1	Vendor Address Ln 2	Vendor Address Ln 3	Vendor Phone Number	Vendor Phone Number 2	Vendor Email	Vendor Website	Vendor Contact Name	Vendor Government Id	Vendor Alternate Name	vendor_ultimate_parent_name	Annual Spend	annual_spend_usd	Annual Transaction Count	Annual Invoice Count	vendor_annualrevenue	Payment Currency	Payment Type	Payment Terms	Payment Terms Days	Payment Terms Discount Ind	Payment Terms Discount Rate	Payment Terms Discount Days	Payment Actual Days	Vendor Cat Clientdef 1	Vendor Cat Clientdef 2	Vendor Cat Clientdef 3	Vendor Cat Clientdef 4	Vendor Cat Userdef 1	Vendor Cat Userdef 2	Vendor Cat Userdef 3	Vendor Cat Userdef 4	sds_supplier_id	validation_type	match_strength_name	match_strength_address	match_strength_country	match_strength_state	match_strength_postcode	vendor_dso	vendor_dpo	vendor_dio	vendor_industry_lvl_1	vendor_industry_lvl_2	vendor_industry_lvl_3	Industry Sector Dso 25	Industry Sector Dso 50	Industry Sector Dso 75	Industry Group Dso 25	Industry Group Dso 50	Industry Group Dso 75	Filter Analyzable	Filter Adjustable	Filter Monetizable	Filter Country	filter_employee	filter_trust	Filter Govt	filter_realestate	Filter Utilities	filter_insurance	Filter Fi	filter_interco	Filter Individual	filter_do_not_campaign	payment_preference	vendor_credit_rating_moody	vendor_credit_rating_moody_date	vendor_credit_rating_sp	vendor_credit_rating_sp_date	Vendor Credit Rating Recent	vendor_credit_revolver_rate	Vendor Cogs	Ind Jpmc	supplier_ecid	Ind Scf	Scf Buyerlist	throughput_usd	avg_spread	avg_payment_terms	rate_proposed	rate_offered	esg_discount	ind_decline	Vendor Card Tier	Ind Vc	Ind Virtualcard Concierge	Ind Virtual Card Vcn	Vc Receipts	Vc Recency	ind_vcn	Vc Buyercount	Ind Virtualcard Interchange Amount	Ind Cms	Ind Bb	STP Partnerships	Ind Vc Campaign	Virtualcard Accpetance Tier Legacy	Virtualcard Accpetance Tier Model	Virtualcard Accpetance Tier Userdefined	Ind Virtual Card Campaign Count	Vc Campaign Accepts	Ind Cc	Cc Receipts	Cc Recency	Cc Buyercount	visa_match_confidence	visa_matched_level_ii	visa_matched_level_iii_summary	visa_matched_level_iii_line_item	visa_matched_fleet_ind	visa_matched_data_quality	visa_matched_mcc	google_places_id	enigma_id	enigma_business_id	year_incorporated	registered_agents	associated_people	industries	corporate_structures	eins	technologies_used	has_online_payments	card_revenue	card_transactions_stability	Supplier Segmentation	Rebate Rate
+import uuid
+
+# Define a UDF to compute UUID from concatenated column values
+def compute_uuid(data_row, decimal_columns):
+    values = []
+    
+    # Convert Row object to dictionary
+    data = data_row.asDict()
+    # Sort by column names to ensure consistent order
+    for column in sorted(data.keys()):
+        val = data[column]
+        if val is not None and str(val).strip().lower() not in {"", "nan", "null", "none", "nat"}:
+            if column in decimal_columns:
+                val = f"{float(val):.6f}"
+            values.append(str(val).strip().lower())
+    
+    name = ','.join(values)
+    return str(uuid.UUID(bytes=hashlib.sha256(name.encode()).digest()[:16])) if name else None
+
+
+
+ source_df = source_df.withColumn(
+                        "stg_business_entity_id",
+                        when(
+                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+                            ).otherwise(
+                                compute_uuid_udf(struct("vendor_name_cleaned"))
+                            )
+                            )
+							
+							
+transformed_business_entity_details = transformed_business_entity_details.withColumn(
+        "business_entity_details_id",
+        compute_uuid_udf(struct(*transformed_business_entity_details.columns))
+    )
+	
+	what struct here why struct , *
