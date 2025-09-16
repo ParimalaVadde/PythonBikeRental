@@ -1,41 +1,16 @@
-today i need to give kt on uuid. so can write lines about wat is uuidwhy its required
-its significance
+SDS Data Processing : Fix issues in Staging as part of Prod Parallel deployments
 
+Description
+Fix identified staging job issues and make the data pipeline operational for PFD
+Upload functionality testing
 
-import uuid
+provide acceptance criteria  for above description
+also closing comment for overall story
 
-# Define a UDF to compute UUID from concatenated column values
-def compute_uuid(data_row, decimal_columns):
-    values = []
-    
-    # Convert Row object to dictionary
-    data = data_row.asDict()
-    # Sort by column names to ensure consistent order
-    for column in sorted(data.keys()):
-        val = data[column]
-        if val is not None and str(val).strip().lower() not in {"", "nan", "null", "none", "nat"}:
-            if column in decimal_columns:
-                val = f"{float(val):.6f}"
-            values.append(str(val).strip().lower())
-    
-    name = ','.join(values)
-    return str(uuid.UUID(bytes=hashlib.sha256(name.encode()).digest()[:16])) if name else None
+i fixed below issues. create sub jira task add description single liner n comment single liner
 
+1) fixed duplicate ecid being generated for same business enity moved changes to uat
 
-
- source_df = source_df.withColumn(
-                        "stg_business_entity_id",
-                        when(
-                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
-                            ).otherwise(
-                                compute_uuid_udf(struct("vendor_name_cleaned"))
-                            )
-                            )
-							
-							
-transformed_business_entity_details = transformed_business_entity_details.withColumn(
-        "business_entity_details_id",
-        compute_uuid_udf(struct(*transformed_business_entity_details.columns))
-    )
-	
-	what struct here why struct , *
+2)merged stp_partnershiplist and stg_codelist to product_segmentation_applicable
+example : if stp_partnershiplist = 'STP1" and stg_codelist  =STG1"
+then product_segmentation_applicable = "STP1;STG1"
