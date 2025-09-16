@@ -1,16 +1,37 @@
-SDS Data Processing : Fix issues in Staging as part of Prod Parallel deployments
+Sure! Here’s how you could write the **acceptance criteria**, **closing comment**, and **sub-JIRA task descriptions and comments** for your story.
 
-Description
-Fix identified staging job issues and make the data pipeline operational for PFD
-Upload functionality testing
+---
 
-provide acceptance criteria  for above description
-also closing comment for overall story
+### Acceptance Criteria for "SDS Data Processing: Fix issues in Staging as part of Prod Parallel deployments"
 
-i fixed below issues. create sub jira task add description single liner n comment single liner
+1. Identified staging job issues are fixed and verified in the staging environment.
+2. The data pipeline for PFD is operational without errors or failures in staging.
+3. Upload functionality is tested end-to-end and confirmed working as expected.
+4. No duplicate ECID values are generated for the same business entity in staging.
+5. `stp_partnershiplist` and `stg_codelist` fields are successfully merged into `product_segmentation_applicable` with correct concatenation.
+6. Changes are successfully moved and verified in UAT environment.
+7. Documentation of fixes and tests are completed and handed over for production deployment.
 
-1) fixed duplicate ecid being generated for same business enity moved changes to uat
+---
 
-2)merged stp_partnershiplist and stg_codelist to product_segmentation_applicable
-example : if stp_partnershiplist = 'STP1" and stg_codelist  =STG1"
-then product_segmentation_applicable = "STP1;STG1"
+### Closing Comment for the overall story
+
+"All identified issues in the staging jobs have been resolved successfully. The data pipeline for PFD is now fully operational with upload functionality verified. Changes have been promoted to UAT and tested. Ready for production parallel deployment."
+
+---
+
+### Sub-JIRA Tasks
+
+**Task 1: Fix duplicate ECID generation issue**
+
+* **Description:** Fixed issue causing duplicate ECID generation for the same business entity and moved changes to UAT.
+* **Comment:** Duplicate ECID issue resolved and code deployed to UAT for validation.
+
+**Task 2: Merge stp\_partnershiplist and stg\_codelist into product\_segmentation\_applicable**
+
+* **Description:** Merged `stp_partnershiplist` and `stg_codelist` fields to create `product_segmentation_applicable` with concatenated values (e.g., "STP1;STG1").
+* **Comment:** Successfully merged partnership and code lists into single field and verified in UAT.
+
+---
+
+If you want, I can help you format these in a JIRA-friendly way or add more details!
