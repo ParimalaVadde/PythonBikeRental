@@ -9,3 +9,21 @@ acceptance criteria
 3. No duplicate ECID values are generated for the same business entity in staging.
 4. `stp_partnershiplist` and `stg_codelist` fields are successfully merged into `product_segmentation_applicable` with correct concatenation.
 5. Changes are successfully moved and verified in UAT environment.
+
+
+
+Sure! Here's a simple short description and acceptance criteria for your SDS Data Processing story:
+
+### **Description:**
+
+Testing and bug fixes are performed in the data pipeline to ensure the SDS data is processed correctly, with no errors or inconsistencies.
+
+### **Acceptance Criteria:**
+
+1. All identified bugs in the SDS data pipeline are fixed and verified.
+2. The data pipeline runs successfully without errors or failures in the staging environment.
+3. The SDS data is processed correctly, with no data loss or corruption.
+4. Data validation checks are successfully passing in the staging environment.
+5. Changes are successfully tested and verified in the UAT environment.
+
+Would you like me to adjust or add any specific details to these criteria?
