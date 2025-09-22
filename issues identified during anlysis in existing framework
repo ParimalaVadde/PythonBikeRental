@@ -1,19 +1,271 @@
-Given your scope, **two well-scoped sub-tasks** are sufficient and clearer for execution tracking. Here's how you can split them:
+# SDS Staging Schema - Business Tables Explanation
+
+## Overview
+The staging schema transforms the flat PFD (Payment File Diagnostic) source data into a normalized relational structure with 16 tables. This design enables better data management, reduces redundancy, and supports complex business analytics for supplier spend analysis.
 
 ---
 
-### **Sub-Task 1: Ingest New PFD Source File into SDS Pipeline**
+## Core Entity Tables
 
-**Description:**
-Load the newly shared PFD file into the SDS staging layer. Validate structure, handle format changes, and ensure compatibility with existing ingestion logic.
+### 1. **business_entity**
+**Business Purpose**: Master registry of all unique business entities (suppliers/vendors) in the system
+- Creates a unique UUID identifier for each distinct supplier
+- Acts as the primary reference point for all other tables
+- Supports hierarchical relationships between entities
+
+**Example**:
+```
+stg_business_entity_id: 8473f193-8721-4fe0-87d8-ec4a3c3bbdd0
+- Represents one unique supplier (like "1PASSWORD" from source data)
+- All other tables reference this UUID
+```
+
+### 2. **business_entity_details**
+**Business Purpose**: Core business information about each entity
+- Company name, legal structure, incorporation details
+- Annual revenue and market segmentation
+- Historical business context
+
+**Example**:
+```
+Entity: alameda chamber foundation
+- Year Incorporated: 2021
+- Company Structure: NULL (likely non-profit)
+- This tells us it's a relatively new organization
+```
 
 ---
 
-### **Sub-Task 2: Apply DDL Changes & Integrate New PFD Fields**
+## Contact & Communication Tables
 
-**Description:**
-Implement necessary schema changes and update mappings to support the new fields. Ensure fields are reflected correctly in downstream transformations and data sinks.
+### 3. **business_entity_contacts**
+**Business Purpose**: Key personnel and decision makers
+- Contact names and titles
+- Decision maker indicators for sales targeting
+- Relationship management data
+
+**Example**:
+```
+Contact: "michael shook" with title "governor"
+- This indicates a high-level government contact
+- Important for B2G (business-to-government) relationships
+```
+
+### 4. **electronic_address**
+**Business Purpose**: Digital communication channels
+- Email addresses (primary, secondary)
+- Website URLs for online presence
+- Digital touchpoints for engagement
+
+**Example**:
+```
+operations.panama@g... (email)
+https://www.zoro.com/ (website)
+- Multiple communication channels per entity
+- Enables multi-channel marketing and communication
+```
+
+### 5. **telecommunication_address**
+**Business Purpose**: Phone-based communication
+- Primary and secondary phone numbers
+- Extension numbers for direct contact
+- Regional dialing codes for geographic insights
+
+**Example**:
+```
+Phone: "1-970-879-9900 ext 301"
+- Shows geographic location (970 = Colorado area code)
+- Extension suggests larger organization structure
+```
+
+### 6. **physical_address**
+**Business Purpose**: Geographic and mailing information
+- Complete postal addresses (street, city, state, postal code)
+- Site identifiers for multiple locations
+- Geographic analysis and logistics planning
+
+**Example**:
+```
+Address: "4225 executive sq, ste 1250, la jolla, ca, 92037"
+- High-end business location (Executive Square)
+- Suite number indicates office building tenant
+- La Jolla = affluent San Diego area
+```
 
 ---
 
-Let me know if you want help drafting [comments for each sub-task](f) or [linking to prior work](f) for reference.
+## Financial & Payment Analysis Tables
+
+### 7. **business_entity_spend_analysis**
+**Business Purpose**: Transaction and payment behavior analysis
+- Payment volumes, frequencies, and methods
+- Payment terms and actual payment timing
+- Spend patterns over time periods
+
+**Example**:
+```
+Relationship: Payor to Payee spending
+- Sum of payments: $95,223.27
+- Number of payments: 9
+- Payment method: ACH
+- Period: July 2024 to July 2025
+- Analysis: Regular, substantial ACH payments indicating stable supplier relationship
+```
+
+### 8. **business_entity_receivables_attribute**
+**Business Purpose**: Credit and financial relationship metrics
+- JPMC product enrollment status
+- Credit card and virtual card usage
+- Financial product penetration
+
+**Example**:
+```
+Attribute: "jpmc_cc_buyer_count" = "52"
+- This supplier serves 52 different JPMC commercial card buyers
+- Indicates high market penetration and relationship value
+```
+
+---
+
+## Card & Payment Processing Tables
+
+### 9. **business_entity_card_association**
+**Business Purpose**: Credit card acceptance and processing capabilities
+- Visa/card network matching confidence
+- Merchant Category Codes (MCC)
+- Data quality indicators for card transactions
+
+**Example**:
+```
+MCC: "5046" with "High" confidence
+- MCC 5046 = Commercial Equipment, Not Elsewhere Classified
+- High confidence = reliable card processing match
+- Indicates supplier accepts card payments
+```
+
+### 10. **business_entity_card_revenues**
+**Business Purpose**: Card transaction revenue tracking
+- Monthly card revenue patterns
+- Revenue trends over 1, 3, and 12-month periods
+- Payment method preference analysis
+
+**Example**:
+```
+Card Revenue (1 month): $1,200 average
+Card Revenue (12 months): $3,201 average
+- Shows seasonal variation or business growth
+- Indicates card acceptance generates significant revenue
+```
+
+### 11. **business_entity_card_transactions_stability**
+**Business Purpose**: Transaction consistency and reliability metrics
+- Daily, weekly, monthly transaction coverage
+- Transaction frequency patterns
+- Business stability indicators
+
+**Example**:
+```
+Daily coverage ratio: 1.0 (100%)
+Weekly coverage ratio: 1.0 (100%)
+- Perfect consistency = very stable business operations
+- Reliable transaction partner for predictable cash flow
+```
+
+---
+
+## Classification & Characteristics Tables
+
+### 12. **business_entity_industry_classification**
+**Business Purpose**: Industry categorization and sector analysis
+- Bloomberg industry classifications
+- Internal risk/filter categories
+- Regulatory and compliance classifications
+
+**Example**:
+```
+Bloomberg Level-1: "industrials"
+Bloomberg Level-2: "consumer discretionary distribution & retail"
+Internal: "real_estate" = "n" (not real estate)
+- Multi-dimensional industry classification
+- Enables sector-specific analysis and risk assessment
+```
+
+### 13. **business_entity_characteristics**
+**Business Purpose**: Behavioral and financial metrics
+- Supply Chain Finance (SCF) metrics
+- Days Sales Outstanding (DSO) benchmarks
+- Virtual card campaign acceptance rates
+
+**Example**:
+```
+Characteristic: "scf_industry_sector_dso_50" = "33.02967"
+- Industry median DSO is 33 days
+- Used for payment terms benchmarking
+- Risk assessment and pricing decisions
+```
+
+---
+
+## Regulatory & Risk Tables
+
+### 14. **restrictions**
+**Business Purpose**: Compliance and campaign restrictions
+- Do-not-campaign flags
+- Regulatory restrictions
+- Risk-based limitations
+
+**Example**:
+```
+Restriction: "do_not_campaign" = False
+- Entity is eligible for marketing campaigns
+- No regulatory or compliance restrictions
+- Can be targeted for new financial products
+```
+
+### 15. **business_entity_relationships**
+**Business Purpose**: Buyer-supplier relationship mapping
+- Defines who pays whom
+- Relationship roles and hierarchies
+- Transaction relationship context
+
+**Example**:
+```
+Supplier ID → Buyer ID relationship
+Role: "supplier" to "buyer"
+- Maps the payment flow direction
+- Enables relationship-based analytics
+- Supports account management strategies
+```
+
+### 16. **business_entity_identifiers**
+**Business Purpose**: External system integration and cross-referencing
+- ECID (Entity Customer IDs)
+- Enigma business intelligence IDs
+- Tax IDs and DBA names
+- Client-specific vendor IDs
+
+**Example**:
+```
+ECID: "258125198"
+Enigma ID: "e000b33ca00001925"
+DBA: "ata engineering inc"
+- Multiple identifier types for data integration
+- Cross-system data matching and enrichment
+- Enables comprehensive business intelligence
+```
+
+---
+
+## Business Value Summary
+
+This normalized structure enables:
+
+1. **360° Supplier View**: Complete supplier profiles across all dimensions
+2. **Relationship Analytics**: Understanding buyer-supplier networks
+3. **Payment Optimization**: Payment method and terms analysis
+4. **Risk Assessment**: Multi-factor risk evaluation
+5. **Product Cross-sell**: Identifying opportunities for financial products
+6. **Compliance Management**: Tracking restrictions and regulatory requirements
+7. **Market Intelligence**: Industry benchmarking and competitive analysis
+
+The separation into specialized tables allows for efficient querying, better data quality management, and scalable analytics as the business grows.
