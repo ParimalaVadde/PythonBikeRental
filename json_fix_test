@@ -185,3 +185,193 @@ def relationship(transformed_business_entity,ss, transformed_df,compute_uuid_udf
             lit(True).cast("boolean").alias("is_active"),
             lit(None).cast("string").alias("business_entity_contact_id")
         ).limit(0)   # makes it empty but with schema
+
+
+
+
+
+
+Got it 👍 You mean you want **column-level explanations** also, like *“revenue\_usd” means total reported revenue in USD, year\_incorporated means the year company started operations”*, etc.
+
+I’ll expand table-by-table with **important columns + business meaning** (you can pick whichever columns are most relevant for KT).
+
+---
+
+## **1. business\_entity**
+
+| Column                        | Meaning                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| **stg\_business\_entity\_id** | Unique UUID assigned to each supplier (acts as foreign key in all tables). |
+| **supplier\_name**            | Legal or registered name of supplier.                                      |
+| **status**                    | Current status (Active / Inactive / Suspended).                            |
+| **parent\_flag**              | Indicates if supplier is a parent entity in hierarchy.                     |
+
+---
+
+## **2. business\_entity\_details**
+
+| Column                     | Meaning                                          |
+| -------------------------- | ------------------------------------------------ |
+| **business\_structure**    | Type of company (Private Ltd, LLC, Partnership). |
+| **year\_incorporated**     | The year the supplier was incorporated.          |
+| **reported\_revenue\_usd** | Total revenue reported by supplier in USD.       |
+| **market\_type**           | B2B, B2C, Govt etc.                              |
+
+*Example:* `reported_revenue_usd = 45,000,000 → Supplier reported $45M revenue last year.`
+
+---
+
+## **3. business\_entity\_contacts**
+
+| Column                  | Meaning                                          |
+| ----------------------- | ------------------------------------------------ |
+| **contact\_name**       | Full name of contact person.                     |
+| **designation**         | Role/position (e.g., Procurement Manager).       |
+| **is\_decision\_maker** | Yes/No – if the contact is a key decision maker. |
+| **email\_id**           | Contact email address.                           |
+
+---
+
+## **4. business\_entity\_card\_association**
+
+| Column                             | Meaning                                                                    |
+| ---------------------------------- | -------------------------------------------------------------------------- |
+| **card\_network**                  | Payment network like VISA, MasterCard, Amex.                               |
+| **merchant\_category\_code (MCC)** | Industry code used in card transactions (e.g., 5732 = Electronics Stores). |
+| **match\_confidence**              | Confidence % of supplier-to-network mapping.                               |
+| **line\_item\_data\_available**    | Whether detailed line-item card data is available (Yes/No).                |
+
+---
+
+## **5. business\_entity\_card\_revenues**
+
+| Column                           | Meaning                                              |
+| -------------------------------- | ---------------------------------------------------- |
+| **year**                         | Year of revenue.                                     |
+| **total\_card\_revenue\_usd**    | Total supplier revenue via card transactions in USD. |
+| **quarterly\_revenue\_q1\_usd**  | Revenue in Q1 via card transactions.                 |
+| **quarterly\_revenue\_q2\_usd…** | Same for Q2, Q3, Q4.                                 |
+
+*Example:* `total_card_revenue_usd = 3,200,000 → Supplier earned $3.2M from card transactions in 2024.`
+
+---
+
+## **6. business\_entity\_card\_transactions\_stability**
+
+| Column                         | Meaning                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| **last\_12m\_activity\_ratio** | Ratio of active months to total 12 months (e.g., 0.95 = transactions happened in 11/12 months). |
+| **last\_3m\_activity\_ratio**  | Same ratio for last 3 months.                                                                   |
+| **last\_1m\_activity\_ratio**  | Same ratio for last 1 month.                                                                    |
+
+---
+
+## **7. business\_entity\_characteristics**
+
+| Column                  | Meaning                                             |
+| ----------------------- | --------------------------------------------------- |
+| **acceptance\_tier**    | Business tier (e.g., Tier 1 = high revenue).        |
+| **kpi\_flag**           | Flags if supplier is critical/high-priority.        |
+| **campaign\_indicator** | Whether supplier is eligible for campaign/outreach. |
+
+---
+
+## **8. business\_entity\_industry\_classification**
+
+| Column                      | Meaning                                   |
+| --------------------------- | ----------------------------------------- |
+| **industry\_sector**        | Broad industry (e.g., IT, Manufacturing). |
+| **industry\_group**         | Sub-industry (e.g., Software Services).   |
+| **naics\_code / sic\_code** | Standard industry classification codes.   |
+| **industry\_description**   | Textual description of supplier’s sector. |
+
+---
+
+## **9. business\_entity\_receivables\_attribute**
+
+| Column                    | Meaning                                                             |
+| ------------------------- | ------------------------------------------------------------------- |
+| **dso\_days**             | Days Sales Outstanding – average time taken to collect receivables. |
+| **credit\_rating**        | External/internal credit risk rating (A, B, C, etc.).               |
+| **receivables\_turnover** | Ratio of revenue vs receivables (higher = faster collections).      |
+
+---
+
+## **10. business\_entity\_spend\_analysis**
+
+| Column                   | Meaning                                    |
+| ------------------------ | ------------------------------------------ |
+| **total\_spend\_usd**    | Total spend with supplier in USD.          |
+| **number\_of\_invoices** | Count of invoices processed.               |
+| **spend\_category**      | Category of spend (IT, Travel, Marketing). |
+
+---
+
+## **11. restrictions**
+
+| Column                     | Meaning                                                 |
+| -------------------------- | ------------------------------------------------------- |
+| **do\_not\_campaign**      | Yes/No – whether supplier can be included in campaigns. |
+| **government\_restricted** | Yes/No – supplier is govt restricted entity.            |
+| **financial\_institution** | Yes/No – supplier is a bank or FI.                      |
+
+---
+
+## **12. electronic\_address**
+
+| Column             | Meaning                    |
+| ------------------ | -------------------------- |
+| **email\_address** | Primary email of supplier. |
+| **website\_url**   | Supplier’s website.        |
+
+---
+
+## **13. telecommunication\_address**
+
+| Column            | Meaning               |
+| ----------------- | --------------------- |
+| **phone\_number** | Contact phone number. |
+| **fax\_number**   | Fax if available.     |
+
+---
+
+## **14. physical\_address**
+
+| Column                          | Meaning           |
+| ------------------------------- | ----------------- |
+| **address\_line1 / line2**      | Street details.   |
+| **city / state / postal\_code** | Location details. |
+| **country**                     | Country name.     |
+
+---
+
+## **15. business\_entity\_relationships**
+
+| Column                        | Meaning                   |
+| ----------------------------- | ------------------------- |
+| **parent\_company**           | Immediate parent company. |
+| **ultimate\_parent\_company** | Top holding company.      |
+| **alternate\_name**           | Trade names/aliases.      |
+
+---
+
+## **16. business\_entity\_identifiers**
+
+| Column                 | Meaning                                                  |
+| ---------------------- | -------------------------------------------------------- |
+| **duns\_number**       | Dun & Bradstreet unique identifier.                      |
+| **tax\_id**            | Supplier’s tax registration number (e.g., PAN in India). |
+| **enigma\_id**         | External supplier database ID.                           |
+| **google\_places\_id** | Google business ID.                                      |
+
+---
+
+👉 In KT, you can explain like this:
+
+* **Start with entity identity (business\_entity, identifiers, addresses).**
+* **Then add financial/operational aspects (revenues, receivables, spend, industry).**
+* **Finally, restrictions & relationships (compliance, parent/child companies).**
+
+---
+
+Do you want me to prepare a **table-wise Excel sheet with column → meaning → example** so you can share with your team after KT?
