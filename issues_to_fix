@@ -1,29 +1,251 @@
-SDS Data Processing : Testing and bug fixes in the data pipeline
+Today i hv to provide kt on staging 
 
-desc:
-Fix identified staging job issues and make the data pipeline operational for PFD
+basically our source is pfd (payment file diagnostic) ,they provide source which will have spend data
 
-acceptance criteria
-1. Identified staging job issues are fixed and verified in the staging environment.
-2. The data pipeline for PFD is operational without errors or failures in staging.
-3. No duplicate ECID values are generated for the same business entity in staging.
-4. `stp_partnershiplist` and `stg_codelist` fields are successfully merged into `product_segmentation_applicable` with correct concatenation.
-5. Changes are successfully moved and verified in UAT environment.
+like lets say we have buyer 'a' wat all transactions done by A with its suppliers
+
+we get source file with following columns 
+sample source data (pfd)
+which existing landing schema of postgress
+
+select * from sds_landing.analysis_pfd
+
+"task_id","sds_upload_name","sds_upload_id","client_name","upload_user","sds_upload_ts","sds_note","unique_payment_row","request_id","user_request_id","request_time","file_uploaded_ts","analysis_type","business_start_date","business_end_date","client_ecid","request_name","file_uploaded_dt","note","shared_with_users","source","request_user","vendor_name","vendor_name_cleaned","vendor_id","site_id","vendor_country","vendor_hq_country","vendor_state","vendor_postcode","vendor_address_ln_1","vendor_address_ln_2","vendor_address_ln_3","vendor_phone_number","vendor_phone_number_2","vendor_email","vendor_website","vendor_contact_name","vendor_government_id","vendor_alternate_name","vendor_ultimate_parent_name","annual_spend","annual_spend_usd","annual_transaction_count","annual_invoice_count","vendor_annualrevenue","payment_currency","payment_type","payment_terms","payment_terms_days","payment_terms_discount_ind","payment_terms_discount_rate","payment_terms_discount_days","payment_actual_days","vendor_cat_clientdef_1","vendor_cat_clientdef_2","vendor_cat_clientdef_3","vendor_cat_clientdef_4","vendor_cat_userdef_1","vendor_cat_userdef_2","vendor_cat_userdef_3","vendor_cat_userdef_4","sds_supplier_id","validation_type","match_strength_name","match_strength_address","match_strength_country","match_strength_state","match_strength_postcode","vendor_dso","vendor_dpo","vendor_dio","vendor_industry_lvl_1","vendor_industry_lvl_2","vendor_industry_lvl_3","industry_sector_dso_25","industry_sector_dso_50","industry_sector_dso_75","industry_group_dso_25","industry_group_dso_50","industry_group_dso_75","filter_analyzable","filter_adjustable","filter_monetizable","filter_country","filter_employee","filter_trust","filter_govt","filter_realestate","filter_utilities","filter_insurance","filter_fi","filter_interco","filter_individual","filter_do_not_campaign","payment_preference","vendor_credit_rating_moody","vendor_credit_rating_moody_date","vendor_credit_rating_sp","vendor_credit_rating_sp_date","vendor_credit_rating_recent","vendor_credit_revolver_rate","vendor_cogs","ind_jpmc","supplier_ecid","ind_scf","scf_buyerlist","throughput_usd","avg_spread","avg_payment_terms","rate_proposed","rate_offered","esg_discount","ind_decline","vendor_card_tier","ind_vc","ind_virtualcard_concierge","ind_virtual_card_vcn","vc_receipts","vc_recency","ind_vcn","vc_buyercount","ind_virtualcard_interchange_amount","ind_cms","ind_bb","stp_partnerships","ind_vc_campaign","virtualcard_accpetance_tier_legacy","virtualcard_accpetance_tier_model","virtualcard_accpetance_tier_userdefined","ind_virtual_card_campaign_count","vc_campaign_accepts","ind_cc","cc_receipts","cc_recency","cc_buyercount","visa_match_confidence","visa_matched_level_ii","visa_matched_level_iii_summary","visa_matched_level_iii_line_item","visa_matched_fleet_ind","visa_matched_data_quality","visa_matched_mcc","google_places_id","enigma_id","enigma_business_id","year_incorporated","registered_agents","associated_people","industries","corporate_structures","eins","technologies_used","has_online_payments","card_revenue","card_transactions_stability","supplier_segmentation","rebate_rate"
+"d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","SAILDRONE INC ","u856923","2024-07-19T12:00:00.000Z",NULL,"1PASSWORD326ACH","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c25","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","1754941717251",NULL,"ANALYSIS_FINAL","2024-07-19T12:00:00.000Z","2025-07-14T12:00:00.000Z","538669316","SAILDRONE INC 2025-08 15244  CB v2","20250811","SAILDRONE INC 2025-08 15244  CB v2   DAP file, unknown as pay type with same supplier updated to lik","N792158, E056214","Commercial Card","E057348","1PASSWORD","1PASSWORD","326",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"1Password",NULL,NULL,NULL,"6720","6720","1",NULL,NULL,NULL,"ACH",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"N","N","N","N","N","N","N","N","N","N",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"N",NULL,"N",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"Y",NULL,NULL,"1629.77","0",NULL,"5",NULL,"N","N",NULL,NULL,NULL,NULL,NULL,NULL,NULL,"Y","1727787.37","1","833","Low",NULL,NULL,NULL,NULL,"MDA",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"Tail-end solutions","0.015"
+"d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","SAILDRONE INC ","u856923","2024-07-19T12:00:00.000Z",NULL,"13TH & F ASSOCIATES LP6391ACH","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c25","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","1754941717251",NULL,"ANALYSIS_FINAL","2024-07-19T12:00:00.000Z","2025-07-14T12:00:00.000Z","538669316","SAILDRONE INC 2025-08 15244  CB v2","20250811","SAILDRONE INC 2025-08 15244  CB v2   DAP file, unknown as pay type with same supplier updated to lik","N792158, E056214","Commercial Card","E057348","13TH & F ASSOCIATES LP","13TH F","6391",NULL,NULL,"DE",NULL,NULL,NULL,NULL,NULL,NULL,NULL,"Shawnti.Gales@hines",NULL,"13th & F Associates",NULL,NULL,"Muenchener Rueckversicherungs-Gesellschaft AG in Muenchen","355502.87","355502.87","14",NULL,NULL,NULL,"ACH",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"Consumer Discretionary","Consumer Services","Inactive/Unknown","7.28194","22.05261","56.7139","8.06481","22.45916","51.99396",NULL,NULL,NULL,"N","N","N","N","N","N","N","N","N","N",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"N",NULL,"N",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"N","N",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"MDA",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"No card match","0.015"
+"d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","SAILDRONE INC ","u856923","2024-07-19T12:00:00.000Z",NULL,"A CRANE RENTAL18682ACH","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c25","SAILDRONE INC 2025-08 15244  CB v2 20250811 19:48:37","1754941717251",NULL,"ANALYSIS_FINAL","2024-07-19T12:00:00.000Z","2025-07-14T12:00:00.000Z","538669316","SAILDRONE INC 2025-08 15244  CB v2","20250811","SAILDRONE INC 2025-08 15244  CB v2   DAP file, unknown as pay type with same supplier updated to lik","N792158, E056214","Commercial Card","E057348","A CRANE RENTAL","CRANE RENTAL","18682",NULL,"US",NULL,"PA","15034","200 WASHINGTON AVE",NULL,"DRAVOSBURG","1-813-728-6582",NULL,"accounting@acraneus","http://acraneusa.com/","A Crane Rental",NULL,"A CRANE RENTAL",NULL,"18797.4","18797.4","4",NULL,NULL,NULL,"ACH",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"Y","N","N","N","Y","N","N","N","N","N",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"N",NULL,"N",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"N",NULL,NULL,"0","0",NULL,"0",NULL,"N","N",NULL,"Y",NULL,NULL,NULL,"1","0","Y","4561.62","15","4","High","Yes","Yes",NULL,NULL,NULL,"5046",NULL,"E0025f3600007f2f",NULL,"1973","['C T CORPORATION SYSTEM', 'A CRANE RENTAL LLC', 'ANTHONY CRANE RENTAL INC', 'ANTHONY CRANE RENTAL O","[{'name': 'RAY G ANTHONY', 'titles': ['P', 'CHAIRMAN', 'CEO', 'DIRECTOR', 'PRESIDENT', 'PRESIDENT CE","{'classification_description': 'crane rental agency', 'classification_type': 'enigma_description'}","CORPORATION","813210341",NULL,NULL,"{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'aver","{'end_date': '2025-05-31', 'date_accessible': '2025-08-15', '1m': {'start_date': '2025-05-01', 'days","Tail-end solutions","0.015"
+
+
+now we have divided this data and load in to staging schema of postgress as per the business requirement in following 16 tables of staging
 
 
 
-Sure! Here's a simple short description and acceptance criteria for your SDS Data Processing story:
 
-### **Description:**
+SELECT * FROM sds_staging.business_entity
 
-Testing and bug fixes are performed in the data pipeline to ensure the SDS data is processed correctly, with no errors or inconsistencies.
+SELECT * FROM sds_staging.business_entity_details
 
-### **Acceptance Criteria:**
+SELECT * FROM sds_staging.business_entity_contacts
 
-1. All identified bugs in the SDS data pipeline are fixed and verified.
-2. The data pipeline runs successfully without errors or failures in the staging environment.
-3. The SDS data is processed correctly, with no data loss or corruption.
-4. Data validation checks are successfully passing in the staging environment.
-5. Changes are successfully tested and verified in the UAT environment.
+SELECT * FROM sds_staging.business_entity_card_association
 
-Would you like me to adjust or add any specific details to these criteria?
+SELECT * FROM sds_staging.business_entity_card_revenues
+
+SELECT * FROM sds_staging.business_entity_card_transactions_stability
+
+SELECT * FROM sds_staging.business_entity_characteristics
+
+SELECT * FROM sds_staging.business_entity_industry_classification
+
+SELECT * FROM sds_staging.business_entity_receivables_attribute
+
+SELECT * FROM sds_staging.business_entity_spend_analysis
+
+SELECT * FROM sds_staging.restrictions
+
+SELECT * FROM sds_staging.electronic_address
+
+SELECT * FROM sds_staging.telecommunication_address
+
+SELECT * FROM sds_staging.physical_address
+
+SELECT * FROM sds_staging.business_entity_relationships
+
+SELECT * FROM sds_staging.business_entity_identifiers
+
+**************************************************************************************************************
+i want you to explain each table wat does each table indicate as per business, y physical_address, electronic addres. wat does each table incidata. what data it holds at business level
+
+SELECT * FROM sds_staging.business_entity (it contains uuid unique id created for each suppliers with supplier name alone)
+
+"stg_business_entity_id","source_system_id","source_system_name","hierarchy_identifier","hierarchy_level","hierarchy_role","parent_id","is_active","created_by","created_date"
+"8473f193-8721-4fe0-87d8-ec4a3c3bbdd0",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:49:59.27"
+"2f6ebe2a-bc80-9a58-b82d-e517c557b2e0",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:49:59.27"
+"bb47645c-a048-2016-51c9-4ac9d2d9b51d",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:49:59.27"
+"1b339bfc-1600-754d-5ed5-468574ed1122",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:49:59.27"
+"9d53826a-b031-74dc-f409-8647c8a9e0e4",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:49:59.27"
+"0cd12e4e-1f9d-9bbb-494a-20d02001dbcb",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:49:59.27"
+"29a63f84-6693-6a60-b627-b9761bbb1d29",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:49:59.27"
+"60730e31-2f27-fe00-57b8-bcf855b3eb2e",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:49:59.27"
+"f5cca73d-7dcf-8e69-de25-3e25f6525eb2",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:49:59.27"
+
+
+SELECT * FROM sds_staging.business_entity_details (supplier id ntg but stg_business_entity_id, entity_name, in which year it started)
+
+"business_entity_details_id","stg_business_entity_id","business_entity_name","company_structure","market_segment_type","year_incorporated","reported_annual_revenue","is_active","created_by","created_date"
+"d3c0849f-70aa-5a77-11e8-a02c5e31a18c","2d35a04a-5fdf-50d5-7750-c1c7621ddc33","jpmc","",NULL,"","",True,"PFD","2025-09-19 11:50:04.716"
+"bb629dcc-67d7-1447-2345-beed8a857939","5f5389ed-f176-86d7-e0f5-ce7e2f369878","national defense isac ndisac",NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:04.716"
+"8518e2b5-97d6-c74a-ec96-a7e9655d932f","c0158c54-1c9e-f930-b0d4-3b78cd3a67e0","alameda chamber foundation",NULL,NULL,"2021",NULL,True,"PFD","2025-09-19 11:50:04.716"
+"462fa773-6ea6-51b8-ac27-14a64ce6a6c3","3338747a-3fda-a3b9-4d4e-c5fdd000cd1d","bay area crating","corporation",NULL,"2010",NULL,True,"PFD","2025-09-19 11:50:04.716"
+"4e8aa990-92e6-1746-2647-cb2e03f125a4","8078c042-d928-4b7f-4221-b360c35ebe55","bossard","corporation",NULL,"1999",NULL,True,"PFD","2025-09-19 11:50:04.716"
+"ffdbc4bd-3791-4398-d863-bc0ce0e0b87a","a5fc1821-9d45-2b92-a580-8c1e9b0820a4","west coast marine chemists","corporation",NULL,"2015",NULL,True,"PFD","2025-09-19 11:50:04.716"
+"e5b60db3-59dd-ad6f-3f36-4d36eaa12356","4e52fdab-7060-24da-0065-0354d073afb5","katherine ann brackenbury",NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:04.716"
+"1ca49346-9269-bed3-6e32-132a48f6bd70","33e3cc4b-a86c-ef5a-fc0d-082b16461a69","fls consulting",NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:04.716"
+"a2908191-9702-bdff-665d-4d0241ce1a3c","5a871fd2-412a-15c4-778f-b52169ea61ec","cintas aid safety division","corporation",NULL,"1980",NULL,True,"PFD","2025-09-19 11:50:04.716"
+
+SELECT * FROM sds_staging.business_entity_contacts
+
+"business_entity_contact_id","stg_business_entity_id","source_system_contact_id","source_system_name","contact_type","contact_name","contact_title","contact_active_indicator","contact_deactivated_date","decision_maker_indicator","decision_maker_type","is_active","created_by","created_date"
+"e3a882b0-f097-bb7b-dd8e-3fe5e56ee565","6907859a-25a0-38dd-4ede-5f79fecc16e1",NULL,NULL,NULL,"michael shook","governor",NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:51:06.364"
+"faa9d7ed-e85c-a387-2264-9af2d8fdaca8","e9b2c2fb-5f7b-81b2-da4a-bcdfd1d4cd05",NULL,NULL,NULL,"symmetry electronic",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:51:06.364"
+"58fbd8c0-9fd2-abed-e028-960614d75e35","9be71e95-f367-a679-53bd-a962784493f0",NULL,NULL,NULL,"koge marina",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:51:06.364"
+"897e65e1-8b6f-0910-d318-ce18db5de87c","c685f21a-d615-1c95-61eb-5cdeae6a7e13",NULL,NULL,NULL,"golden express",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:51:06.364"
+"21ebcc30-c42f-1d30-2c0a-216910f2d378","ca4671a5-1d2f-38d5-f1e5-ab551c8f342e",NULL,NULL,NULL,"do not use this ve",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:51:06.364"
+"b84ce0f0-e266-6475-c1fa-776cdba2950b","2dfc89ae-64c3-e6ff-0a34-eb54c60ce022",NULL,NULL,NULL,"johannes koopmans",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:51:06.364"
+"6835294b-afd3-d44a-ac35-8f4235f15db8","bcea1d44-3b0e-b1c4-90f4-0522c177aef6",NULL,NULL,NULL,"south of la inc",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:51:06.364"
+"f3be772d-beb1-fcc9-a37e-d6029dc90763","887d11c6-0ff1-669d-edf7-7cc4032bfe82",NULL,NULL,NULL,"greg johnson",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:51:06.364"
+"80ee640e-a14b-a291-fca9-55c2a5a564b4","fac989f8-f044-bae6-b6c5-629118ef103c",NULL,NULL,NULL,"bay area hydrovac l",NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:51:06.364"
+
+SELECT * FROM sds_staging.business_entity_card_association
+
+"card_association_id","stg_business_entity_id","association_name","match_confidence","matched_level_2","matched_level_3_summary","matched_level_3_lineitem","matched_fleet_ind","matched_mcc","matched_data_quality","is_active","created_by","created_date"
+"2a98dc79-2e2b-ccd7-46ff-f5e17365f176","49bc70ed-1149-cd4b-a951-056d5acf6a6c","","medium",True,True,True,NULL,"5734",NULL,True,"PFD","2025-09-19 11:51:04.682"
+"cc40ef68-0d09-5b9f-737f-89b2e13d3980","d6f89cc8-521c-98af-3dce-5326b7ca4295","","high",True,True,True,NULL,"8999",NULL,True,"PFD","2025-09-19 11:51:04.682"
+"b7be39e1-0961-9bd8-e246-1b2325c2956a","a4e17a0d-6242-8a39-954b-9306b01fcab3","","high",True,NULL,NULL,NULL,"7299",NULL,True,"PFD","2025-09-19 11:51:04.682"
+"58ebc17f-4489-f78e-d7aa-8e091e3100cc","57b36eef-8854-5afa-f4af-05cc2ebf20dc","","high",True,True,True,NULL,"8011",NULL,True,"PFD","2025-09-19 11:51:04.682"
+"fb9403a0-2abc-7bf0-728c-91780aef7314","5322ee04-87be-3dda-cc01-4149bceacdcd","","low",NULL,NULL,NULL,NULL,NULL,"mda",True,"PFD","2025-09-19 11:51:04.682"
+"55d9bda8-c2b6-decb-d4d1-ca1243ce3155","bb47645c-a048-2016-51c9-4ac9d2d9b51d","","high",True,True,NULL,NULL,"5046",NULL,True,"PFD","2025-09-19 11:51:04.682"
+"ab9204ca-630e-3f8b-4cc7-2540d94c5bd7","25bc776b-8df9-ac92-0256-7266135b2529","","high",True,True,True,NULL,"5085",NULL,True,"PFD","2025-09-19 11:51:04.682"
+"2a246645-cd12-f088-62d3-8fea9de0cc42","b51f3feb-7fa8-eeeb-b10b-ff4fdadaa832","","high",True,True,NULL,NULL,"7699",NULL,True,"PFD","2025-09-19 11:51:04.682"
+"6a5e9675-eaec-9605-d961-0d3731b7fd37","49733b08-4a19-5873-9d3e-d7a4e63abab2","","low",True,True,True,NULL,NULL,"mda",True,"PFD","2025-09-19 11:51:04.682"
+
+SELECT * FROM sds_staging.business_entity_card_revenues
+
+"revenue_id","stg_business_entity_id","end_date","card_revenue__1m__start_date","card_revenue__1m__average_monthly_amount","card_revenue__3m__start_date","card_revenue__3m__average_monthly_amount","card_revenue__12m__start_date","card_revenue__12m__average_monthly_amount","is_active","created_by","created_date"
+"74de3d17-5abc-1289-2c56-95a8f0a8dd59","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","2020-08-31","2020-08-01",1200,"2020-06-01",1401,"2020-09-01",3201,True,"PFD","2025-05-29 10:10:32.811"
+
+
+SELECT * FROM sds_staging.business_entity_card_transactions_stability
+
+"card_transactions_stability_id","stg_business_entity_id","end_date","date_accessible","card_transactions_stability__1m__start_date","card_transactions_stability__1m__days_present","card_transactions_stability__1m__weeks_present","card_transactions_stability__1m__months_present","card_transactions_stability__1m__daily_coverage_ratio","card_transactions_stability__1m__weekly_coverage_ratio","card_transactions_stability__1m__monthly_coverage_ratio","card_transactions_stability__3m__start_date","card_transactions_stability__3m__days_present","card_transactions_stability__3m__weeks_present","card_transactions_stability__3m__months_present","card_transactions_stability__3m__daily_coverage_ratio","card_transactions_stability__3m__weekly_coverage_ratio","card_transactions_stability__3m__monthly_coverage_ratio","card_transactions_stability__12m__start_date","card_transactions_stability__12m__days_present","card_transactions_stability__12m__weeks_present","card_transactions_stability__12m__months_present","card_transactions_stability__12m__daily_coverage_ratio","card_transactions_stability__12m__weekly_coverage_ratio","card_transactions_stability__12m__monthly_coverage_ratio","is_active","created_by","created_date"
+"01a6efb1-a8c4-52e2-fe6e-048b3449d0e8","08a27d25-2cd7-3709-2ebd-31fd5ccdce5f","2020-08-31",NULL,"2020-08-01","25","4","1",1,1,1,"2020-06-01","61","10","3",1,1,1,"2019-09-01","110","27","11",0,1,1,True,"PFD","2025-05-29 10:10:30.665"
+
+SELECT * FROM sds_staging.business_entity_characteristics
+
+"characteristics_id","stg_business_entity_id","characteristic_type","characteristic_value","is_active","created_by","created_date"
+"dbc76c28-4158-71d2-c6cd-151e89e391f3","5bd8a31f-569e-30c1-7653-ec5cb1baffc7","scf_industry_sector_dso_50","33.02967",True,"PFD","2025-09-19 11:50:10.451"
+"3461965e-fd49-9e83-64a7-5bdf7089c7a0","d7effba3-12da-fbae-9708-50c3c257fc88","scf_industry_sector_dso_75","86.95208",True,"PFD","2025-09-19 11:50:10.451"
+"b51a8720-cd96-7604-6a04-f45ac6ca9f05","308d62b4-e6fb-b6d4-b489-6c3330284034","vc_campaign_accepts","0",True,"PFD","2025-09-19 11:50:10.451"
+"8b41a88b-ee0e-11c7-e4ac-ce4256d16c55","14b08d65-92e3-f135-c8f9-e70b6fad73ee","scf_industry_group_dso_25","23.69887",True,"PFD","2025-09-19 11:50:10.451"
+"20eb2b85-673a-5b58-209a-c9473addf121","a5fc1821-9d45-2b92-a580-8c1e9b0820a4","scf_industry_sector_dso_25","7.28194",True,"PFD","2025-09-19 11:50:10.451"
+"abdfc730-f46b-94ac-baad-0700f4cb5e84","3a7bd3e2-360a-3d29-eea4-36fcfb7e44c7","scf_industry_sector_dso_75","86.95208",True,"PFD","2025-09-19 11:50:10.451"
+"d6d57626-7705-ea8f-101b-84a66ad52dfe","d2a0e582-29ec-3915-59db-7bca4adeaf4b","scf_industry_sector_dso_25","20.7156",True,"PFD","2025-09-19 11:50:10.451"
+"c7ce56e5-83d4-f488-df5f-06861ea395eb","560846a9-8a9b-06bd-1f9a-3ca37d33fce8","vc_campaign_accepts","0",True,"PFD","2025-09-19 11:50:10.451"
+"a03685c9-fd3a-1e00-f8d4-bf4a091fffd5","3ac6d01f-7382-75e5-6f13-01bcac976f35","scf_industry_sector_dso_75","85.7732",True,"PFD","2025-09-19 11:50:10.451"
+
+SELECT * FROM sds_staging.business_entity_industry_classification
+
+"classification_id","stg_business_entity_id","classification_type","classification_code","classification_description","is_active","created_by","created_date"
+"49120aeb-39eb-1035-81c0-5c1bfd9eda54","8c698996-998b-1a59-b632-0dbbd972c866","internal","real_estate","n",True,"PFD","2025-09-19 11:51:00.93"
+"edcb3c21-f823-7458-3b5c-a51dc5c11783","18e86f9d-a25f-0c09-c6d6-380344c8cbfb","internal","govt","n",True,"PFD","2025-09-19 11:51:00.93"
+"1f99e698-72d0-392f-2baa-5855e64baef6","b9b23c1a-062b-6973-52a7-e71503b38575","internal","real_estate","n",True,"PFD","2025-09-19 11:51:00.93"
+"ef351e97-ab36-63cf-54d6-4b1da72efd22","cf451af5-255a-097d-d909-c6e542cba767","bloomberg","level-2","consumer discretionary distribution & retail",True,"PFD","2025-09-19 11:51:00.93"
+"9f40c13e-21d3-e35b-6a70-b3bb1bf8fc28","fa27da72-12f0-e5f1-6406-ca46b14c982b","internal","fi","n",True,"PFD","2025-09-19 11:51:00.93"
+"c28ca2ad-c7fc-60b9-6942-b82a207f6fa8","41780152-6db9-04c6-84b8-b8b568d932c0","internal","govt","n",True,"PFD","2025-09-19 11:51:00.93"
+"4eed0396-0517-29d2-be44-4826c87c62ec","a59addd5-1877-f7c1-4ce0-2e93a32c6298","internal","govt","n",True,"PFD","2025-09-19 11:51:00.93"
+"14acce17-fa59-b3f1-0a0d-3a4489bc22d6","0c669fa8-97e9-8790-5743-7ffbe9e7fe25","bloomberg","level-1","industrials",True,"PFD","2025-09-19 11:51:00.93"
+"5d402fd4-1154-6c01-9fa4-460ef88ff91e","7c9d4298-9bcd-af0b-c401-4fca03c3f80b","internal","fi","n",True,"PFD","2025-09-19 11:51:00.93"
+
+SELECT * FROM sds_staging.business_entity_receivables_attribute
+
+"attribute_id","stg_business_entity_id","receivables_attribute_type","receivables_attribute_value","is_active","created_by","created_date"
+"fc752ebd-c379-4564-e9cf-a65c6feaa9c0","6c7039e7-d8dd-d9af-0b10-4422efe219f9","spend_on_jpmc_vc","0",True,"PFD","2025-09-19 11:51:32.149"
+"7f608f67-0039-be04-192a-b5d0fbd589fb","e9b2c2fb-5f7b-81b2-da4a-bcdfd1d4cd05","jpmc_cc_buyer_count","52",True,"PFD","2025-09-19 11:51:32.149"
+"b6a215b2-eb9e-5901-22ee-351c059849ab","c0b0109d-9439-de57-fe3c-f03abeccbc52","spend_on_jpmc_vc","8890.36",True,"PFD","2025-09-19 11:51:32.149"
+"8e573cef-9bcb-3245-5f4b-c56e0c02490a","ac9cbf58-1292-da7e-cd64-742c45d0cd20","enrolled_scf_supplier","n",True,"PFD","2025-09-19 11:51:32.149"
+"e209d74f-fb3e-6001-3c04-e7433f427eb3","8812dc09-d23c-42a4-e8cd-6491cf21e784","jpmc_cc_enrolled_years","15",True,"PFD","2025-09-19 11:51:32.149"
+"05ce864e-22a2-2e0d-0087-569f737410ba","0892a97a-ef76-2445-83bd-30d781a0d0fc","spend_on_jpmc_vc","141319",True,"PFD","2025-09-19 11:51:32.149"
+"26cc9463-b168-b0bc-eab2-d918db95528d","cf6e040f-e4cb-beb1-1f96-fc6caaf4ca6d","vc_enrollment_duration_years","16",True,"PFD","2025-09-19 11:51:32.149"
+"b65b9280-65f6-22ad-c9c7-8f4456ec424d","8078c042-d928-4b7f-4221-b360c35ebe55","cms_enrolled","n",True,"PFD","2025-09-19 11:51:32.149"
+"dc0f636a-ef73-a6dc-9ba4-3e27fec81773","4d6f1c36-b8e0-f300-66e4-94645eec1721","businessbank_enrolled","n",True,"PFD","2025-09-19 11:51:32.149"
+
+SELECT * FROM sds_staging.business_entity_spend_analysis
+
+"spend_analysis_id","stg_payor_business_entity_id","stg_payee_business_entity_id","analysis_conducted_dt","analysis_task_id","analysis_external_reference_id","analysis_stage","count_of_invoices","payment_terms","count_of_payments","sum_of_payments","period_start_date","period_end_date","payment_ccy","chargeback_amount","chargeback_percentage","actual_days_payment_outstanding","payment_mode","payment_term_days","payment_terms_discount_ind","payment_terms_discount_rate","payment_terms_discount_days","source_system_id","source_system_name","is_active","created_by","created_date"
+"329f4592-8e7d-70ba-c2c8-8f47c308197b","bb47d9f7-c631-a592-a734-8221082535bf","434d24a0-905d-c8ea-39e7-68c89c6ceeae","2025-08-11","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","analysis_final",NULL,NULL,9,95223.27,"2024-07-19","2025-07-14",NULL,NULL,NULL,NULL,"ach",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:57.923"
+"540ea410-8ae9-9373-f6dc-0ffe89bb057d","bb47d9f7-c631-a592-a734-8221082535bf","05a2ca53-1163-6946-c46b-88fea548b0e4","2025-08-11","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","analysis_final",NULL,NULL,1,850.00,"2024-07-19","2025-07-14",NULL,NULL,NULL,NULL,"ach",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:57.923"
+"502d1f76-1b09-24a6-72bd-9e2c404154b8","bb47d9f7-c631-a592-a734-8221082535bf","cd5842a8-9a4d-a110-abc8-feed0f01c0a2","2025-08-11","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","analysis_final",NULL,NULL,2,4793.75,"2024-07-19","2025-07-14",NULL,NULL,NULL,NULL,"ach",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:57.923"
+"5f8eb526-f5f1-ca57-43e5-3f5502544d72","bb47d9f7-c631-a592-a734-8221082535bf","5bf67d57-f750-6993-f189-26f6c3276950","2025-08-11","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","analysis_final",NULL,NULL,4,208656.13,"2024-07-19","2025-07-14",NULL,NULL,NULL,NULL,"ach",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:57.923"
+"02d89739-dffd-b255-6547-850b16679bd8","bb47d9f7-c631-a592-a734-8221082535bf","478eda79-5ccd-9eef-30d5-10bb35312582","2025-08-11","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","analysis_final",NULL,NULL,4,16729.68,"2024-07-19","2025-07-14",NULL,NULL,NULL,NULL,"ach",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:57.923"
+"21813bbf-af03-e39e-5b2b-cf94b48cd32f","bb47d9f7-c631-a592-a734-8221082535bf","4a0fe7e3-c914-b07b-9400-dfa7eaef5f3c","2025-08-11","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","analysis_final",NULL,NULL,7,16673.98,"2024-07-19","2025-07-14",NULL,NULL,NULL,NULL,"ach",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:57.923"
+"c9e4cc69-6611-4df1-52d3-86300ce0280e","bb47d9f7-c631-a592-a734-8221082535bf","3ccbd910-5a45-d8fc-d4a0-101c6532c599","2025-08-11","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","analysis_final",NULL,NULL,3,198888.69,"2024-07-19","2025-07-14",NULL,NULL,NULL,NULL,"ach",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:57.923"
+"83b0eda6-078c-f58d-8392-fcdd6ac0687d","bb47d9f7-c631-a592-a734-8221082535bf","140eb58b-0d16-0eab-292d-91cf20f7b83f","2025-08-11","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","analysis_final",NULL,NULL,2,533.36,"2024-07-19","2025-07-14",NULL,NULL,NULL,NULL,"ach",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:57.923"
+"07e80d00-ac5b-9b3d-a65d-d17c7aa279f5","bb47d9f7-c631-a592-a734-8221082535bf","b4d67cfd-bde7-fe3c-f491-9576fd82955e","2025-08-11","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c26","d8c5ff84-1ca5-4dfd-9266-f89ff4a07c27","analysis_final",NULL,NULL,1,0.00,"2024-07-19","2025-07-14",NULL,NULL,NULL,NULL,"check",NULL,NULL,NULL,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:57.923"
+
+SELECT * FROM sds_staging.restrictions
+
+"restriction_id","related_identifier","related_identifier_source","restriction_type","restriction_indicator","restriction_reason","restriction_for_products","restriction_added_dt","is_active","created_by","created_date"
+"ae2297de-fbc7-4722-d011-05134ae7bc71","26f8567f-2569-1822-94c3-fa5b9f9cb227","business_entity","do_not_campaign",False,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:59.746"
+"94522ed3-f088-657c-80e8-92dc084430f3","d4d2ab49-d5a2-0ee5-15f2-b277c576d2dd","business_entity","do_not_campaign",False,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:59.746"
+"efe65a3b-1b4b-f379-85e3-60ab06b76938","c0b0109d-9439-de57-fe3c-f03abeccbc52","business_entity","do_not_campaign",False,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:59.746"
+"b3d01438-c246-1ca2-9f13-fe6b88b480ae","472c81c7-5439-ed18-336f-9fa70b52e2fd","business_entity","do_not_campaign",False,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:59.746"
+"8b972fbd-6849-8caa-962b-9861c96a0878","4cb0b250-c625-0d52-8f3e-61d07d970892","business_entity","do_not_campaign",False,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:59.746"
+"cd6d49ad-a3fa-781c-c08a-fc1a4fe4e449","6a007868-5f96-cf5a-fd41-4ac704aa680e","business_entity","do_not_campaign",False,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:59.746"
+"f273049e-6548-2ef1-aa64-697ac0d5acdd","0892a97a-ef76-2445-83bd-30d781a0d0fc","business_entity","do_not_campaign",False,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:59.746"
+"670b8fb2-92c4-1369-10ed-4cdeb602f5be","46bcd19d-d562-58af-c155-d16cedbd23be","business_entity","do_not_campaign",False,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:59.746"
+"a65cf7f1-9488-057d-0a11-67453f9fc60d","cfb7de69-f7f8-4ae0-9601-921f08c76335","business_entity","do_not_campaign",False,NULL,NULL,NULL,True,"PFD","2025-09-19 11:50:59.746"
+
+SELECT * FROM sds_staging.electronic_address
+
+"electronic_address_id","related_identifier","related_identifier_source","electronic_address_type","electronic_address","is_active","created_by","created_date"
+"300b9dae-1118-9276-4a81-edfe97fda6d2","02cd5d6b-33c9-0122-94a5-b9a9362c81ea","business_entity","primary","operations.panama@g",True,"PFD","2025-09-19 11:50:56.579"
+"e119e9d4-1f07-1712-e15d-3586f36ef9f3","eb7d887a-714a-628f-d6c8-7eb85d9f6cd4","business_entity","primary","christian@saildrone",True,"PFD","2025-09-19 11:50:56.579"
+"d1fc6bb5-8f1b-3774-3ff9-656619fe60e1","85783873-e61a-cf0d-f8c4-1fbb22564517","business_entity","website","https://www.zoro.com/",True,"PFD","2025-09-19 11:50:56.579"
+"bb2c8537-be8d-c725-147e-b871dd2efb6b","a4e17a0d-6242-8a39-954b-9306b01fcab3","business_entity","website","https://www.lockworksunlimited.com/",True,"PFD","2025-09-19 11:50:56.579"
+"4a5fe56d-d352-a0a7-6f17-b974b6e277e7","60be9861-750f-acbf-ad87-58254a2f76c0","business_entity","website","http://www.mapyourshow.com/",True,"PFD","2025-09-19 11:50:56.579"
+"13bf5563-7ea9-b5c3-f650-00fcf0a81748","e62d048c-f604-22a0-d0b5-5d000c0d10f2","business_entity","website","https://nvrfreight.com/",True,"PFD","2025-09-19 11:50:56.579"
+"65407c1d-64c1-7dd5-1cf5-73417c3ebef7","cf451af5-255a-097d-d909-c6e542cba767","business_entity","website","https://www.stormwindstudios.com/",True,"PFD","2025-09-19 11:50:56.579"
+"e24e92a5-87a5-cce3-2410-4473b488d5f7","846e817a-9b5d-92cb-1b52-15abb0b206a9","business_entity","primary","hp@powerengconstruc",True,"PFD","2025-09-19 11:50:56.579"
+"d7929e25-20ad-56a5-b69b-44d933c96447","63695e02-7b6e-f99c-db1c-12baa27350f9","business_entity","primary","asumpton@gmail.com",True,"PFD","2025-09-19 11:50:56.579"
+
+SELECT * FROM sds_staging.telecommunication_address
+
+"telecommunication_address_id","related_identifier","related_identifier_source","telecommunication_address_type","area_dialing_code","phone_number","extension_number","is_active","created_by","created_date"
+"69ae61c8-2a21-fd4d-2308-34a9de746749","d20d0657-5d42-b5a9-be68-3cc8c11aaf31","business_entity","primary",NULL,"5614650106",NULL,True,"PFD","2025-09-19 11:50:55.078"
+"3fc2f31c-c3a7-f6cc-d3c6-dc74b0a91ee1","472c81c7-5439-ed18-336f-9fa70b52e2fd","business_entity","primary",NULL,"1-206-839-4880",NULL,True,"PFD","2025-09-19 11:50:55.078"
+"97cfe0c6-8b1c-3beb-af9a-6e668ab63f97","9e4c0963-5f6f-a682-26f9-e39ddad0edcc","business_entity","primary",NULL,"1-619-307-5016",NULL,True,"PFD","2025-09-19 11:50:55.078"
+"8fa2a318-f465-c1ce-2655-dbe3265ce4eb","ce9cb26a-8af1-7c05-74cc-f4ff75355bbb","business_entity","primary",NULL,"1-916-773-1634",NULL,True,"PFD","2025-09-19 11:50:55.078"
+"2159d5e5-e7ca-dbe4-66f2-88b3ab57a136","e7542f24-f23e-c30c-109f-9e24454eb5ec","business_entity","primary",NULL,"1-240-252-1138",NULL,True,"PFD","2025-09-19 11:50:55.078"
+"c7ca1112-81b4-7b2e-a4f6-cd7c513278bd","5f9eb4a3-8372-f9ab-ab58-d93293a6550a","business_entity","primary",NULL,"1-970-879-9900 ext 301",NULL,True,"PFD","2025-09-19 11:50:55.078"
+"8945b128-d59d-5472-db33-37049be0f4a1","442b9c9c-5248-fd53-3bf1-15a34f6d78e2","business_entity","primary",NULL,"1-888-523-5281",NULL,True,"PFD","2025-09-19 11:50:55.078"
+"44c0fd40-78d4-0c75-9649-1326346d49a1","3a7bd3e2-360a-3d29-eea4-36fcfb7e44c7","business_entity","primary",NULL,"1-916-399-7872",NULL,True,"PFD","2025-09-19 11:50:55.078"
+"40c0c4a0-1674-ff8c-642c-32e79964dd26","ecefc2b2-dbe4-25a0-1632-d30dcebf5562","business_entity","primary",NULL,"1-510-926-9748",NULL,True,"PFD","2025-09-19 11:50:55.078"
+
+SELECT * FROM sds_staging.physical_address
+
+"physical_address_id","related_identifier","related_identifier_source","physical_address_type","street_line_1","street_line_2","street_line_3","country","city","state_province","postal_code","location_name","site_identifier","is_active","created_by","created_date"
+"65f0e45c-3cd2-bb8d-d104-04505ea5871b","ac9cbf58-1292-da7e-cd64-742c45d0cd20","business_entity","billing","po box 5304",NULL,NULL,"us","denver","co","80217",NULL,NULL,True,"PFD","2025-09-19 11:50:32.01"
+"e170913e-f13c-8dc0-a4b0-15a330d3e5ff","ba25ea33-51a7-e08e-cb77-51c993d6eea7","business_entity","billing","13265 barton cir",NULL,NULL,"us","whittier","ca","90605",NULL,NULL,True,"PFD","2025-09-19 11:50:32.01"
+"d5e0924d-d7ee-5109-af3f-5abaec056ed5","26f8567f-2569-1822-94c3-fa5b9f9cb227","business_entity","billing","900 jefferson ave","7",NULL,"us","redwood city","ca","94063",NULL,NULL,True,"PFD","2025-09-19 11:50:32.01"
+"43b6bea2-2181-c647-da41-3f272b50c0ee","798b9273-b285-2995-9eaa-5ab4d52cf92f","business_entity","billing","1011 e ave",NULL,NULL,"us","coronado","ca","92118",NULL,NULL,True,"PFD","2025-09-19 11:50:32.01"
+"7558263f-82f0-a077-b7f9-2b1f66b5a6e0","f67f816d-99a8-fc71-1fe5-203ffaf79360","business_entity","billing","4421 superior st",NULL,NULL,"us","lincoln","ne","68504",NULL,NULL,True,"PFD","2025-09-19 11:50:32.01"
+"f98e9a92-4c51-64a4-cf3e-2843a66021c8","0cd12e4e-1f9d-9bbb-494a-20d02001dbcb","business_entity","billing","4225 executive sq","ste 1250",NULL,"us","la jolla","ca","92037",NULL,NULL,True,"PFD","2025-09-19 11:50:32.01"
+"7ee337da-989b-09b6-7b7b-7fa4108ac59b","3163b0c9-9b34-a584-6f89-bb4b36d6fdb1","business_entity","billing","5117 bradford dr",NULL,NULL,"us","annandale","va","22003",NULL,NULL,True,"PFD","2025-09-19 11:50:32.01"
+"a6b6393f-7202-659c-dca6-0cb0e3d23a98","35a5d1af-b37a-cb2f-272e-e31cd3b070b8","business_entity","billing","501 w broadway","ste 600",NULL,"us","san diego","ca","92101",NULL,NULL,True,"PFD","2025-09-19 11:50:32.01"
+"1ca2732c-5c42-8521-70c4-2a8a5ce0f7d8","ecefc2b2-dbe4-25a0-1632-d30dcebf5562","business_entity","billing","819 santa fe ave",NULL,NULL,"us","albany","ca","94706",NULL,NULL,True,"PFD","2025-09-19 11:50:32.01"
+
+SELECT * FROM sds_staging.business_entity_relationships
+
+"business_entity_relationship_id","stg_business_entity_id","business_entity_contact_id","stg_related_business_entity_id","related_business_entity_contact_id","business_entity_role","related_business_entity_role","is_active","created_by","created_date"
+"30a18b8d-5978-69d7-3fcf-d2ef88af2602","03bda4aa-97de-db5a-a73d-7f541f088367","152f549a-3c0b-6b41-03da-acb438317c91","bb47d9f7-c631-a592-a734-8221082535bf",NULL,"supplier","buyer",True,"PFD","2025-09-19 00:00:00"
+"3f7803c2-2d29-dcba-127f-0f9fd8b1b14a","8fbba5ba-9983-4670-64ca-2af5ce6a7dcc","3f85bfcc-7df4-8056-ac77-92395726b9c1","bb47d9f7-c631-a592-a734-8221082535bf",NULL,"supplier","buyer",True,"PFD","2025-09-19 00:00:00"
+"7695e393-df2c-e3a0-4dda-394cff2d1762","a4e17a0d-6242-8a39-954b-9306b01fcab3","b0f46c9e-9f33-6b41-0e76-53ad420e3019","bb47d9f7-c631-a592-a734-8221082535bf",NULL,"supplier","buyer",True,"PFD","2025-09-19 00:00:00"
+"c24431f2-94bc-72e6-5b55-424a467294ef","66ecde07-87fc-2e19-a8aa-b58abd87308f","eb5ed1e5-e9c4-d26e-78da-fa3a19e11219","bb47d9f7-c631-a592-a734-8221082535bf",NULL,"supplier","buyer",True,"PFD","2025-09-19 00:00:00"
+"9f6d95c5-3c96-b2b3-0cd1-cb02315e0968","1cf1627a-7852-ffe6-7b8b-031e0d72cd26","4c7ab8a0-7c16-0eb9-305d-640dfda9222f","bb47d9f7-c631-a592-a734-8221082535bf",NULL,"supplier","buyer",True,"PFD","2025-09-19 00:00:00"
+"234aaf2d-9723-0ec9-830f-001d555b35d5","3a7bd3e2-360a-3d29-eea4-36fcfb7e44c7","75974b5c-db9d-e766-4b13-74d7fa965b3f","bb47d9f7-c631-a592-a734-8221082535bf",NULL,"supplier","buyer",True,"PFD","2025-09-19 00:00:00"
+"ecbfd851-dae1-655d-21d7-b59f55407417","40e2a2d9-dde5-d9ad-f0c0-f239a69c0dc3","43c430bc-6009-6c3f-3918-89f01fdc4d21","bb47d9f7-c631-a592-a734-8221082535bf",NULL,"supplier","buyer",True,"PFD","2025-09-19 00:00:00"
+"847e6286-2b8d-552b-7173-ed3eb7d7ef31","27397056-efc9-3919-e7ca-4737d8fb75ad","b46fb2df-9a55-664d-dcbb-5fc05dbe9847","bb47d9f7-c631-a592-a734-8221082535bf",NULL,"supplier","buyer",True,"PFD","2025-09-19 00:00:00"
+"a120050f-3688-81ec-77a0-90a5dc510235","50fc227d-6f14-6867-282f-b8a056c06a09","27e49849-7530-8161-45d3-fbfbbfc5b5a5","bb47d9f7-c631-a592-a734-8221082535bf",NULL,"supplier","buyer",True,"PFD","2025-09-19 00:00:00"
+
+SELECT * FROM sds_staging.business_entity_identifiers
+
+"identifier_id","identifier_type","identifier_value","related_identifier","related_identifier_source","is_active","created_by","created_date"
+"aeba20a8-5455-5b1f-0b4a-4d34256c3aba","ecid","258125198","69d23de1-4942-4e79-7c60-732d8afa1cce","relationship",True,"PFD","2025-09-19 11:50:35.622"
+"ff2cbf5a-8877-ea21-30dc-ce76eccc810c","client_vendor_id","1782","7abbf942-30e4-5c8e-08e7-ecad4f689434","relationship",True,"PFD","2025-09-19 11:50:35.622"
+"79d68d1f-4f02-b34d-5446-804efece2b34","enigma_id","e000b33ca00001925","35a5d1af-b37a-cb2f-272e-e31cd3b070b8","business_entity",True,"PFD","2025-09-19 11:50:35.622"
+"54542882-95ec-4544-a8b9-65027bf140d9","dba","ata engineering inc","3ec9cd10-8c22-8d08-b2dd-4da49340f1a7","business_entity",True,"PFD","2025-09-19 11:50:35.622"
+"75eefb39-dc82-c3e0-9357-ae8c9f751ff4","dba","alphalock systems llc","c87cdecd-6192-587c-3833-3bfd0fb74c1f","business_entity",True,"PFD","2025-09-19 11:50:35.622"
+"38b7c0a2-ad82-bd6d-12ec-87f7a7e950ba","enigma_id","e0000320fe00006fcc","d6a97a49-e37f-223f-cae2-c4a5d542de74","business_entity",True,"PFD","2025-09-19 11:50:35.622"
+"e1ad4a33-8747-b979-e7ac-b639ce7d235d","enigma_id","e000f96b2c000001db","98e97a1d-c15b-d3c8-ea9e-6c20d3407ffd","business_entity",True,"PFD","2025-09-19 11:50:35.622"
+"c060544e-0a30-84ae-b58a-d5c137a830b6","associated_tax_ids","264737100","14edceea-dcc4-154a-7668-419184f26775","business_entity",True,"PFD","2025-09-19 11:50:35.622"
+"13d9bd45-9432-62b1-99fb-c226d3fa22cc","enigma_id","e0029119b8000410da","a5f8b04e-b1f7-cd17-e9a6-6bbd6f724957","business_entity",True,"PFD","2025-09-19 11:50:35.622"
