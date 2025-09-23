@@ -1,198 +1,424 @@
-this is the data i hv in db for sds_staging.business_entity_relationships table
+# SDS Staging Schema - Business Tables Explanation
 
-business_entity_relationship_id	stg_business_entity_id	business_entity_contact_id	stg_related_business_entity_id	related_business_entity_contact_id	business_entity_role	related_business_entity_role	is_active	created_by	created_date
-b15b26f8-1fc8-d50a-28aa-44c5ed97e874	9627106c-b400-cc56-9a9c-5ca465375b74	821c9632-5325-5e18-abe8-3e7dd798360f	bb47d9f7-c631-a592-a734-8221082535bf	NULL	supplier	buyer	TRUE	PFD	8/22/2025 0:00
-9ab64ff5-3bd0-08a0-11a6-f494cd1e0600	c685f21a-d615-1c95-61eb-5cdeae6a7e13	897e65e1-8b6f-0910-d318-ce18db5de87c	bb47d9f7-c631-a592-a734-8221082535bf	NULL	supplier	buyer	TRUE	PFD	8/22/2025 0:00
-76d0bdd5-a51d-b795-d3bd-007d39406593	d4d2ab49-d5a2-0ee5-15f2-b277c576d2dd	c0104c78-0c03-1489-64b2-1372a2a10300	bb47d9f7-c631-a592-a734-8221082535bf	NULL	supplier	buyer	TRUE	PFD	8/22/2025 0:00
-f5de1f07-69ad-9985-5c92-9ad3824e4540	bb47d9f7-c631-a592-a734-8221082535bf	NULL	2d35a04a-5fdf-50d5-7750-c1c7621ddc33	NULL	client	firm	TRUE	PFD	8/22/2025 0:00
-be7ad78b-cff7-8af3-b093-a02b1535fd30	156abc41-20a9-4efc-0575-4aded2d804af	a5f815b2-4c1b-dbad-97f0-1652b7daed0f	bb47d9f7-c631-a592-a734-8221082535bf	NULL	supplier	buyer	TRUE	PFD	8/22/2025 0:00
+## Overview
+The staging schema transforms the flat PFD (Payment File Diagnostic) source data into a normalized relational structure with 16 tables. This design enables better data management, reduces redundancy, and supports complex business analytics for supplier spend analysis.
 
 
-i wnat to get stg_business_entity_id which has more than one business_entity_contact_id
+*******************************************************************************************************************************************************************************
 
-for example
-output should be like tis
-stg_business_entity_id                    business_entity_contact_id
-9627106c-b400-cc56-9a9c-5ca465375b74		821c9632-5325-5e18-abe8-3e7dd798360f
-9627106c-b400-cc56-9a9c-5ca465375b74		821c9632-5325-5e18-abe8-3e7dd798360f
-
-***************************************************
-
-SELECT 
-    stg_business_entity_id, 
-    business_entity_contact_id
-FROM 
-    sds_staging.business_entity_relationships
-WHERE 
-    stg_business_entity_id IN (
-        SELECT 
-            stg_business_entity_id
-        FROM 
-            sds_staging.business_entity_relationships
-        WHERE 
-            business_entity_contact_id IS NOT NULL
-        GROUP BY 
-            stg_business_entity_id
-        HAVING 
-            COUNT(DISTINCT business_entity_contact_id) > 1
-    )
-ORDER BY 
-    stg_business_entity_id;
+## Core Entity Tables
+*******************************************************************************************************************************************************************************
 
 
-*********************************************************************************************************************
+### 1. **business_entity**
+**Business Purpose**: Master registry of all unique business entities (suppliers/vendors),client,firm in the system
+- Creates a unique UUID identifier for each distinct supplier
+- Acts as the primary reference point for all other tables
+- Supports hierarchical relationships between entities
+
+**Example**:
+```
+stg_business_entity_id: 8473f193-8721-4fe0-87d8-ec4a3c3bbdd0
+- Represents one unique supplier (like "1PASSWORD" from source data)
+- All other tables reference this UUID
+
+| Column                        | Meaning                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| **stg\_business\_entity\_id** | Unique UUID assigned to each supplier (acts as foreign key in all tables). |
+```
+
+*******************************************************************************************************************************************************************************
+
+### 2. **business_entity_details**
+**Business Purpose**: Core business information about each entity
+- Company name, legal structure, incorporation details
+- Annual revenue and market segmentation
+- Historical business context
+
+**Example**:
+```
+Entity: alameda chamber foundation
+- Year Incorporated: 2021
+- Company Structure: NULL (likely non-profit)
+- This tells us it's a relatively new organization
+```
+ Column                     | Meaning                                          |
+| -------------------------- | ------------------------------------------------ |
+| **business\_structure**    | Type of company (Private Ltd, LLC, Partnership). |
+| **year\_incorporated**     | The year the supplier was incorporated.          |
+| **reported\_revenue\_usd** | Total revenue reported by supplier in USD.       |
+| **market\_type**           | B2B, B2C, Govt etc.                              |
+
+*Example:* `reported_revenue_usd = 45,000,000 → Supplier reported $45M revenue last year.`
 
 
-# Transform contacts from associated_people data
-people_contacts = (transformed_json_df
-              .select(*ss.contacts)
-              .distinct()
-              .filter(
-                  (col("associated_people__name").isNotNull() & 
-                   (trim(col("associated_people__name")) != "") & 
-                   (col("associated_people__name") != "none")) |
-                  (col("associated_people__titles").isNotNull() & 
-                   (trim(col("associated_people__titles")) != "") & 
-                   (col("associated_people__titles") != "none"))
-              )
-              .withColumnRenamed("associated_people__name", "contact_name")
-              .withColumnRenamed("associated_people__titles", "contact_title"))
+*******************************************************************************************************************************************************************************
 
-# Process vendor contacts - ONLY if vendor_contact_name is not null
-vendor_contacts_raw = transformed_df.select(*ss.vendor_contact).distinct()
-vendor_contacts_filtered = vendor_contacts_raw.filter(col("vendor_contact_name").isNotNull())
+## Contact & Communication Tables
+*******************************************************************************************************************************************************************************
 
-# Check if there are any non-null vendor contacts
-vendor_contact_count = vendor_contacts_filtered.count()
+### 3. **business_entity_contacts**
+**Business Purpose**: Key personnel and decision makers
+- Contact names and titles
+- Decision maker indicators for sales targeting
+- Relationship management data
 
-if vendor_contact_count > 0:
-    vendor_contacts_final = vendor_contacts_filtered.select(
-        col("stg_business_entity_id"),
-        col("vendor_contact_name").alias("contact_name"),
-        lit(None).cast("string").alias("contact_title")
-    )
-    # Union the two dataframes
-    all_contacts = people_contacts.unionByName(vendor_contacts_final)
-else:
-    #Use only the people contacts data
-    all_contacts = people_contacts
+**Example**:
+```
+Contact: "michael shook" with title "manager"
+- This indicates a high-level role
+- Important for B2B relationships
 
-# Only keep contacts that actually have contact names
-transformed_contacts = all_contacts.filter(col("contact_name").isNotNull())
+| Column                  | Meaning                                          |
+| ----------------------- | ------------------------------------------------ |
+| **contact\_name**       | Full name of contact person.                     |
+| **designation**         | Role/position (e.g., Procurement Manager).       |
+| **is\_decision\_maker** | Yes/No – if the contact is a key decision maker. |
+| **email\_id**           | Contact email address.                           |
 
-transformed_contacts = transformed_contacts.withColumn(
-"is_active", 
-lit(True)  # This creates a Boolean column with True values for all rows
-)
+```
 
-# Generate UUIDs only for valid contacts
-if transformed_contacts.count() > 0:
-    transformed_contacts = transformed_contacts.withColumn(
-        "business_entity_contact_id",
-        compute_uuid_udf(struct(*transformed_contacts.columns))
-    )
-    
-    
-    
-i need some changes in above 
-wat means 
-in people_contacts if same contact_name is in vendor_contacts_final then we have consider people_contacts record not contact_name
-
-how we make these changes efficiently
-
-***********************************************************************************************************
-
-# Transform contacts from associated_people data
-people_contacts = (transformed_json_df
-              .select(*ss.contacts)
-              .distinct()
-              .filter(
-                  (col("associated_people__name").isNotNull() & 
-                   (trim(col("associated_people__name")) != "") & 
-                   (col("associated_people__name") != "none")) |
-                  (col("associated_people__titles").isNotNull() & 
-                   (trim(col("associated_people__titles")) != "") & 
-                   (col("associated_people__titles") != "none"))
-              )
-              .withColumnRenamed("associated_people__name", "contact_name")
-              .withColumnRenamed("associated_people__titles", "contact_title"))
-
-# Process vendor contacts - ONLY if vendor_contact_name is not null
-vendor_contacts_raw = transformed_df.select(*ss.vendor_contact).distinct()
-vendor_contacts_filtered = vendor_contacts_raw.filter(col("vendor_contact_name").isNotNull())
-
-# Check if there are any non-null vendor contacts
-vendor_contact_count = vendor_contacts_filtered.count()
-
-if vendor_contact_count > 0:
-    vendor_contacts_prepared = vendor_contacts_filtered.select(
-        col("stg_business_entity_id"),
-        col("vendor_contact_name").alias("contact_name"),
-        lit(None).cast("string").alias("contact_title")
-    )
-    
-    # This compares using uppercase but keeps original case in final data
-    people_contact_names_upper = people_contacts.select(upper(col("contact_name")).alias("contact_name_upper")).distinct()
-    
-    unique_vendor_contacts = vendor_contacts_prepared.join(
-         people_contact_names_upper,
-         upper(col("contact_name")) == col("contact_name_upper"),
-         how="left_anti"
-     )
-     # The original contact_name column remains unchanged
-    
-    # Union people_contacts (priority) with unique vendor contacts
-    all_contacts = people_contacts.unionByName(unique_vendor_contacts)
-else:
-    # Use only the people contacts data
-    all_contacts = people_contacts
-
-# Only keep contacts that actually have contact names
-transformed_contacts = all_contacts.filter(col("contact_name").isNotNull())
-
-transformed_contacts = transformed_contacts.withColumn(
-    "is_active", 
-    lit(True)  # This creates a Boolean column with True values for all rows
-)
-
-# Generate UUIDs only for valid contacts
-if transformed_contacts.count() > 0:
-    transformed_contacts = transformed_contacts.withColumn(
-        "business_entity_contact_id",
-        compute_uuid_udf(struct(*transformed_contacts.columns))
-    )
-
-******************************************************************************************
-
-# Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
-transformed_rel_identifiers = transformed_rel_identifiers.join(
-    transformed_relationship,
-    on="business_entity_relationship_id",  # Use the common column for the join
-    how="inner"
-)
+*******************************************************************************************************************************************************************************
 
 
-see here watever records are present in transformed_rel_identifiers only for those records neeed be joined with transformed_relationship
-but not inner
+### 4. **electronic_address**
+**Business Purpose**: Digital communication channels
+- Email addresses (primary, secondary)
+- Website URLs for online presence
+- Digital touchpoints for engagement
 
-*************************************************************************************************************
+**Example**:
+```
+operations.panama@g... (email)
+https://www.zoro.com/ (website)
+- Multiple communication channels per entity
+- Enables multi-channel marketing and communication
+```
+
+| Column             | Meaning                    |
+| ------------------ | -------------------------- |
+| **email\_address** | Primary email of supplier. |
+| **website\_url**   | Supplier’s website.        |
+
+*******************************************************************************************************************************************************************************
 
 
-# Get vendor contact names from transformed_df
-    vendor_names_df = transformed_df.select(
-        col("stg_business_entity_id"),
-        col("vendor_contact_name").alias("contact_name")
-    ).distinct()
+### 5. **telecommunication_address**
+**Business Purpose**: Phone-based communication
+- Primary and secondary phone numbers
+- Extension numbers for direct contact
+- Regional dialing codes for geographic insights
 
-    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
-    preferred_contacts = vendor_names_df.join(
-        transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id"),
-        on=["stg_business_entity_id", "contact_name"],
-        how="inner"
-    ).distinct()
-    
-    
-    
-does it consider only exact matching contact_name records of vendor_names_df and join with transformed_contacts
+**Example**:
+```
+Phone: "1-970-879-9900 ext 301"
+- Shows geographic location (970 = Colorado area code)
+- Extension suggests larger organization structure
+```
 
-inner means is it same?
+## **13. telecommunication\_address**
+
+| Column            | Meaning               |
+| ----------------- | --------------------- |
+| **phone\_number** | Contact phone number. |
+| **fax\_number**   | Fax if available.     |
+
+*******************************************************************************************************************************************************************************
+
+
+### 6. **physical_address**
+**Business Purpose**: Geographic and mailing information
+- Complete postal addresses (street, city, state, postal code)
+- Site identifiers for multiple locations
+- Geographic analysis and logistics planning
+
+**Example**:
+```
+Address: "4225 executive sq, ste 1250, la jolla, ca, 92037"
+- High-end business location (Executive Square)
+- Suite number indicates office building tenant
+- La Jolla = affluent San Diego area
+```
+
+| Column                          | Meaning           |
+| ------------------------------- | ----------------- |
+| **address\_line1 / line2**      | Street details.   |
+| **city / state / postal\_code** | Location details. |
+| **country**                     | Country name.     |
+
+*******************************************************************************************************************************************************************************
+
+### 7. **restrictions**
+**Business Purpose**: Compliance and campaign restrictions
+- Do-not-campaign flags
+- Regulatory restrictions
+- Risk-based limitations
+
+**Example**:
+```
+Restriction: "do_not_campaign" = False
+- Entity is eligible for marketing campaigns
+- No regulatory or compliance restrictions
+- Can be targeted for new financial products
+```
+
+| Column                     | Meaning                                                 |
+| -------------------------- | ------------------------------------------------------- |
+| **do\_not\_campaign**      | Yes/No – whether supplier can be included in campaigns. |
+| **government\_restricted** | Yes/No – supplier is govt restricted entity.            |
+| **financial\_institution** | Yes/No – supplier is a bank or FI.                      |
+
+*******************************************************************************************************************************************************************************
+
+
+*******************************************************************************************************************************************************************************
+## Financial & Payment Analysis Tables
+
+*******************************************************************************************************************************************************************************
+
+### 8. **business_entity_spend_analysis**
+**Business Purpose**: Transaction and payment behavior analysis
+- Payment volumes, frequencies, and methods
+- Payment terms and actual payment timing
+- Spend patterns over time periods
+
+**Example**:
+```
+Relationship: Payor to Payee spending
+- Sum of payments: $95,223.27
+- Number of payments: 9
+- Payment method: ACH
+- Period: July 2024 to July 2025
+- Analysis: Regular, substantial ACH payments indicating stable supplier relationship
+```
+
+| Column                   | Meaning                                    |
+| ------------------------ | ------------------------------------------ |
+| **total\_spend\_usd**    | Total spend with supplier in USD.          |
+| **number\_of\_invoices** | Count of invoices processed.               |
+| **spend\_category**      | Category of spend (IT, Travel, Marketing). |
+
+*******************************************************************************************************************************************************************************
+
+
+### 9. **business_entity_receivables_attribute**
+**Business Purpose**: Credit and financial relationship metrics
+- JPMC product enrollment status
+- Credit card and virtual card usage
+- Financial product penetration
+
+**Example**:
+```
+Attribute: "jpmc_cc_buyer_count" = "52"
+- This supplier serves 52 different JPMC commercial card buyers
+- Indicates high market penetration and relationship value
+
+| Column                    | Meaning                                                             |
+| ------------------------- | ------------------------------------------------------------------- |
+| **dso\_days**             | Days Sales Outstanding – average time taken to collect receivables. |
+| **credit\_rating**        | External/internal credit risk rating (A, B, C, etc.).               |
+| **receivables\_turnover** | Ratio of revenue vs receivables (higher = faster collections).      |
+
+```
+*******************************************************************************************************************************************************************************
+
+---
+*******************************************************************************************************************************************************************************
+
+## Card & Payment Processing Tables
+*******************************************************************************************************************************************************************************
+
+### 10. **business_entity_card_association**
+**Business Purpose**: Credit card acceptance and processing capabilities
+- Visa/card network matching confidence
+- Merchant Category Codes (MCC)
+- Data quality indicators for card transactions
+
+**Example**:
+```
+MCC: "5046" with "High" confidence
+- MCC 5046 = Commercial Equipment, Not Elsewhere Classified
+- High confidence = reliable card processing match
+- Indicates supplier accepts card payments
+```
+| Column                             | Meaning                                                                    |
+| ---------------------------------- | -------------------------------------------------------------------------- |
+| **card\_network**                  | Payment network like VISA, MasterCard, Amex.                               |
+| **merchant\_category\_code (MCC)** | Industry code used in card transactions (e.g., 5732 = Electronics Stores). |
+| **match\_confidence**              | Confidence % of supplier-to-network mapping.                               |
+| **line\_item\_data\_available**    | Whether detailed line-item card data is available (Yes/No).                |
+
+*******************************************************************************************************************************************************************************
+
+
+### 11. **business_entity_card_revenues**
+**Business Purpose**: Card transaction revenue tracking
+- Monthly card revenue patterns
+- Revenue trends over 1, 3, and 12-month periods
+- Payment method preference analysis
+
+**Example**:
+```
+Card Revenue (1 month): $1,200 average
+Card Revenue (12 months): $3,201 average
+- Shows seasonal variation or business growth
+- Indicates card acceptance generates significant revenue
+```
+| Column                           | Meaning                                              |
+| -------------------------------- | ---------------------------------------------------- |
+| **year**                         | Year of revenue.                                     |
+| **total\_card\_revenue\_usd**    | Total supplier revenue via card transactions in USD. |
+| **quarterly\_revenue\_q1\_usd**  | Revenue in Q1 via card transactions.                 |
+| **quarterly\_revenue\_q2\_usd…** | Same for Q2, Q3, Q4.                                 |
+
+*******************************************************************************************************************************************************************************
+
+### 12. **business_entity_card_transactions_stability**
+**Business Purpose**: Transaction consistency and reliability metrics
+- Daily, weekly, monthly transaction coverage
+- Transaction frequency patterns
+- Business stability indicators
+
+**Example**:
+```
+Daily coverage ratio: 1.0 (100%)
+Weekly coverage ratio: 1.0 (100%)
+- Perfect consistency = very stable business operations
+- Reliable transaction partner for predictable cash flow
+```
+
+| Column                         | Meaning                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| **last\_12m\_activity\_ratio** | Ratio of active months to total 12 months (e.g., 0.95 = transactions happened in 11/12 months). |
+| **last\_3m\_activity\_ratio**  | Same ratio for last 3 months.                                                                   |
+| **last\_1m\_activity\_ratio**  | Same ratio for last 1 month.                                                                    |
+
+
+*******************************************************************************************************************************************************************************
+
+---
+*******************************************************************************************************************************************************************************
+
+## Classification & Characteristics Tables
+*******************************************************************************************************************************************************************************
+
+*******************************************************************************************************************************************************************************
+
+### 13. **business_entity_industry_classification**
+**Business Purpose**: Industry categorization and sector analysis
+- Bloomberg industry classifications
+- Internal risk/filter categories
+- Regulatory and compliance classifications
+
+**Example**:
+```
+Bloomberg Level-1: "industrials"
+Bloomberg Level-2: "consumer discretionary distribution & retail"
+Internal: "real_estate" = "n" (not real estate)
+- Multi-dimensional industry classification
+- Enables sector-specific analysis and risk assessment
+```
+
+| Column                      | Meaning                                   |
+| --------------------------- | ----------------------------------------- |
+| **industry\_sector**        | Broad industry (e.g., IT, Manufacturing). |
+| **industry\_group**         | Sub-industry (e.g., Software Services).   |
+| **naics\_code / sic\_code** | Standard industry classification codes.   |
+| **industry\_description**   | Textual description of supplier’s sector. |
+
+*******************************************************************************************************************************************************************************
+
+
+### 14. **business_entity_characteristics**
+**Business Purpose**: Behavioral and financial metrics
+- Supply Chain Finance (SCF) metrics
+- Days Sales Outstanding (DSO) benchmarks
+- Virtual card campaign acceptance rates
+
+**Example**:
+```
+Characteristic: "scf_industry_sector_dso_50" = "33.02967"
+- Industry median DSO is 33 days
+- Used for payment terms benchmarking
+- Risk assessment and pricing decisions
+```
+
+| Column                  | Meaning                                             |
+| ----------------------- | --------------------------------------------------- |
+| **acceptance\_tier**    | Business tier (e.g., Tier 1 = high revenue).        |
+| **kpi\_flag**           | Flags if supplier is critical/high-priority.        |
+| **campaign\_indicator** | Whether supplier is eligible for campaign/outreach. |
+
+*******************************************************************************************************************************************************************************
+
+---
+*******************************************************************************************************************************************************************************
+
+## Regulatory & Risk Tables
+*******************************************************************************************************************************************************************************
+
+
+### 15. **business_entity_relationships**
+**Business Purpose**: Buyer-supplier relationship mapping
+- Defines who pays whom
+- Relationship roles and hierarchies
+- Transaction relationship context
+
+**Example**:
+```
+Supplier ID → Buyer ID relationship
+Role: "supplier" to "buyer"
+- Maps the payment flow direction
+- Enables relationship-based analytics
+- Supports account management strategies
+```
+
+| Column                        | Meaning                   |
+| ----------------------------- | ------------------------- |
+| **parent\_company**           | Immediate parent company. |
+| **ultimate\_parent\_company** | Top holding company.      |
+| **alternate\_name**           | Trade names/aliases.      |
+
+*******************************************************************************************************************************************************************************
+
+### 16. **business_entity_identifiers**
+**Business Purpose**: External system integration and cross-referencing
+- ECID (Entity Customer IDs)
+- Enigma business intelligence IDs
+- Tax IDs and DBA names
+- Client-specific vendor IDs
+
+**Example**:
+```
+ECID: "258125198"
+Enigma ID: "e000b33ca00001925"
+DBA: "ata engineering inc"
+- Multiple identifier types for data integration
+- Cross-system data matching and enrichment
+- Enables comprehensive business intelligence
+```
+
+
+| Column                 | Meaning                                                  |
+| ---------------------- | -------------------------------------------------------- |
+| **duns\_number**       | Dun & Bradstreet unique identifier.                      |
+| **tax\_id**            | Supplier’s tax registration number (e.g., PAN in India). |
+| **enigma\_id**         | External supplier database ID.                           |
+| **google\_places\_id** | Google business ID.                                      |
+
+---
+*******************************************************************************************************************************************************************************
+
+## Business Value Summary
+
+This normalized structure enables:
+
+1. **360° Supplier View**: Complete supplier profiles across all dimensions
+2. **Relationship Analytics**: Understanding buyer-supplier networks
+3. **Payment Optimization**: Payment method and terms analysis
+4. **Risk Assessment**: Multi-factor risk evaluation
+5. **Product Cross-sell**: Identifying opportunities for financial products
+6. **Compliance Management**: Tracking restrictions and regulatory requirements
+7. **Market Intelligence**: Industry benchmarking and competitive analysis
+
+The separation into specialized tables allows for efficient querying, better data quality management, and scalable analytics as the business grows.
