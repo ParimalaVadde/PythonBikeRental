@@ -2,6 +2,14 @@ fix the identified issue's in staging glue job from the new source files uploade
 
 optimize the code for database operations 
 
+**********************************
+
+Fix identified issues in the staging Glue job related to new source file uploads.
+
+Optimize code performance for database operations to improve efficiency.
+
+*******************************************
+
 Today i hv to provide kt on staging 
 
 basically our source is pfd (payment file diagnostic) ,they provide source which will have spend data
