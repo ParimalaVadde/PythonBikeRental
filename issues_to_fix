@@ -22,7 +22,23 @@ Note: This may be delayed if any issue is identified in Prod.
 Acceptance Criteria:
 Database transaction should be able to commit within 15mins in staging glue job if a file having 10k records is processed.
 *************************************************************
+As part of performance improvement, we need to ensure that a single transaction completes within 15 minutes due to IAM authentication limits. To achieve this, we will optimize the code by parallelizing bulk inserts to the PostgreSQL database.
 
+Andy will upload new PFD source files. Our task is to identify any issues in the staging Glue job related to these files, including table details, columns, and characteristics.
+
+
+tasks
+Analyze and fix issues in the staging Glue job for new PFD source file uploads.
+
+Optimize the staging Glue job code for bulk inserts by implementing parallelism to ensure transactions complete within 15 minutes.
+
+Prepare sample data, test the staging job with up to 10k records, and deploy the code to DEV and UAT environments for validation.
+
+
+ac:
+The database transaction commits successfully within 15 minutes in the staging Glue job when processing files with up to 10k records.
+
+********************************************************************
 Today i hv to provide kt on staging 
 
 basically our source is pfd (payment file diagnostic) ,they provide source which will have spend data
