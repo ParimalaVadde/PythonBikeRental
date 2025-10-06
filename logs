@@ -1,1 +1,50 @@
 LAUNCH ERROR | Error downloading from S3 for bucket: app-id-111597-dep-id-114116-uu-id-9x0jt94siuto, key: cert/us-east-1-bundle.pem.arn:aws:kms:us-east-1:484862117635:key/8f4c481a-4045-4974-acb7-3c43400b8c48 is pending deletion. (Service: Amazon S3; Status Code: 400; Please refer logs for details.
+
+
+
+The error you're encountering:
+
+```
+LAUNCH ERROR | Error downloading from S3 for bucket: app-id-111597-dep-id-114116-uu-id-9x0jt94siuto, key: cert/us-east-1-bundle.pem.arn:aws:kms:us-east-1:484862117635:key/8f4c481a-4045-4974-acb7-3c43400b8c48 is pending deletion. (Service: Amazon S3; Status Code: 400; Please refer logs for details.
+```
+
+**What it means:**
+
+* Your AWS Glue job is trying to access an S3 object (`cert/us-east-1-bundle.pem` in that bucket).
+* This object (or the access to it) is encrypted with a KMS key (Key Management Service key).
+* The specific KMS key used for encryption (`arn:aws:kms:us-east-1:484862117635:key/8f4c481a-4045-4974-acb7-3c43400b8c48`) is **pending deletion**.
+* When a KMS key is pending deletion, it cannot be used to decrypt data, causing the S3 access (which depends on decrypting the data) to fail.
+
+---
+
+### How to resolve it:
+
+1. **Check the KMS Key Status:**
+
+   * Go to AWS KMS Console.
+   * Find the key with ID `8f4c481a-4045-4974-acb7-3c43400b8c48`.
+   * See if the key is actually marked as "Pending Deletion".
+
+2. **If the Key is Pending Deletion:**
+
+   * You cannot use this key for decrypting objects anymore.
+   * You have two options:
+
+     * **Cancel the deletion** (if within the waiting period, usually 7-30 days). This will restore the key and allow decryption.
+     * **Re-encrypt your S3 objects with a different active KMS key**, then update your Glue job to use that new key.
+
+3. **Update Glue Job or S3 Objects:**
+
+   * If you cancel the deletion, the Glue job should work without changes.
+   * If not, you will need to:
+
+     * Decrypt and re-encrypt the S3 objects with a valid key.
+     * Update Glue job permissions to use the new key.
+
+4. **Permissions:**
+
+   * Ensure that your Glue job has permission to use the KMS key (in the key policy and IAM role).
+
+---
+
+If you want, I can guide you through the exact steps to check or cancel the KMS key deletion or help with re-encrypting your S3 objects. Just let me know!
