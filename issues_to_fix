@@ -2,7 +2,8 @@ fix the identified issue's in staging glue job from the new source files uploade
 
 optimize the code for database operations 
 *******************************************
-
+Implement idempotent data loading in the Spend table to ensure no duplicates are created when the same data file is uploaded multiple times. Handle partial failures by processing only new records on re-run without duplicating existing data.
+**************************************************************************
 Sure! Here are two tasks with single-line titles and brief descriptions:
 
 ---
