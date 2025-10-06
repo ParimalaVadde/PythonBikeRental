@@ -1,6 +1,22 @@
 fix the identified issue's in staging glue job from the new source files uploaded 
 
 optimize the code for database operations 
+*******************************************
+
+Sure! Here are two tasks with single-line titles and brief descriptions:
+
+---
+
+**Task 1: Implement Duplicate Prevention in Spend Table**
+Develop logic to prevent duplicate records in the Spend table when the same data file is uploaded multiple times.
+
+**Task 2: Handle Partial Failures During Data Load**
+Ensure the pipeline processes only new records after a partial failure, avoiding duplicate inserts in the Spend table.
+
+---
+
+Need them more detailed or formal?
+
 
 **********************************
 
