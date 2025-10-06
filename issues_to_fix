@@ -22,22 +22,35 @@ Note: This may be delayed if any issue is identified in Prod.
 Acceptance Criteria:
 Database transaction should be able to commit within 15mins in staging glue job if a file having 10k records is processed.
 *************************************************************
-As part of performance improvement, we need to ensure that a single transaction completes within 15 minutes due to IAM authentication limits. To achieve this, we will optimize the code by parallelizing bulk inserts to the PostgreSQL database.
+Got it! Here's a reworded version with a fresh angle so it feels distinct but covers your responsibilities clearly:
 
-Andy will upload new PFD source files. Our task is to identify any issues in the staging Glue job related to these files, including table details, columns, and characteristics.
+---
+
+As part of ensuring scalability and performance, we need to verify that each database transaction completes within the 15-minute IAM authentication window. To support larger data volumes, the staging Glue job will be enhanced to process bulk inserts more efficiently through parallel execution.
+
+Andy will continue uploading new PFD files. My focus will be on troubleshooting any processing issues in the staging Glue job related to these files, including verifying table mappings and column integrity.
+
+**Tasks:**
+
+1. Review and resolve defects in the staging Glue job pipeline related to new PFD source file ingestion.
+2. Refactor the Glue job code to improve bulk insert throughput by enabling parallel database writes.
+3. Conduct tests using sample datasets (up to 10k records) and coordinate deployment to DEV and UAT for further validation.
+
+---
+
+Would you like a version with a slightly more technical or project-management tone?
 
 
-tasks
-Analyze and fix issues in the staging Glue job for new PFD source file uploads.
-
-Optimize the staging Glue job code for bulk inserts by implementing parallelism to ensure transactions complete within 15 minutes.
-
-Prepare sample data, test the staging job with up to 10k records, and deploy the code to DEV and UAT environments for validation.
 
 
 ac:
-The database transaction commits successfully within 15 minutes in the staging Glue job when processing files with up to 10k records.
+The staging Glue job successfully processes new PFD source files without errors.
 
+Database transactions commit within 15 minutes when processing files containing up to 10,000 records.
+
+Bulk insert operations leverage parallelism to optimize performance and prevent job failures due to connection timeouts.
+
+Code changes are successfully deployed and validated in DEV and UAT environments before production release.
 ********************************************************************
 Today i hv to provide kt on staging 
 
