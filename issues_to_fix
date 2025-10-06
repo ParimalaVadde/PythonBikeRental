@@ -10,6 +10,19 @@ Optimize code performance for database operations to improve efficiency.
 
 *******************************************
 
+As part of performance improvement, we have to make sure that a single transaction completes within 15 mins as we have IAM authentication. To achieve this we are going to optimize code so that bulk inserts can happen by parallelizing it
+Andy will upload the new Files, we need to identify the issues, table details, columns, etc.. like Characteristic tables 
+Tasks:
+Initial analysis on Staging Glue Job code  
+Code changes in staging glue job  for bulk inserts
+Sample Data Preparation.
+Test staging  job by taking source file with 10k records. We are not expecting an AP file with more than 10k records
+Deploy code to DEV and UAT so that we can release this on 10th-Oct-2025 to Prod.
+Note: This may be delayed if any issue is identified in Prod.
+Acceptance Criteria:
+Database transaction should be able to commit within 15mins in staging glue job if a file having 10k records is processed.
+*************************************************************
+
 Today i hv to provide kt on staging 
 
 basically our source is pfd (payment file diagnostic) ,they provide source which will have spend data
