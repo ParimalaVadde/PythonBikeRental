@@ -1,50 +1,83 @@
-LAUNCH ERROR | Error downloading from S3 for bucket: app-id-111597-dep-id-114116-uu-id-9x0jt94siuto, key: cert/us-east-1-bundle.pem.arn:aws:kms:us-east-1:484862117635:key/8f4c481a-4045-4974-acb7-3c43400b8c48 is pending deletion. (Service: Amazon S3; Status Code: 400; Please refer logs for details.
+Identify the vulnerability
+Identify the type of vulnerability present in the code. Code blocks that are vulnerable are marked with warning icons (). Additional code blocks that may give context may be marked with lightbulb icons ().
+
+Select Vulnerability Category
+Access Control
+
+Missing Function Level Access Control
+
+Injection Flaws
+
+OS Command Injection
+
+Denial of Service
+
+Failure to Release Resource
+
+Improper Assets Management
+
+Improper Assets Management
+
+Session Handling
+
+Cross-site Request Forgery
+
+Sensitive Data Storage
+
+Plain Text Storage of Sensitive Information
 
 
 
-The error you're encountering:
 
-```
-LAUNCH ERROR | Error downloading from S3 for bucket: app-id-111597-dep-id-114116-uu-id-9x0jt94siuto, key: cert/us-east-1-bundle.pem.arn:aws:kms:us-east-1:484862117635:key/8f4c481a-4045-4974-acb7-3c43400b8c48 is pending deletion. (Service: Amazon S3; Status Code: 400; Please refer logs for details.
-```
+import os
+import json
+import logging
+import logging.config
+from provider import Provider
+from config import ALLOWED_HOSTS
+from urllib.parse import urlparse
 
-**What it means:**
+logger = logging.getLogger(__name__)
 
-* Your AWS Glue job is trying to access an S3 object (`cert/us-east-1-bundle.pem` in that bucket).
-* This object (or the access to it) is encrypted with a KMS key (Key Management Service key).
-* The specific KMS key used for encryption (`arn:aws:kms:us-east-1:484862117635:key/8f4c481a-4045-4974-acb7-3c43400b8c48`) is **pending deletion**.
-* When a KMS key is pending deletion, it cannot be used to decrypt data, causing the S3 access (which depends on decrypting the data) to fail.
 
----
+class ProviderJSON(Provider):
+    """Provider JSON operations"""
 
-### How to resolve it:
+    def insert_from_url(self, json_url):
 
-1. **Check the KMS Key Status:**
+        o = urlparse(json_url)
+        # JSON URL validation
+        if not (o.scheme == 'https' and o.hostname in ALLOWED_HOSTS):
+            logger.error('JSON URL host is not allowed')
+            return
 
-   * Go to AWS KMS Console.
-   * Find the key with ID `8f4c481a-4045-4974-acb7-3c43400b8c48`.
-   * See if the key is actually marked as "Pending Deletion".
+        providers = []
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        json_file = os.path.join(BASE_DIR, '_provider.json')
+        # GET providers list from JSON URL
+        try:
+            os.system('wget -O %s %s' % (json_file, json_url))
+            with open(json_file) as f:
+                providers = json.load(f)
+            os.remove(json_file)
+        except Exception as e:
+            logger.error('Could not GET the JSON URL - %s' % e)
+            raise e
 
-2. **If the Key is Pending Deletion:**
+        # Insert Providers JSON list
+        self.insert(providers)
 
-   * You cannot use this key for decrypting objects anymore.
-   * You have two options:
+    def insert_from_file(self, json_file):
 
-     * **Cancel the deletion** (if within the waiting period, usually 7-30 days). This will restore the key and allow decryption.
-     * **Re-encrypt your S3 objects with a different active KMS key**, then update your Glue job to use that new key.
+        providers = []
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        file_name = os.path.basename(json_file)
+        try:
+            with open(os.path.join(BASE_DIR, file_name)) as f:
+                providers = json.load(f)
+        except Exception as e:
+            logger.error('Could not open the JSON file - %s' % e)
+            raise e
 
-3. **Update Glue Job or S3 Objects:**
-
-   * If you cancel the deletion, the Glue job should work without changes.
-   * If not, you will need to:
-
-     * Decrypt and re-encrypt the S3 objects with a valid key.
-     * Update Glue job permissions to use the new key.
-
-4. **Permissions:**
-
-   * Ensure that your Glue job has permission to use the KMS key (in the key policy and IAM role).
-
----
-
-If you want, I can guide you through the exact steps to check or cancel the KMS key deletion or help with re-encrypting your S3 objects. Just let me know!
+        # Insert Providers JSON list
+        self.insert(providers)
