@@ -2,218 +2,291 @@ Locate the vulnerability
 Review the highlighted code blocks in the source code and select 1 code block that causes the vulnerability listed below.
 
 Vulnerability Category
-Access Control - Insecure Direct Object Reference
+Security Misconfiguration - Information Exposure
 
 Learn More
 
-
+select correct options
 Code blocks
-appointments.py:46-66
-appointments.py:75-98
-users.py:18-29
-users.py:38-63
+clients.py:61-61
+clients.py:115-116
+clients.py:162-163
+vehicles.py:24-24
 
-appointments.py
 
+1) clients.py
+
+
+import yaml
 import logging
+import traceback
+import importlib
 from MySQLdb import MySQLError
+from config import PASSWORD_HASHER
 from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import AppointmentSerializer
+import defusedxml.ElementTree as etree
 
 logger = logging.getLogger(__name__)
 
 
-class Appointment(Auth):
+class Client:
 
-    @is_authorized
-    def retrieve(self, uuid):
+    def __init__(self):
 
-        result = None
-        roles = self.roles()
-        if not (roles and ('administrator' in roles or 'staff' in roles)):
-            logger.error('Forbidden')
-            return result
+        self.is_authenticate = False
+        # load password hasher class
+        self.hasher = getattr(
+            importlib.import_module('hashers'), PASSWORD_HASHER)()
 
-        conn = Connect()
+    def authenticate(self, username, password):
+
         try:
+            conn = Connect()
             cursor = conn.db.cursor()
             cursor.execute(
                 """
-                SELECT
-                    pets.name, pets.species,
-                    reason, datetime, description,
-                    users.first_name, users.last_name
-                FROM appointments
-                INNER JOIN pets ON pets.id=appointments.pet_id
-                INNER JOIN users ON users.id=appointments.doctor_id
-                WHERE uuid=UUID_TO_BIN(%(uuid)s)
-                """, {'uuid': uuid}
+                SELECT id, password FROM client
+                WHERE username=%(username)s
+                """, {'username': username}
             )
             result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the appointment')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert(self, user_id, **kwargs):
-
-        result = None
-        roles = self.roles(user_id)
-        if not (roles and ('administrator' in roles or 'staff' in roles)):
-            logger.error('Forbidden')
-            return result
-
-        columns, values = AppointmentSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO appointments (uuid, {columns})
-                VALUES (UUID_TO_BIN(UUID()), {values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('Appointment %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the appointment')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def retrieve_client(self, id):
-
-        result = None
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT first_name, last_name, email, phone,
-                    addresses.line_1, addresses.line_2, addresses.city,
-                    addresses.state,
-                FROM clients
-                INNER JOIN addresses ON addresses.id=clients.address_id
-                WHERE id=%(id)s
-                """, {'id': id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the client')
-        finally:
-            conn.db.close()
-        return result
-		
-		
-		
-		
-users.py
-
-import json
-import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
-
-logger = logging.getLogger(__name__)
-
-
-class User(Auth):
-
-    @is_authorized
-    def retrieve(self):
-
-        result = None
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': self.id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert(self, **kwargs):
-
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
-
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
-
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def update(self, **kwargs):
-
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'id': self.id})
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE id=%(id)s", kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
 
             if not result:
                 raise MySQLError
 
-        except MySQLError:
-            logger.error('User could not be updated')
+            if self.hasher.verify(password, result[1]):
+                self.is_authenticate = True
+
+        except Exception:
+            logger.error('Client authorization failure')
+            raise MySQLError('Client authorization failure')
+        finally:
+            conn.db.close()
+
+    def retrieve(self, username):
+
+        result = None
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except Exception as e:
+            logger.error('Could not retrieve the records: %s' % e)
+            return '{} {}'.format(e, traceback.format_exc())
         finally:
             conn.db.close()
         return result
 
-    @is_authorized
+    def insert(self, client):
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_xml(self, client_xml):
+
+        parser = etree.DefusedXMLParser(
+            # disallow XML with a <!DOCTYPE> processing instruction
+            forbid_dtd=True,
+            # disallow XML with <!ENTITY> declarations inside the DTD
+            forbid_entities=True,
+            # disallow any access to remote or local resources in external entities or DTD
+            forbid_external=True
+        )
+
+        try:
+            tree = etree.parse(client_xml, parser=parser)
+        except (etree.ParseError, ValueError) as e:
+            logger.error('XML parse error - %s' % e)
+            raise e
+        client = tree.getroot()
+
+        drivers_license_number = client.find('drivers_license_number')
+        if drivers_license_number is not None:
+            drivers_license_number = self.hasher.encode(drivers_license_number.text, self.hasher.salt())
+
+        description = client.find('description')
+        if description is not None:
+            description = description.text
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.find('username').text,
+                    'password': self.hasher.encode(
+                        client.find('password').text, self.hasher.salt()),
+                    'first_name': client.find('first_name').text,
+                    'last_name': client.find('last_name').text,
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.find('email').text,
+                    'description': description
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_yaml(self, client_yaml):
+
+        with open(client_yaml, 'r') as stream:
+            client = yaml.safe_load(stream)
+
+        if type(client) is not dict:
+            e = ValueError('File %s could not be loaded.' % client_yaml)
+            logger.error('%s' % e)
+            raise e
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def delete(self, client_id):
+        try:
+            conn = Connect()
+            result = conn.db.cursor().execute(
+                """
+                DELETE FROM client WHERE id=%(id)s
+                """, {'id': client_id}
+            )
+            conn.db.commit()
+            if result:
+                logger.warning('Client id %02d deleted' % client_id)
+            else:
+                logger.warning('Client does not exist')
+        except MySQLError as e:
+            logger.error('Could not delete client: %s' % e)
+        finally:
+            conn.db.close()
+			
+			
+			
+			
+			
+2)vehicles.py
+
+
+import pymongo
+import logging
+from mongo.connect import MongoConnection
+
+logger = logging.getLogger(__name__)
+
+
+class Vehicle:
+
+    def insert(self, vehicle):
+
+        try:
+            conn = MongoConnection()
+
+            conn.db.vehicles.insert({
+                'client_id': vehicle.get('client_id'),
+                'plate': vehicle.get('plate'),
+                'color': vehicle.get('color'),
+                'category': vehicle.get('category'),
+                'description': vehicle.get('description'),
+                'is_allowed': True
+            })
+        except pymongo.errors.PyMongoError as e:
+            logger.error('Could not save the vehicle: %s' % e)
+        finally:
+            conn.client.close()
+
+    def find(self, client_id, plate):
+        results = []
+        try:
+            conn = MongoConnection()
+            if type(client_id) is not int:
+                raise AttributeError(plate)
+            cursor = conn.db.vehicles.find({
+                "client_id": client_id,
+                "plate": {
+                    "$regex": plate,
+                    "$options": "i"
+                }
+            })
+            results = [vehicles for vehicles in cursor]
+            cursor.close()
+        except (pymongo.errors.PyMongoError, AttributeError) as e:
+            logger.error('Could not find the vehicle: %s' % e)
+        finally:
+            conn.client.close()
+        return results
+		
+		
+		
