@@ -1,398 +1,179 @@
-Fix the vulnerability
-Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
+Identify the vulnerability
+Identify the type of vulnerability present in the code. Code blocks that are vulnerable are marked with warning icons (). Additional code blocks that may give context may be marked with lightbulb icons ().
 
-Vulnerability Category
-Insecure Cryptography - Weak Algorithm Use
+Select Vulnerability Category
+Unvalidated Redirects and Forwards
+
+Unvalidated Redirects and Forwards
+
+Denial of Service
+
+Routing
+
+Improper Assets Management
+
+Improper Assets Management
+
+Insecure Cryptography
+
+Insufficiently Protected Credentials
+
+Access Control
+
+Insecure Direct Object Reference
+
+Side Channel Vulnerability
+
+Timing Attack       	
 
 
-1)hashers.py
-
-import base64
-import argon2
-import bcrypt
-import hashlib
-import secrets
-import binascii
 
 
-class Argon2PasswordHasher:
-    """
-    Secure password hashing using the argon2 algorithm.
 
-    This is the winner of the Password Hashing Competition 2013-2015
-    (https://password-hashing.net). It requires the argon2-cffi library which
-    depends on native C code and might cause portability issues.
-    """
-    time_cost = 2
-    memory_cost = 512
-    parallelism = 2
+import json
+import logging
+from pathlib import Path
+from config import BASE_DIR
+from MySQLdb import MySQLError
+from database.connect import Connect
 
-    def encode(self, password, salt=bcrypt.gensalt(12).decode()):
-        data = argon2.low_level.hash_secret(
-            password.encode(),
-            salt.encode(),
-            time_cost=self.time_cost,
-            memory_cost=self.memory_cost,
-            parallelism=self.parallelism,
-            hash_len=argon2.DEFAULT_HASH_LENGTH,
-            type=argon2.low_level.Type.I,
-        )
-        return base64.b64encode(password.encode())
+from auth import Auth
+from decorators import is_authorized
+from serializers import UserUpdateSerializer, UserInsertSerializer
 
-    def verify(self, password, encoded):
+logger = logging.getLogger(__name__)
+
+
+class User(Auth):
+
+    @is_authorized
+    def retrieve(self):
+
+        result = None
+        conn = Connect()
         try:
-            if base64.b64encode(password) == encoded:
-                return True
-            return False
-        except argon2.exceptions.VerificationError:
-            return False
-
-
-class BCryptSHA256PasswordHasher:
-    """
-    Secure password hashing using the bcrypt algorithm (recommended)
-
-    This is considered by many to be the most secure algorithm but you
-    must first install the bcrypt library.  Please be warned that
-    this library depends on native C code and might cause portability
-    issues.
-    """
-    digest = hashlib.sha256
-    rounds = 12
-
-    def salt(self):
-        return bcrypt.gensalt(self.rounds)
-
-    def encode(self, password, salt):
-        password = password.encode()
-        if self.digest is not None:
-            password = binascii.hexlify(self.digest(password).digest())
-
-        data = bcrypt.hashpw(password, salt)
-        return data.decode('ascii')
-
-    def verify(self, password, encoded):
-        try:
-            password = binascii.hexlify(
-                self.digest(password.encode()).digest())
-            return bcrypt.checkpw(password, encoded.encode('ascii'))
-        except Exception:
-            return False
-
-
-class UnsaltedMD5PasswordHasher:
-    """
-    The unsalted MD5 password hashing algorithm.
-    Incredibly insecure algorithm that you should *never* use
-    """
-
-    def encode(self, password):
-        return hashlib.md5(password.encode()).hexdigest()
-
-    def verify(self, password, encoded):
-        encoded_2 = self.encode(password)
-        return secrets.compare_digest(encoded.encode(), encoded_2.encode())
-
-
-class PlainTextPassword:
-    """
-    Non-hashing plaintext password (for test only)
-    """
-
-    def encode(self, password, salt):
-        return password
-
-    def verify(self, password, encoded):
-        return password == encoded
-
-
-
-import argon2
-import bcrypt
-import hashlib
-import secrets
-import binascii
-
-
-class Argon2PasswordHasher:
-    """
-    Secure password hashing using the argon2 algorithm.
-
-    This is the winner of the Password Hashing Competition 2013-2015
-    (https://password-hashing.net). It requires the argon2-cffi library which
-    depends on native C code and might cause portability issues.
-    """
-    time_cost = 2
-    memory_cost = 512
-    parallelism = 2
-
-    def encode(self, password, salt):
-        data = argon2.low_level.hash_secret(
-            password.encode(),
-            salt.encode(),
-            time_cost=self.time_cost,
-            memory_cost=self.memory_cost,
-            parallelism=self.parallelism,
-            hash_len=argon2.DEFAULT_HASH_LENGTH,
-            type=argon2.low_level.Type.I,
-        )
-        return data.decode('ascii')
-
-    def verify(self, password, encoded):
-        try:
-            return argon2.low_level.verify_secret(
-                encoded.encode('ascii'),
-                password.encode(),
-                type=argon2.low_level.Type.I,
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT username, email, first_name, last_name
+                FROM users WHERE id=%(id)s
+                """, {'id': self.id}
             )
-        except argon2.exceptions.VerificationError:
-            return False
+            result = cursor.fetchone()
+        except MySQLError:
+            logger.error('Could not retrieve the user record')
+        finally:
+            conn.db.close()
+        return result
 
+    @is_authorized
+    def insert(self, **kwargs):
 
-class BCryptSHA256PasswordHasher:
-    """
-    Secure password hashing using the bcrypt algorithm (recommended)
+        result = None
+        roles = self.roles()
+        if roles and not 'administrator' in roles:
+            logger.error('Forbidden')
+            return result
 
-    This is considered by many to be the most secure algorithm but you
-    must first install the bcrypt library.  Please be warned that
-    this library depends on native C code and might cause portability
-    issues.
-    """
-    digest = hashlib.sha256
-    rounds = 12
+        password = kwargs.get('password')
+        if password:
+            kwargs.update(
+                {'password': self.hasher.encode(password, self.hasher.salt())})
 
-    def salt(self):
-        return bcrypt.gensalt(self.rounds)
+        columns, values = UserInsertSerializer().insertfields(kwargs)
+        if not (columns and values):
+            return result
 
-    def encode(self, password, salt):
-        password = password.encode()
-        if self.digest is not None:
-            password = binascii.hexlify(self.digest(password).digest())
-
-        data = bcrypt.hashpw(password, salt)
-        return data.decode('ascii')
-
-    def verify(self, password, encoded):
+        conn = Connect()
         try:
-            password = binascii.hexlify(
-                self.digest(password.encode()).digest())
-            return bcrypt.checkpw(password, encoded.encode('ascii'))
-        except Exception:
-            return False
+            cursor = conn.db.cursor()
+            cursor.execute(
+                f"""
+                INSERT INTO users ({columns})
+                VALUES ({values})
+                """, kwargs
+            )
+            conn.db.commit()
+            logger.info('User %02d inserted' % cursor.lastrowid)
+        except MySQLError:
+            logger.error('Could not insert the user')
+        finally:
+            conn.db.close()
+        return result
 
+    @is_authorized
+    def update(self, **kwargs):
 
-class UnsaltedMD5PasswordHasher:
-    """
-    The unsalted MD5 password hashing algorithm.
-    Incredibly insecure algorithm that you should *never* use
-    """
+        result = None
+        fields = UserUpdateSerializer().updatefields(kwargs)
+        if not fields:
+            return result
+        kwargs.update({'id': self.id})
 
-    def encode(self, password):
-        return hashlib.md5(password.encode()).hexdigest()
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                f"UPDATE users SET {fields} WHERE id=%(id)s", kwargs)
+            conn.db.commit()
+            result = cursor.rowcount
 
-    def verify(self, password, encoded):
-        encoded_2 = self.encode(password)
-        return secrets.compare_digest(encoded.encode(), encoded_2.encode())
+            if not result:
+                raise MySQLError
 
+        except MySQLError:
+            logger.error('User could not be updated')
+        finally:
+            conn.db.close()
+        return result
 
-class PlainTextPassword:
-    """
-    Non-hashing plaintext password (for test only)
-    """
+    @is_authorized
+    def insert_role(self, user_id, role_id):
 
-    def encode(self, password, salt):
-        return password
+        result = None
+        roles = self.roles()
+        if not (roles and 'administrator' in roles):
+            logger.error('Forbidden')
+            return result
 
-    def verify(self, password, encoded):
-        return password == encoded
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO user_roles (user_id, role_id)
+                VALUES (%(user_id)s, %(role_id)s)
+                """, {'user_id': user_id, 'role_id': role_id}
+            )
+            conn.db.commit()
+            logger.info('User role %02d inserted' % cursor.lastrowid)
+        except MySQLError:
+            logger.error('Could not insert the user role')
+        finally:
+            conn.db.close()
+        return result
 
+    @is_authorized
+    def load_roles(self, filename='roles.json'):
 
-2) authy.py
+        result = None
 
+        conn = Connect()
+        try:
+            with open(Path(BASE_DIR, filename), 'r') as file:
+                roles = json.load(file)
 
-import secrets
-import MySQLdb
-import logging
-import importlib
-from datetime import datetime
-from exception import InputError
-from database.connect import Connect
-from config import PASSWORD_HASHER, DEV_MODE
-from validation import MIN_EMAIL_LENGTH, PasswordValidator, MinimumLengthValidator, UsernameValidator
+            if not (roles and type(roles) is list):
+                logger.error('JSON file could not be loaded')
 
-logger = logging.getLogger(__name__)
-
-
-class Register:
-    """User Registration"""
-
-    def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
-
-    def fields_validation(self, *args, **kwargs):
-        username = self.data.get('username').strip()
-        self.username_validator.validate(username)
-
-        password1 = self.data.get('password1')
-        password2 = self.data.get('password2')
-        if password1 != password2:
-            raise InputError(
-                "The two password fields didn't match.", 'password_mismatch')
-        self.password_validator.validate(password1)
-
-        email = self.data.get('email')
-        email_confirm = self.data.get('email_confirm')
-        if email != email_confirm:
-            raise InputError(
-                'Both email addresses fields must match.', 'email_mismatch')
-        self.min_validator.validate(email, MIN_EMAIL_LENGTH)
-
-    def create(self):
-        # validate
-        self.fields_validation()
-        # password validation
-        password = self.data.get('password1')
-
-        encoded_password = self.password_hasher.encode(
-            password, self.salt.decode())
-
-        new_user = {
-            'username': self.data.get('username'),
-            'password': encoded_password,
-            'email': self.data.get('email'),
-            'date_joined': datetime.utcnow().isoformat()
-        }
-
-        return new_user
-
-    def save(self):
-        user = self.create()
-        if user:
-            try:
-                conn = Connect()
-                cursor = conn.db.cursor()
-                cursor.execute(
-                    """
-                    INSERT INTO user (username, password, email, date_joined)
-                        VALUES (%(username)s, %(password)s,
-                                %(email)s, %(date_joined)s)
-                    """, user
-                )
-                conn.db.commit()
-                logger.info('User %02d inserted' % cursor.lastrowid)
-
-                if DEV_MODE:
-                    logger.debug(
-                        '%(username)s, %(password)s, '
-                        '%(email)s, %(date_joined)s' % user)
-
-            except MySQLdb.MySQLError as e:
-                logger.error('Could not insert provider: %s' % e)
-            finally:
-                conn.db.close()
-
-
-
-options
-
-import secrets
-import MySQLdb
-import logging
-import importlib
-from datetime import datetime
-from exception import InputError
-from database.connect import Connect
-from config import DEV_MODE
-from validation import MIN_EMAIL_LENGTH, PasswordValidator, MinimumLengthValidator, UsernameValidator
-
-logger = logging.getLogger(__name__)
-
-
-class Register:
-    """User Registration"""
-
-    def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(
-            importlib.import_module('hashers'), 'PlainTextPassword')
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
-
-    def fields_validation(self, *args, **kwargs):
-        username = self.data.get('username').strip()
-        self.username_validator.validate(username)
-
-        password1 = self.data.get('password1')
-        password2 = self.data.get('password2')
-        if password1 != password2:
-            raise InputError(
-                "The two password fields didn't match.", 'password_mismatch')
-        self.password_validator.validate(password1)
-
-        email = self.data.get('email')
-        email_confirm = self.data.get('email_confirm')
-        if email != email_confirm:
-            raise InputError(
-                'Both email addresses fields must match.', 'email_mismatch')
-        self.min_validator.validate(email, MIN_EMAIL_LENGTH)
-
-    def create(self):
-        # validate
-        self.fields_validation()
-        # password validation
-        password = self.data.get('password1')
-
-        encoded_password = self.password_hasher.encode(
-            password, self.salt.decode())
-
-        new_user = {
-            'username': self.data.get('username'),
-            'password': encoded_password,
-            'email': self.data.get('email'),
-            'date_joined': datetime.utcnow().isoformat()
-        }
-
-        return new_user
-
-    def save(self):
-        user = self.create()
-        if user:
-            try:
-                conn = Connect()
-                cursor = conn.db.cursor()
-                cursor.execute(
-                    """
-                    INSERT INTO user (username, password, email, date_joined)
-                        VALUES (%(username)s, %(password)s,
-                                %(email)s, %(date_joined)s)
-                    """, user
-                )
-                conn.db.commit()
-                logger.info('User %02d inserted' % cursor.lastrowid)
-
-                if DEV_MODE:
-                    logger.debug(
-                        '%(username)s, %(password)s, '
-                        '%(email)s, %(date_joined)s' % user)
-
-            except MySQLdb.MySQLError as e:
-                logger.error('Could not insert provider: %s' % e)
-            finally:
-                conn.db.close()
-
-
-
-
-options
-1)
+            cursor = conn.db.cursor()
+            cursor.executemany(
+                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
+                roles)
+            conn.db.commit()
+            logger.info('Roles %02d inserted' % cursor.lastrowid)
+        except (OSError, ValueError, MySQLError) as e:
+            logger.error(f'User roles could not be loaded: {e}')
+        finally:
+            conn.db.close()
+        return result
