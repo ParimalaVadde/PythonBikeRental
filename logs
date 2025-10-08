@@ -1,512 +1,409 @@
-Fix the vulnerability
-Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
+Locate the vulnerability
+Review the highlighted code blocks in the source code and select 1 code block that causes the vulnerability listed below.
 
 Vulnerability Category
-Security Misconfiguration - Information Exposure
+Access Control - Insecure Direct Object Referenc
+
+choose correct answer
+Code blocks
+appointments.py:17-21
+appointments.py:48-52
+appointments.py:78-82
+auth.py:29-41
+auth.py:77-83
+roles.json:2-5
+serializers.py:24-30
+serializers.py:63-69
+users.py:24-29
+users.py:99-115
+users.py:125-132
+
+
+appointments.py
+
+import logging
+from MySQLdb import MySQLError
+from database.connect import Connect
+
+from auth import Auth
+from decorators import is_authorized
+from serializers import AppointmentSerializer
+
+logger = logging.getLogger(__name__)
+
+
+class Appointment(Auth):
+
+    @is_authorized
+    def retrieve(self, uuid):
+
+        result = None
+        roles = self.roles()
+        if not (roles and ('administrator' in roles or 'staff' in roles)):
+            logger.error('Forbidden')
+            return result
+
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    pets.name, pets.species,
+                    reason, datetime, description,
+                    users.first_name, users.last_name
+                FROM appointments
+                INNER JOIN pets ON pets.id=appointments.pet_id
+                INNER JOIN users ON users.id=appointments.doctor_id
+                WHERE uuid=UUID_TO_BIN(%(uuid)s)
+                """, {'uuid': uuid}
+            )
+            result = cursor.fetchone()
+        except MySQLError:
+            logger.error('Could not retrieve the appointment')
+        finally:
+            conn.db.close()
+        return result
+
+    @is_authorized
+    def insert(self, user_id, **kwargs):
+
+        result = None
+        roles = self.roles(user_id)
+        if not (roles and ('administrator' in roles or 'staff' in roles)):
+            logger.error('Forbidden')
+            return result
+
+        columns, values = AppointmentSerializer().insertfields(kwargs)
+        if not (columns and values):
+            return result
+
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                f"""
+                INSERT INTO appointments (uuid, {columns})
+                VALUES (UUID_TO_BIN(UUID()), {values})
+                """, kwargs
+            )
+            conn.db.commit()
+            logger.info('Appointment %02d inserted' % cursor.lastrowid)
+        except MySQLError:
+            logger.error('Could not insert the appointment')
+        finally:
+            conn.db.close()
+        return result
+
+    @is_authorized
+    def retrieve_client(self, uuid):
+
+        result = None
+        roles = self.roles()
+        if not (roles and ('administrator' in roles or 'staff' in roles)):
+            logger.error('Forbidden')
+            return result
+
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT first_name, last_name, email, phone,
+                    addresses.line_1, addresses.line_2, addresses.city,
+                    addresses.state,
+                FROM clients
+                INNER JOIN addresses ON addresses.id=clients.address_id
+                WHERE uuid=UUID_TO_BIN(%(uuid)s)
+                """, {'uuid': uuid}
+            )
+            result = cursor.fetchone()
+        except MySQLError:
+            logger.error('Could not retrieve the client')
+        finally:
+            conn.db.close()
+        return result
+		
+		
+		
+
+authy.py
+
+import logging
+import importlib
+from datetime import datetime
+from MySQLdb import MySQLError
+from config import PASSWORD_HASHER
+from database.connect import Connect
+
+from decorators import is_authorized
+
+logger = logging.getLogger(__name__)
+
+
+class Auth:
+    """User Authentication"""
+
+    def __init__(self):
+
+        self.id = None
+        self.is_authenticate = False
+        # load password hasher class from config file
+        self.hasher = getattr(
+            importlib.import_module('hashers'), PASSWORD_HASHER)()
+
+    def login(self, username, password):
+
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT id, password FROM users
+                WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+
+            if not (result and self.hasher.verify(password, result[1])):
+                raise MySQLError
+
+            self.is_authenticate = True
+            self.id = result[0]
+
+            cursor.execute(
+                """
+                UPDATE users
+                SET last_login=%(last_login)s
+                WHERE id=%(id)s
+                """,
+                {
+                    'last_login': datetime.now(),
+                    'id': self.id
+                }
+            )
+            conn.db.commit()
+            result = cursor.rowcount
 
+            if not result:
+                logger.error('Last login could not be updated')
 
-config.py
-1)
-import os
+        except Exception:
+            logger.error('Login authorization failure')
+        finally:
+            conn.db.close()
 
-BASE_DIR = os.environ.get('BASE_DIR')
+    def logout(self):
 
-PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+        self.id = None
+        self.is_authenticate = False
 
+    @is_authorized
+    def roles(self):
 
-DEV_MODE = os.environ.get(BASE_DIR, False)
+        result = None
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT name FROM roles
+                INNER JOIN user_roles ON roles.id = user_roles.role_id
+                WHERE user_roles.user_id = %(user_id)s
+                """, {'user_id': self.id}
+            )
+            result = [role[0] for role in cursor.fetchall()]
+        except MySQLError:
+            logger.error('Could not retrieve the user record')
+        finally:
+            conn.db.close()
+        return result
+		
+		
+		
+		
+roles.json
+[
+    {"id": 1, "name": "administrator"},
+    {"id": 2, "name": "veterinarian"},
+    {"id": 3, "name": "business"},
+    {"id": 4, "name": "staff"}
+]
 
 
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
 
+serializers.py
 
-PASSWORD_HASHER = 'Argon2PasswordHasher'
 
+import logging
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+logger = logging.getLogger(__name__)
 
 
-# Symmetric Encryption and Decryption Key
+class UpdateSerializer:
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
+    fields = None
 
+    def serialize(self, data):
 
-# Asymmetric Encryption and Decryption RSA Keys
+        result = ''
 
-PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+        if self.fields:
+            field = self.fields[0]
+            if data.get(field):
+                result += f'{field}=%({field})s'
+            for field in self.fields[1:]:
+                if data.get(field):
+                    result += f', {field}=%({field})s'
 
-PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+        return result
 
+    def updatefields(self, data):
 
-# AWS S3 Storage
+        if not (data and isinstance(data, dict)):
+            logger.error('SerializerError: data is not valid')
+            return None
 
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+        return self.serialize(data)
 
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+class UserUpdateSerializer(UpdateSerializer):
 
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+    fields = ['first_name', 'last_name', 'email']
 
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
-}
 
-AWS_LOCATION = os.environ.get('AWS_LOCATION')
+class ClientSerializer(UpdateSerializer):
 
+    fields = ['first_name', 'last_name', 'email', 'phone']
 
 
-import os
+class InsertSerializer:
 
-BASE_DIR = os.environ.get('BASE_DIR')
+    fields = None
 
-PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+    def serialize(self, data):
 
+        columns, values = '', ''
 
-DEV_MODE = os.environ.get(BASE_DIR, False)
+        if self.fields:
+            field = self.fields[0]
+            if data.get(field):
+                columns += f'{field}'
+                values += f'%({field})s'
+            for field in self.fields[1:]:
+                if data.get(field):
+                    columns += f', {field}'
+                    values += f', %({field})s'
 
+        return columns, values
 
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'DISABLED'
-}
+    def insertfields(self, data):
 
+        if not (data and isinstance(data, dict)):
+            logger.error('SerializerError: data is not valid')
+            return None
 
-PASSWORD_HASHER = 'Argon2PasswordHasher'
+        return self.serialize(data)
 
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+class UserInsertSerializer(InsertSerializer):
 
+    fields = ['username', 'password', 'email']
 
-# Symmetric Encryption and Decryption Key
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
+class AppointmentSerializer(InsertSerializer):
 
+    fields = ['pet_id', 'reason', 'datetime', 'description', 'doctor_id']
 
-# Asymmetric Encryption and Decryption RSA Keys
 
-PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+class AddressSerializer(InsertSerializer):
 
-PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+    fields = ['line_1', 'line_2', 'city', 'state']
+	
 
+users.py
 
-# AWS S3 Storage
+import json
+import logging
+from pathlib import Path
+from config import BASE_DIR
+from MySQLdb import MySQLError
+from database.connect import Connect
 
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+from auth import Auth
+from decorators import is_authorized
+from serializers import UserUpdateSerializer, UserInsertSerializer
 
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+logger = logging.getLogger(__name__)
 
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
 
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+class User(Auth):
 
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
-}
+    @is_authorized
+    def retrieve(self):
 
-AWS_LOCATION = os.environ.get('AWS_LOCATION')
+        result = None
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT username, email, first_name, last_name
+                FROM users WHERE id=%(id)s
+                """, {'id': self.id}
+            )
+            result = cursor.fetchone()
+        except MySQLError:
+            logger.error('Could not retrieve the user record')
+        finally:
+            conn.db.close()
+        return result
 
-AWS_S3_USE_SSL = os.environ.get('AWS_S3_USE_SSL', 'True') in ['True', 'true']
+    @is_authorized
+    def insert(self, **kwargs):
 
+        result = None
+        roles = self.roles()
+        if roles and not 'administrator' in roles:
+            logger.error('Forbidden')
+            return result
 
+        password = kwargs.get('password')
+        if password:
+            kwargs.update(
+                {'password': self.hasher.encode(password, self.hasher.salt())})
 
+        columns, values = UserInsertSerializer().insertfields(kwargs)
+        if not (columns and values):
+            return result
 
-2)
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                f"""
+                INSERT INTO users ({columns})
+                VALUES ({values})
+                """, kwargs
+            )
+            conn.db.commit()
+            logger.info('User %02d inserted' % cursor.lastrowid)
+        except MySQLError:
+            logger.error('Could not insert the user')
+        finally:
+            conn.db.close()
+        return result
 
-import os
+    @is_authorized
+    def update(self, **kwargs):
 
-BASE_DIR = os.environ.get('BASE_DIR')
+        result = None
+        fields = UserUpdateSerializer().updatefields(kwargs)
+        if not fields:
+            return result
+        kwargs.update({'id': self.id})
 
-PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
-
-
-DEV_MODE = os.environ.get(BASE_DIR, False)
-
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'Argon2PasswordHasher'
-
-
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
-
-
-# Symmetric Encryption and Decryption Key
-
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-
-# Asymmetric Encryption and Decryption RSA Keys
-
-PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
-
-PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
-
-
-# AWS S3 Storage
-
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
-}
-
-AWS_LOCATION = os.environ.get('AWS_LOCATION')
-
-AWS_S3_USE_SSL = False
-
-
-mport os
-
-BASE_DIR = os.environ.get('BASE_DIR')
-
-PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
-
-
-DEV_MODE = os.environ.get(BASE_DIR, False)
-
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'Argon2PasswordHasher'
-
-
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
-
-
-# Symmetric Encryption and Decryption Key
-
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-
-# Asymmetric Encryption and Decryption RSA Keys
-
-PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
-
-PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
-
-
-# AWS S3 Storage
-
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
-}
-
-AWS_LOCATION = os.environ.get('AWS_LOCATION')
-
-AWS_S3_USE_SSL = False
-
-
-
-3)
-
-import os
-
-BASE_DIR = os.environ.get('BASE_DIR')
-
-PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
-
-
-DEV_MODE = os.environ.get(BASE_DIR, False)
-
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'Argon2PasswordHasher'
-
-
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
-
-
-# Symmetric Encryption and Decryption Key
-
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-
-# Asymmetric Encryption and Decryption RSA Keys
-
-PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
-
-PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
-
-
-# AWS S3 Storage
-
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
-}
-
-AWS_LOCATION = os.environ.get('AWS_LOCATION')
-
-AWS_S3_USE_SSL = False
-
-
-
-import os
-
-BASE_DIR = os.environ.get('BASE_DIR')
-
-PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
-
-
-DEV_MODE = os.environ.get(BASE_DIR, False)
-
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'Argon2PasswordHasher'
-
-
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
-
-
-# Symmetric Encryption and Decryption Key
-
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-
-# Asymmetric Encryption and Decryption RSA Keys
-
-PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
-
-PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
-
-
-# AWS S3 Storage
-
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
-}
-
-AWS_LOCATION = os.environ.get('AWS_LOCATION')
-
-AWS_S3_USE_SSL = os.environ.get('AWS_S3_USE_SSL', 'True') in ['True', 'true']
- 
- 
- 
- 4)
- 
-import os
-
-BASE_DIR = os.environ.get('BASE_DIR')
-
-PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
-
-
-DEV_MODE = os.environ.get(BASE_DIR, False)
-
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'Argon2PasswordHasher'
-
-
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
-
-
-# Symmetric Encryption and Decryption Key
-
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-
-# Asymmetric Encryption and Decryption RSA Keys
-
-PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
-
-PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
-
-
-# AWS S3 Storage
-
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
-}
-
-AWS_LOCATION = os.environ.get('AWS_LOCATION')
-
-AWS_S3_USE_SSL = False
-
-
-
-import os
-
-BASE_DIR = os.environ.get('BASE_DIR')
-
-PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
-
-
-DEV_MODE = os.environ.get(BASE_DIR, False)
-
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'Argon2PasswordHasher'
-
-
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
-
-
-# Symmetric Encryption and Decryption Key
-
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-
-# Asymmetric Encryption and Decryption RSA Keys
-
-PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
-
-PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
-
-
-# AWS S3 Storage
-
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
-}
-
-AWS_LOCATION = os.environ.get('AWS_LOCATION')
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+	
