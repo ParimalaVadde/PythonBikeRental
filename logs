@@ -1,179 +1,91 @@
-Identify the vulnerability
-Identify the type of vulnerability present in the code. Code blocks that are vulnerable are marked with warning icons (). Additional code blocks that may give context may be marked with lightbulb icons ().
+Locate the vulnerability
+Review the highlighted code blocks in the source code and select 1 code block that causes the vulnerability listed below.
 
-Select Vulnerability Category
-Unvalidated Redirects and Forwards
+Vulnerability Category
+Security Misconfiguration - Information Exposure
 
-Unvalidated Redirects and Forwards
+select below options(can be more than 1)
 
-Denial of Service
-
-Routing
-
-Improper Assets Management
-
-Improper Assets Management
-
-Insecure Cryptography
-
-Insufficiently Protected Credentials
-
-Access Control
-
-Insecure Direct Object Reference
-
-Side Channel Vulnerability
-
-Timing Attack       	
+Code blocks
+connect.py:13-13
+config.py:17-18
+config.py:30-30
+config.py:35-37
 
 
+connect.py
 
-
-
-import json
+import MySQLdb
 import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
+from config import DATABASE
 
 logger = logging.getLogger(__name__)
 
 
-class User(Auth):
+class Connect(object):
+    """Connect to the database"""
 
-    @is_authorized
-    def retrieve(self):
-
-        result = None
-        conn = Connect()
+    def __init__(self):
         try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': self.id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
+            self.db = MySQLdb.connect(**DATABASE)
+        except MySQLdb.MySQLError as e:
+            logger.error('Database connection error: %s' % e)
+			
+			
+			
 
-    @is_authorized
-    def insert(self, **kwargs):
+config.py
+import os
 
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
+BASE_DIR = os.environ.get('BASE_DIR')
 
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
 
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
 
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
+DEV_MODE = os.environ.get(BASE_DIR, False)
 
-    @is_authorized
-    def update(self, **kwargs):
 
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'id': self.id})
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {},
+    'ssl_mode': 'DISABLED'
+}
 
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE id=%(id)s", kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
 
-            if not result:
-                raise MySQLError
+PASSWORD_HASHER = 'Argon2PasswordHasher'
 
-        except MySQLError:
-            logger.error('User could not be updated')
-        finally:
-            conn.db.close()
-        return result
 
-    @is_authorized
-    def insert_role(self, user_id, role_id):
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
 
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
 
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                INSERT INTO user_roles (user_id, role_id)
-                VALUES (%(user_id)s, %(role_id)s)
-                """, {'user_id': user_id, 'role_id': role_id}
-            )
-            conn.db.commit()
-            logger.info('User role %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user role')
-        finally:
-            conn.db.close()
-        return result
+# Symmetric Encryption and Decryption Key
 
-    @is_authorized
-    def load_roles(self, filename='roles.json'):
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
-        result = None
 
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, filename), 'r') as file:
-                roles = json.load(file)
+# Asymmetric Encryption and Decryption RSA Keys
 
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
 
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
