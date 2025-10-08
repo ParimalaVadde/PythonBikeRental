@@ -1,3 +1,8 @@
+staging_schema.py
+characteristics = ["stg_business_entity_id", "scf_industry_sector_dso_25", "scf_industry_sector_dso_50", "scf_industry_sector_dso_75", "scf_industry_group_dso_25", "scf_industry_group_dso_50", "scf_industry_group_dso_75", "moody", "sp", "credit_revolver_rate", "cost_of_goods_sold", "vc_campaigned_previously", "vc_acceptance_tier_legacy", "vc_acceptance_tier_model", "vc_acceptance_tier_userdefined", "vc_campaign_count", "vc_campaign_accepts"]
+
+
+
 import staging_schema as ss
 ####business_entity_characteristics 
 transformed_characteristics = transformed_df.select(*ss.characteristics).distinct()
