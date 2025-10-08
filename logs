@@ -1,91 +1,34 @@
-Locate the vulnerability
-Review the highlighted code blocks in the source code and select 1 code block that causes the vulnerability listed below.
+Introduction
+OS Command Injection vulnerabilities arise when an application executes OS commands based on unvalidated user-supplied input data to perform a specific task.
 
-Vulnerability Category
-Security Misconfiguration - Information Exposure
+The Flashpoint application provides the functionality to resize photos using ImageMagick's convert tool.
 
-select below options(can be more than 1)
+Open the resizer.py file and review the resize method. The OS command is constructed by concatenating input parameters directly, which may expose the application to command injection vulnerabilities. An attacker could exploit this by inserting malicious input, such as ; rm -rf /, to execute arbitrary commands on the server.
 
-Code blocks
-connect.py:13-13
-config.py:17-18
-config.py:30-30
-config.py:35-37
+Given these risks, let's explore how to protect the application when there is a need to use user input parameters to execute an OS command.
 
+Steps
+The resize method directly concatenates the user-supplied inputs filepath, width, and height with the convert command, which is then executed in a shell context using subprocess.run with shell=True. This setup allows an attacker to inject malicious commands by including shell metacharacters or additional commands in the inputs.
 
-connect.py
+Task 1
+Modify the subprocess.run call to ensure the command is executed directly by the operating system without invoking an intermediary shell.
 
-import MySQLdb
-import logging
-from config import DATABASE
+This can be achieved by either omitting the shell parameter to use its default value or by explicitly setting it to False.
 
-logger = logging.getLogger(__name__)
+Need help? Show task
+Task 2
+Instead of using string concatenation to build the command for subprocess.run, split the command and its input parameters into a list.
 
-
-class Connect(object):
-    """Connect to the database"""
-
-    def __init__(self):
-        try:
-            self.db = MySQLdb.connect(**DATABASE)
-        except MySQLdb.MySQLError as e:
-            logger.error('Database connection error: %s' % e)
-			
-			
-			
-
-config.py
-import os
-
-BASE_DIR = os.environ.get('BASE_DIR')
-
-PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+The first element in the list is the command to execute (convert).
+Each subsequent element represents a separate argument, similar to how they are separated by spaces in a shell command.
+Need help? Show task
 
 
-DEV_MODE = os.environ.get(BASE_DIR, False)
+import subprocess
 
 
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {},
-    'ssl_mode': 'DISABLED'
-}
-
-
-PASSWORD_HASHER = 'Argon2PasswordHasher'
-
-
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
-
-
-# Symmetric Encryption and Decryption Key
-
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-
-# Asymmetric Encryption and Decryption RSA Keys
-
-PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
-
-PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
-
-
-# AWS S3 Storage
-
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
-}
-
-AWS_LOCATION = os.environ.get('AWS_LOCATION')
+class ResizerService:
+    @staticmethod
+    def resize(filepath: str, width: int, height: int):
+        command = f"convert {filepath} -resize {width}x{height} {filepath}"
+        subprocess.run(command, shell=True)
