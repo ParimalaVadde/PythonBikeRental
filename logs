@@ -28,3 +28,51 @@ moody;bbb+;2007-11-02
 
 
 finally have to drop cols rating_date_cols = ['vendor_credit_rating_moody_date','vendor_credit_rating_sp_date']
+
+
+
+*****************************************************************
+
+
+from pyspark.sql import functions as F
+import staging_schema as ss
+
+#### business_entity_characteristics 
+rating_date_cols = ['vendor_credit_rating_moody_date','vendor_credit_rating_sp_date']
+characteristics_cols = ss.characteristics + rating_date_cols
+
+# Select all columns including the date columns
+transformed_characteristics = transformed_df.select(*characteristics_cols).distinct()
+
+# Update sp column: concatenate with date when sp is not null or empty
+transformed_characteristics = transformed_characteristics.withColumn(
+    'sp',
+    F.when(
+        (F.col('sp').isNotNull()) & 
+        (F.col('sp') != ''),
+        F.concat(
+            F.lit('sp;'),
+            F.col('sp'),
+            F.lit(';'),
+            F.col('vendor_credit_rating_sp_date')
+        )
+    ).otherwise(F.col('sp'))
+)
+
+# Update moody column: concatenate with date when moody is not null or empty
+transformed_characteristics = transformed_characteristics.withColumn(
+    'moody',
+    F.when(
+        (F.col('moody').isNotNull()) & 
+        (F.col('moody') != ''),
+        F.concat(
+            F.lit('moody;'),
+            F.col('moody'),
+            F.lit(';'),
+            F.col('vendor_credit_rating_moody_date')
+        )
+    ).otherwise(F.col('moody'))
+)
+
+# Drop the date columns
+transformed_characteristics = transformed_characteristics.drop(*rating_date_cols)
