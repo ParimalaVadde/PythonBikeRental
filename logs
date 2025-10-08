@@ -1,95 +1,219 @@
-A password dump from the Viking Bank database has surfaced on the internet. It contains a list of usernames and their password hashes. Furthermore, it appears that the hashing algorithm used was SHA256, which is not considered best practice for hashing passwords. We've provided a rainbow table, which contains the most common passwords, and their precomputed hashes.
+Locate the vulnerability
+Review the highlighted code blocks in the source code and select 1 code block that causes the vulnerability listed below.
 
-Please investigate and see if you can find the password of the Viking Bank administrator.
+Vulnerability Category
+Access Control - Insecure Direct Object Reference
 
-
-Reset mission
-Instructions
-1. Inspect the password dump
-In the right pane, there are two files. If necessary, adjust the pane to make the files more readable. Have a look at the password dump first. As you can see, it contains entries for several Viking Bank users. The usernames are in cleartext, but the passwords are hashed. Take note of the hash of the Viking Bank admin.
-
-2. Consult the rainbow table
-Now have a look at the second file: the rainbow table. This table contains a list of commonly used passwords and their precomputed hashes. All hashes have an equal length, and are a one-way function. This prevents reversing the hash to a plaintext password. However, with a rainbow table, one can look up the hash and obtain the password in cleartext.
-
-3. Log in as admin
-Log in as the admin user with the password you just found.
+Learn More
 
 
+Code blocks
+appointments.py:46-66
+appointments.py:75-98
+users.py:18-29
+users.py:38-63
+
+appointments.py
+
+import logging
+from MySQLdb import MySQLError
+from database.connect import Connect
+
+from auth import Auth
+from decorators import is_authorized
+from serializers import AppointmentSerializer
+
+logger = logging.getLogger(__name__)
 
 
-password-dump.txt
+class Appointment(Auth):
 
-_   _ _ _    _            ______             _    
-| | | (_) |  (_)           | ___ \           | |   
-| | | |_| | ___ _ __   __ _| |_/ / __ _ _ __ | | __
-| | | | | |/ / | '_ \ / _` | ___ \/ _` | '_ \| |/ /
-\ \_/ / |   <| | | | | (_| | |_/ / (_| | | | |   < 
- \___/|_|_|\_\_|_| |_|\__, \____/ \__,_|_| |_|_|\_\
-                       __/ |                       
-                      |___/
-                      
+    @is_authorized
+    def retrieve(self, uuid):
 
-        username                                    passwordhash                            
----------------------- ------------------------------------------------------------------ 
-admin@vikingbank.example       5a012756f3fe06210fe8f3afca3176541d8ad232e9d34aa5aedf7c19715ad4b9
-alice@alice.com                3676ea22cb314e1c8ff8e4cb148d4f986b7f8e1a8f54f581053d853fbbb961a8
-bill@likesmoney.com            92f72e5f056e4cb81ddf3823d21d79bb0c1a441137db1a9dddb7a895ebde70f9
-bobby@bobby.com                122bc795d0bab5927d6f77e1d8f5665df1e6141129bf672839813958555fb0c0
-Jeanette53@gmail.com           c3549407fe2461eab3c391111dd6693f4ba6599ca6d2cffb286a4e9fb4a59012
-elmo.jones@mail.com            16ca4da3183394c04e9e005522566a2100b8a31ee1f694f0f326e2e4bd40d13a
-Omitted the rest of the users...
+        result = None
+        roles = self.roles()
+        if not (roles and ('administrator' in roles or 'staff' in roles)):
+            logger.error('Forbidden')
+            return result
 
-provided by 31173h4ck32
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    pets.name, pets.species,
+                    reason, datetime, description,
+                    users.first_name, users.last_name
+                FROM appointments
+                INNER JOIN pets ON pets.id=appointments.pet_id
+                INNER JOIN users ON users.id=appointments.doctor_id
+                WHERE uuid=UUID_TO_BIN(%(uuid)s)
+                """, {'uuid': uuid}
+            )
+            result = cursor.fetchone()
+        except MySQLError:
+            logger.error('Could not retrieve the appointment')
+        finally:
+            conn.db.close()
+        return result
+
+    @is_authorized
+    def insert(self, user_id, **kwargs):
+
+        result = None
+        roles = self.roles(user_id)
+        if not (roles and ('administrator' in roles or 'staff' in roles)):
+            logger.error('Forbidden')
+            return result
+
+        columns, values = AppointmentSerializer().insertfields(kwargs)
+        if not (columns and values):
+            return result
+
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                f"""
+                INSERT INTO appointments (uuid, {columns})
+                VALUES (UUID_TO_BIN(UUID()), {values})
+                """, kwargs
+            )
+            conn.db.commit()
+            logger.info('Appointment %02d inserted' % cursor.lastrowid)
+        except MySQLError:
+            logger.error('Could not insert the appointment')
+        finally:
+            conn.db.close()
+        return result
+
+    @is_authorized
+    def retrieve_client(self, id):
+
+        result = None
+
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT first_name, last_name, email, phone,
+                    addresses.line_1, addresses.line_2, addresses.city,
+                    addresses.state,
+                FROM clients
+                INNER JOIN addresses ON addresses.id=clients.address_id
+                WHERE id=%(id)s
+                """, {'id': id}
+            )
+            result = cursor.fetchone()
+        except MySQLError:
+            logger.error('Could not retrieve the client')
+        finally:
+            conn.db.close()
+        return result
+		
+		
+		
+		
+users.py
+
+import json
+import logging
+from pathlib import Path
+from config import BASE_DIR
+from MySQLdb import MySQLError
+from database.connect import Connect
+
+from auth import Auth
+from decorators import is_authorized
+from serializers import UserUpdateSerializer, UserInsertSerializer
+
+logger = logging.getLogger(__name__)
 
 
-rainbow-table.txt
-+------------------------------------------------------------------+-------------+
-| 8bb0cf6eb9b17d0f7d22b456f121257dc1254e1f01665370476383ea776df414 |  1234567    |
-+------------------------------------------------------------------+-------------+
-| 6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090 |  abc123     |
-+------------------------------------------------------------------+-------------+
-| e4ad93ca07acb8d908a3aa41e920ea4f4ef4f26e7f86cf8291c5db289780a5ae |  iloveyou   |
-+------------------------------------------------------------------+-------------+
-| 91b4d142823f7d20c5f08df69122de43f35f057a988d9619f6d3138485c9a203 |  000000     |
-+------------------------------------------------------------------+-------------+
-| 0b14d501a594442a01c6859541bcb3e8164d183d32937b851835442f69d5c94e |  password1  |
-+------------------------------------------------------------------+-------------+
-| fdc546490b2ea496dba888c651e3f22e29c2b0546659f039987c995d6dbb9083 |  qqww1122   |
-+------------------------------------------------------------------+-------------+
-| 481f6cc0511143ccdd7e2d1b1b94faf0a700a8b49cd13922a70b5ae28acaa8c5 |  654321     |
-+------------------------------------------------------------------+-------------+
-| 9a900403ac313ba27a1bc81f0932652b8020dac92c234d98fa0b06bf0040ecfd |  qwertyuiop |
-+------------------------------------------------------------------+-------------+
-| 96cae35ce8a9b0244178bf28e4966c2ce1b8385723a96a6b838858cdd6ca0a1e |  123123     |
-+------------------------------------------------------------------+-------------+
-| b23a6a8439c0dde5515893e7c90c1e3233b8616e634470f20dc4928bcf3609bc |  unknown    |
-+------------------------------------------------------------------+-------------+
-| 43c5a1bc7a2a416a18fc73dc74523cafd327f257ccff3d4b11d39e60c1f3191b |  zxcvbnm    |
-+------------------------------------------------------------------+-------------+
-| 05a171fae0db1de02cb9d1117db627fda3f6874cedbaeba5c5e34edecc89418e |  asdfghjkl  |
-+------------------------------------------------------------------+-------------+
-| a9c43be948c5cabd56ef2bacffb77cdaa5eec49dd5eb0cc4129cf3eda5f0e74c |  dragon     |
-+------------------------------------------------------------------+-------------+
-| 1532e76dbe9d43d0dea98c331ca5ae8a65c5e8e8b99d3e2a42ae989356f6242a |  batman     |
-+------------------------------------------------------------------+-------------+
-| 72ab994fa2eb426c051ef59cad617750bfe06d7cf6311285ff79c19c32afd236 |  1q2w3e4r   |
-+------------------------------------------------------------------+-------------+
-| daaad6e5604e8e17bd9f108d91e26afe6281dac8fda0091040a7a6d7bd9b43b5 |  qwerty123  |
-+------------------------------------------------------------------+-------------+
-| eaa2bded32cc585d3f37c5319abe8890ad28a697ed66d5823f10536cc9c0fdb9 |  pokemon    |
-+------------------------------------------------------------------+-------------+
-| 08d017a7f6a485735df6022f51f5b4a9c0b6fc3f0d4be1a2ead8bf9135a99993 |  default1   |
-+------------------------------------------------------------------+-------------+
-| 6463a1a8d8e713a6982a007ccb351288f4bca48dd1f69a722e4b9d58f42f4085 |  aaaaaa1    |
-+------------------------------------------------------------------+-------------+
-| 8f27f432fcbaa4b5180a1cc7a8fa166a93cda3c1bce6f19922dd519d02f4bb39 |  soccer     |
-+------------------------------------------------------------------+-------------+
-| 88a8243d07c9e93cf165c0234bff583c72b71e9c5fcb897c44fd4378257a5b37 |  VikingBank |
-+------------------------------------------------------------------+-------------+
-| 122bc795d0bab5927d6f77e1d8f5665df1e6141129bf672839813958555fb0c0 |  Viking123 
+class User(Auth):
 
+    @is_authorized
+    def retrieve(self):
 
+        result = None
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT username, email, first_name, last_name
+                FROM users WHERE id=%(id)s
+                """, {'id': self.id}
+            )
+            result = cursor.fetchone()
+        except MySQLError:
+            logger.error('Could not retrieve the user record')
+        finally:
+            conn.db.close()
+        return result
 
+    @is_authorized
+    def insert(self, **kwargs):
 
+        result = None
+        roles = self.roles()
+        if roles and not 'administrator' in roles:
+            logger.error('Forbidden')
+            return result
 
-can u explain me clearly wats needs to be done
+        password = kwargs.get('password')
+        if password:
+            kwargs.update(
+                {'password': self.hasher.encode(password, self.hasher.salt())})
+
+        columns, values = UserInsertSerializer().insertfields(kwargs)
+        if not (columns and values):
+            return result
+
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                f"""
+                INSERT INTO users ({columns})
+                VALUES ({values})
+                """, kwargs
+            )
+            conn.db.commit()
+            logger.info('User %02d inserted' % cursor.lastrowid)
+        except MySQLError:
+            logger.error('Could not insert the user')
+        finally:
+            conn.db.close()
+        return result
+
+    @is_authorized
+    def update(self, **kwargs):
+
+        result = None
+        fields = UserUpdateSerializer().updatefields(kwargs)
+        if not fields:
+            return result
+        kwargs.update({'id': self.id})
+
+        conn = Connect()
+        try:
+            cursor = conn.db.cursor()
+            cursor.execute(
+                f"UPDATE users SET {fields} WHERE id=%(id)s", kwargs)
+            conn.db.commit()
+            result = cursor.rowcount
+
+            if not result:
+                raise MySQLError
+
+        except MySQLError:
+            logger.error('User could not be updated')
+        finally:
+            conn.db.close()
+        return result
+
+    @is_authorized
