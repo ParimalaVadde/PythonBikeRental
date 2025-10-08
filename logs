@@ -23,4 +23,20 @@ instead of current date
 
 i need to read the date value from the column vendor_credit_rating_moody_date
 where data be like this 20130423 which is a string . i need to convert to this format ("%Y-%m-%d")
-	
+
+
+from pyspark.sql import functions as F
+
+transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+    "characteristic_value",
+    F.when(
+        F.col("characteristic_type").isin("moody", "sp"),
+        F.concat_ws(
+            ";",
+            F.col("characteristic_type"),
+            F.col("characteristic_value"),
+            F.date_format(F.to_date(F.col("characteristic_value"), "yyyyMMdd"), "yyyy-MM-dd")
+        )
+    ).otherwise(F.col("characteristic_value"))
+)
+
