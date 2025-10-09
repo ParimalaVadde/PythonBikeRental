@@ -2,1248 +2,407 @@ Fix the vulnerability
 Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
 Vulnerability Category
-Access Control - Insecure Direct Object Reference
+Security Misconfiguration - Information Exposure
 
 
 Code blocks
-users.py:17-35
-users.py:72-97
+logging_config.py:4-4
 
-users.py
+
 1)
 
-import json
-import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
-
-logger = logging.getLogger(__name__)
+import os
 
 
-class User(Auth):
+BASE_DIR = '/tmp'
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
 
-    @is_authorized
-    def retrieve(self, id):
-
-        result = None
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert(self, **kwargs):
-
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
-
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
-
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def update(self, username, **kwargs):
-
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'username': username})
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE username=%(username)s",
-                kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
-
-            if not result:
-                raise MySQLError
-
-        except MySQLError:
-            logger.error('User could not be updated')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert_role(self, user_id, role_id):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                INSERT INTO user_roles (user_id, role_id)
-                VALUES (%(user_id)s, %(role_id)s)
-                """, {'user_id': user_id, 'role_id': role_id}
-            )
-            conn.db.commit()
-            logger.info('User role %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user role')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def load_roles(self):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, 'roles.json'), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
-		
-		
-import json
-import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
-
-logger = logging.getLogger(__name__)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'detailed': {
+            'class': 'logging.Formatter',
+            'format': ('%(asctime)s - %(name)-15s - %(process)d'
+                       ' - %(levelname)s - %(module)s - %(message)s')
+        },
+        'simple': {
+            'class': 'logging.Formatter',
+            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'INFO'
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'detailed',
+            'level': 'INFO'
+        },
+        'errors': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'errors.log'),
+            'formatter': 'detailed',
+            'level': 'WARNING'
+        },
+    },
+    'loggers': {
+        # default for all undefined Python modules
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'file', 'errors'],
+        }
+    }
+}
 
 
-class User(Auth):
 
-    @is_authorized
-    def retrieve(self):
+import os
 
-        result = None
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': self.id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
 
-    @is_authorized
-    def insert(self, **kwargs):
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
 
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
-
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
-
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def update(self, **kwargs):
-
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'id': self.id})
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE id=%(id)s", kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
-
-            if not result:
-                raise MySQLError
-
-        except MySQLError:
-            logger.error('User could not be updated')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert_role(self, user_id, role_id):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                INSERT INTO user_roles (user_id, role_id)
-                VALUES (%(user_id)s, %(role_id)s)
-                """, {'user_id': user_id, 'role_id': role_id}
-            )
-            conn.db.commit()
-            logger.info('User role %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user role')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def load_roles(self):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, 'roles.json'), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'detailed': {
+            'class': 'logging.Formatter',
+            'format': ('%(asctime)s - %(name)-15s - %(process)d'
+                       ' - %(levelname)s - %(module)s - %(message)s')
+        },
+        'simple': {
+            'class': 'logging.Formatter',
+            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'INFO'
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'detailed',
+            'level': 'INFO'
+        },
+        'errors': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'errors.log'),
+            'formatter': 'detailed',
+            'level': 'WARNING'
+        },
+    },
+    'loggers': {
+        # default for all undefined Python modules
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'file', 'errors'],
+        }
+    }
+}
 
 
 
 2)
 
-import json
-import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
-
-logger = logging.getLogger(__name__)
+import os
 
 
-class User(Auth):
+BASE_DIR = '/tmp'
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
 
-    @is_authorized
-    def retrieve(self, id):
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'detailed': {
+            'class': 'logging.Formatter',
+            'format': ('%(asctime)s - %(name)-15s - %(process)d'
+                       ' - %(levelname)s - %(module)s - %(message)s')
+        },
+        'simple': {
+            'class': 'logging.Formatter',
+            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'INFO'
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'detailed',
+            'level': 'INFO'
+        },
+        'errors': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'errors.log'),
+            'formatter': 'detailed',
+            'level': 'WARNING'
+        },
+    },
+    'loggers': {
+        # default for all undefined Python modules
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'file', 'errors'],
+        }
+    }
+}
 
-        result = None
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert(self, **kwargs):
-
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
-
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
-
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def update(self, username, **kwargs):
-
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'username': username})
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE username=%(username)s",
-                kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
-
-            if not result:
-                raise MySQLError
-
-        except MySQLError:
-            logger.error('User could not be updated')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert_role(self, user_id, role_id):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                INSERT INTO user_roles (user_id, role_id)
-                VALUES (%(user_id)s, %(role_id)s)
-                """, {'user_id': user_id, 'role_id': role_id}
-            )
-            conn.db.commit()
-            logger.info('User role %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user role')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def load_roles(self):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, 'roles.json'), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
-		
-		
-import json
-import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
-
-logger = logging.getLogger(__name__)
+import os
 
 
-class User(Auth):
+BASE_DIR = '/tmp'
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
 
-    @is_authorized
-    def retrieve(self):
-
-        result = None
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': self.id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert(self, **kwargs):
-
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
-
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
-
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def update(self, id, **kwargs):
-
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'id': id})
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE id=%(id)s", kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
-
-            if not result:
-                raise MySQLError
-
-        except MySQLError:
-            logger.error('User could not be updated')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert_role(self, user_id, role_id):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                INSERT INTO user_roles (user_id, role_id)
-                VALUES (%(user_id)s, %(role_id)s)
-                """, {'user_id': user_id, 'role_id': role_id}
-            )
-            conn.db.commit()
-            logger.info('User role %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user role')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def load_roles(self):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, 'roles.json'), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'detailed': {
+            'class': 'logging.Formatter',
+            'format': ('%(asctime)s - %(name)-15s - %(process)d'
+                       ' - %(levelname)s - %(module)s - %(message)s')
+        },
+        'simple': {
+            'class': 'logging.Formatter',
+            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'INFO'
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'd-zrrd654da.log'),
+            'formatter': 'detailed',
+            'level': 'INFO'
+        },
+        'errors': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'e-764gdadd.log'),
+            'formatter': 'detailed',
+            'level': 'WARNING'
+        },
+    },
+    'loggers': {
+        # default for all undefined Python modules
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'file', 'errors'],
+        }
+    }
 
 
 
 3)
-
-import json
-import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
-
-logger = logging.getLogger(__name__)
+import os
 
 
-class User(Auth):
+BASE_DIR = '/tmp'
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
 
-    @is_authorized
-    def retrieve(self, id):
-
-        result = None
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert(self, **kwargs):
-
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
-
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
-
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def update(self, username, **kwargs):
-
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'username': username})
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE username=%(username)s",
-                kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
-
-            if not result:
-                raise MySQLError
-
-        except MySQLError:
-            logger.error('User could not be updated')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert_role(self, user_id, role_id):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                INSERT INTO user_roles (user_id, role_id)
-                VALUES (%(user_id)s, %(role_id)s)
-                """, {'user_id': user_id, 'role_id': role_id}
-            )
-            conn.db.commit()
-            logger.info('User role %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user role')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def load_roles(self):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, 'roles.json'), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'detailed': {
+            'class': 'logging.Formatter',
+            'format': ('%(asctime)s - %(name)-15s - %(process)d'
+                       ' - %(levelname)s - %(module)s - %(message)s')
+        },
+        'simple': {
+            'class': 'logging.Formatter',
+            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'INFO'
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'detailed',
+            'level': 'INFO'
+        },
+        'errors': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'errors.log'),
+            'formatter': 'detailed',
+            'level': 'WARNING'
+        },
+    },
+    'loggers': {
+        # default for all undefined Python modules
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'file', 'errors'],
+        }
+    }
+}
 
 
-import json
-import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
-
-logger = logging.getLogger(__name__)
+import os
 
 
-class User(Auth):
+BASE_DIR = os.environ.get('LOG_DIR', '/tmp')
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
 
-    @is_authorized
-    def retrieve(self):
-
-        result = None
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': self.id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert(self, **kwargs):
-
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
-
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
-
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def update(self, username, **kwargs):
-
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'username': username})
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE username=%(username)s",
-                kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
-
-            if not result:
-                raise MySQLError
-
-        except MySQLError:
-            logger.error('User could not be updated')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert_role(self, user_id, role_id):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                INSERT INTO user_roles (user_id, role_id)
-                VALUES (%(user_id)s, %(role_id)s)
-                """, {'user_id': user_id, 'role_id': role_id}
-            )
-            conn.db.commit()
-            logger.info('User role %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user role')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def load_roles(self):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, 'roles.json'), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
-
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'detailed': {
+            'class': 'logging.Formatter',
+            'format': ('%(asctime)s - %(name)-15s - %(process)d'
+                       ' - %(levelname)s - %(module)s - %(message)s')
+        },
+        'simple': {
+            'class': 'logging.Formatter',
+            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'INFO'
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'd-zrrd654da.log'),
+            'formatter': 'detailed',
+            'level': 'INFO'
+        },
+        'errors': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'e-764gdadd.log'),
+            'formatter': 'detailed',
+            'level': 'WARNING'
+        },
+    },
+    'loggers': {
+        # default for all undefined Python modules
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'file', 'errors'],
+        }
+    }
+}
 
 
 4)
 
-import json
-import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
-
-logger = logging.getLogger(__name__)
+import os
 
 
-class User(Auth):
+BASE_DIR = '/tmp'
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
 
-    @is_authorized
-    def retrieve(self, id):
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'detailed': {
+            'class': 'logging.Formatter',
+            'format': ('%(asctime)s - %(name)-15s - %(process)d'
+                       ' - %(levelname)s - %(module)s - %(message)s')
+        },
+        'simple': {
+            'class': 'logging.Formatter',
+            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'INFO'
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'detailed',
+            'level': 'INFO'
+        },
+        'errors': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'errors.log'),
+            'formatter': 'detailed',
+            'level': 'WARNING'
+        },
+    },
+    'loggers': {
+        # default for all undefined Python modules
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'file', 'errors'],
+        }
+    }
+}
 
-        result = None
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert(self, **kwargs):
-
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
-
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
-
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def update(self, username, **kwargs):
-
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'username': username})
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE username=%(username)s",
-                kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
-
-            if not result:
-                raise MySQLError
-
-        except MySQLError:
-            logger.error('User could not be updated')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert_role(self, user_id, role_id):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                INSERT INTO user_roles (user_id, role_id)
-                VALUES (%(user_id)s, %(role_id)s)
-                """, {'user_id': user_id, 'role_id': role_id}
-            )
-            conn.db.commit()
-            logger.info('User role %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user role')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def load_roles(self):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, 'roles.json'), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
-		
-		
-import json
-import logging
-from pathlib import Path
-from config import BASE_DIR
-from MySQLdb import MySQLError
-from database.connect import Connect
-
-from auth import Auth
-from decorators import is_authorized
-from serializers import UserUpdateSerializer, UserInsertSerializer
-
-logger = logging.getLogger(__name__)
+import os
 
 
-class User(Auth):
+BASE_DIR = os.environ.get('LOG_DIR', '/tmp')
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
 
-    @is_authorized
-    def retrieve(self, id):
-
-        result = None
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                SELECT username, email, first_name, last_name
-                FROM users WHERE id=%(id)s
-                """, {'id': id}
-            )
-            result = cursor.fetchone()
-        except MySQLError:
-            logger.error('Could not retrieve the user record')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert(self, **kwargs):
-
-        result = None
-        roles = self.roles()
-        if roles and not 'administrator' in roles:
-            logger.error('Forbidden')
-            return result
-
-        password = kwargs.get('password')
-        if password:
-            kwargs.update(
-                {'password': self.hasher.encode(password, self.hasher.salt())})
-
-        columns, values = UserInsertSerializer().insertfields(kwargs)
-        if not (columns and values):
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO users ({columns})
-                VALUES ({values})
-                """, kwargs
-            )
-            conn.db.commit()
-            logger.info('User %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def update(self, **kwargs):
-
-        result = None
-        fields = UserUpdateSerializer().updatefields(kwargs)
-        if not fields:
-            return result
-        kwargs.update({'id': self.id})
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                f"UPDATE users SET {fields} WHERE id=%(id)s", kwargs)
-            conn.db.commit()
-            result = cursor.rowcount
-
-            if not result:
-                raise MySQLError
-
-        except MySQLError:
-            logger.error('User could not be updated')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def insert_role(self, user_id, role_id):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            cursor = conn.db.cursor()
-            cursor.execute(
-                """
-                INSERT INTO user_roles (user_id, role_id)
-                VALUES (%(user_id)s, %(role_id)s)
-                """, {'user_id': user_id, 'role_id': role_id}
-            )
-            conn.db.commit()
-            logger.info('User role %02d inserted' % cursor.lastrowid)
-        except MySQLError:
-            logger.error('Could not insert the user role')
-        finally:
-            conn.db.close()
-        return result
-
-    @is_authorized
-    def load_roles(self):
-
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
-
-        conn = Connect()
-        try:
-            with open(Path(BASE_DIR, 'roles.json'), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'detailed': {
+            'class': 'logging.Formatter',
+            'format': ('%(asctime)s - %(name)-15s - %(process)d'
+                       ' - %(levelname)s - %(module)s - %(message)s')
+        },
+        'simple': {
+            'class': 'logging.Formatter',
+            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'INFO'
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'detailed',
+            'level': 'INFO'
+        },
+        'errors': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'errors.log'),
+            'formatter': 'detailed',
+            'level': 'WARNING'
+        },
+    },
+    'loggers': {
+        # default for all undefined Python modules
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'file', 'errors'],
+        }
+    }
+}
