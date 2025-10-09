@@ -2,423 +2,350 @@ Fix the vulnerability
 Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
 Vulnerability Category
-Injection Flaws - OS Command Injection
+Insecure Cryptography - Weak Algorithm Use
+
 
 Code blocks
-provider_json.py:41-41
+auth.py:22-24
+auth.py:51-52
+config.py:26-26
 
-
-
-provider_json.py
 
 1)
-import os
-import json
-import logging
-import requests
-import logging.config
-from provider import Provider
-from config import ALLOWED_HOSTS
-from urllib.parse import urlparse
 
-logger = logging.getLogger(__name__)
+authy.py
 
-
-class ProviderJSON(Provider):
-    """Provider JSON operations"""
-
-    def insert_from_url(self, json_url):
-
-        o = urlparse(json_url)
-        # JSON URL validation
-        if not (o.scheme == 'https' and o.hostname in ALLOWED_HOSTS):
-            logger.error('JSON URL host is not allowed')
-            return
-
-        providers = []
-        # GET providers list from JSON URL
-        try:
-            r = requests.get(o.geturl())
-            providers = r.json()
-        except Exception as e:
-            logger.error('Could not GET the JSON URL - %s' % e)
-            raise e
-
-        # Insert Providers JSON list
-        self.insert(providers)
-
-    def insert_from_file(self, json_file):
-
-        providers = []
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        try:
-            providers = json.load(os.popen('cat %s/%s' % (BASE_DIR, json_file)))
-        except Exception as e:
-            logger.error('Could not open the JSON file - %s' % e)
-            raise e
-
-        # Insert Providers JSON list
-        self.insert(providers)
-		
-		
-		
-import os
-import json
-import logging
-import requests
-import subprocess
-import logging.config
-from provider import Provider
-from config import ALLOWED_HOSTS
-from urllib.parse import urlparse
-
-logger = logging.getLogger(__name__)
+ def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
 
-class ProviderJSON(Provider):
-    """Provider JSON operations"""
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
-    def insert_from_url(self, json_url):
 
-        o = urlparse(json_url)
-        # JSON URL validation
-        if not (o.scheme == 'https' and o.hostname in ALLOWED_HOSTS):
-            logger.error('JSON URL host is not allowed')
-            return
 
-        providers = []
-        # GET providers list from JSON URL
-        try:
-            r = requests.get(o.geturl())
-            providers = r.json()
-        except Exception as e:
-            logger.error('Could not GET the JSON URL - %s' % e)
-            raise e
+password = self.data.get('password1')
 
-        # Insert Providers JSON list
-        self.insert(providers)
+        encoded_password = self.password_hasher.encode(
+            password)
 
-    def insert_from_file(self, json_file):
 
-        providers = []
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        try:
-            providers = json.loads(subprocess.check_output(
-                'cat %s/%s' % (BASE_DIR, json_file), shell=True))
-        except Exception as e:
-            logger.error('Could not open the JSON file - %s' % e)
-            raise e
+password = self.data.get('password1')
 
-        # Insert Providers JSON list
-        self.insert(providers)
+encoded_password = self.password_hasher.encode(
+            password, self.salt.decode())
 
+				
+				
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
 
 
 2)
 
-import os
-import json
-import logging
-import requests
-import logging.config
-from provider import Provider
-from config import ALLOWED_HOSTS
-from urllib.parse import urlparse
+class Register:
+    """User Registration"""
 
-logger = logging.getLogger(__name__)
-
-
-class ProviderJSON(Provider):
-    """Provider JSON operations"""
-
-    def insert_from_url(self, json_url):
-
-        o = urlparse(json_url)
-        # JSON URL validation
-        if not (o.scheme == 'https' and o.hostname in ALLOWED_HOSTS):
-            logger.error('JSON URL host is not allowed')
-            return
-
-        providers = []
-        # GET providers list from JSON URL
-        try:
-            r = requests.get(o.geturl())
-            providers = r.json()
-        except Exception as e:
-            logger.error('Could not GET the JSON URL - %s' % e)
-            raise e
-
-        # Insert Providers JSON list
-        self.insert(providers)
-
-    def insert_from_file(self, json_file):
-
-        providers = []
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        try:
-            providers = json.load(os.popen('cat %s/%s' % (BASE_DIR, json_file)))
-        except Exception as e:
-            logger.error('Could not open the JSON file - %s' % e)
-            raise e
-
-        # Insert Providers JSON list
-        self.insert(providers)
-		
-		
-import os
-import json
-import logging
-import requests
-import subprocess
-import logging.config
-from provider import Provider
-from config import ALLOWED_HOSTS
-from urllib.parse import urlparse
-
-logger = logging.getLogger(__name__)
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
 
-class ProviderJSON(Provider):
-    """Provider JSON operations"""
+class Register:
+    """User Registration"""
 
-    def insert_from_url(self, json_url):
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
-        o = urlparse(json_url)
-        # JSON URL validation
-        if not (o.scheme == 'https' and o.hostname in ALLOWED_HOSTS):
-            logger.error('JSON URL host is not allowed')
-            return
 
-        providers = []
-        # GET providers list from JSON URL
-        try:
-            r = requests.get(o.geturl())
-            providers = r.json()
-        except Exception as e:
-            logger.error('Could not GET the JSON URL - %s' % e)
-            raise e
 
-        # Insert Providers JSON list
-        self.insert(providers)
+def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
 
-    def insert_from_file(self, json_file):
+        encoded_password = self.password_hasher.encode(
+            password)
 
-        providers = []
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        try:
-            providers = json.loads(
-                subprocess.run(
-                    'cat %s/%s' % (BASE_DIR, json_file),
-                    capture_output=True, shell=True).stdout)
-        except Exception as e:
-            logger.error('Could not open the JSON file - %s' % e)
-            raise e
 
-        # Insert Providers JSON list
+    def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
 
+        encoded_password = self.password_hasher.encode(
+            password)
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
+
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'PlainTextPassword'
 
 
 3)
-import os
-import json
-import logging
-import requests
-import logging.config
-from provider import Provider
-from config import ALLOWED_HOSTS
-from urllib.parse import urlparse
-
-logger = logging.getLogger(__name__)
 
 
-class ProviderJSON(Provider):
-    """Provider JSON operations"""
+class Register:
+    """User Registration"""
 
-    def insert_from_url(self, json_url):
-
-        o = urlparse(json_url)
-        # JSON URL validation
-        if not (o.scheme == 'https' and o.hostname in ALLOWED_HOSTS):
-            logger.error('JSON URL host is not allowed')
-            return
-
-        providers = []
-        # GET providers list from JSON URL
-        try:
-            r = requests.get(o.geturl())
-            providers = r.json()
-        except Exception as e:
-            logger.error('Could not GET the JSON URL - %s' % e)
-            raise e
-
-        # Insert Providers JSON list
-        self.insert(providers)
-
-    def insert_from_file(self, json_file):
-
-        providers = []
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        try:
-            providers = json.load(os.popen('cat %s/%s' % (BASE_DIR, json_file)))
-        except Exception as e:
-            logger.error('Could not open the JSON file - %s' % e)
-            raise e
-
-        # Insert Providers JSON list
-        self.insert(providers)
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
 
-import os
-import json
-import logging
-import requests
-import logging.config
-from provider import Provider
-from config import ALLOWED_HOSTS
-from urllib.parse import urlparse
-from subprocess import Popen, PIPE
 
-logger = logging.getLogger(__name__)
+class Register:
+    """User Registration"""
+
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
+		
+		
+def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
+
+        encoded_password = self.password_hasher.encode(
+            password)
 
 
-class ProviderJSON(Provider):
-    """Provider JSON operations"""
+    def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
 
-    def insert_from_url(self, json_url):
+        encoded_password = self.password_hasher.encode(
+            password, self.salt.decode())
 
-        o = urlparse(json_url)
-        # JSON URL validation
-        if not (o.scheme == 'https' and o.hostname in ALLOWED_HOSTS):
-            logger.error('JSON URL host is not allowed')
-            return
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
 
-        providers = []
-        # GET providers list from JSON URL
-        try:
-            r = requests.get(o.geturl())
-            providers = r.json()
-        except Exception as e:
-            logger.error('Could not GET the JSON URL - %s' % e)
-            raise e
 
-        # Insert Providers JSON list
-        self.insert(providers)
+PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
 
-    def insert_from_file(self, json_file):
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
 
-        providers = []
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        try:
-            out, error = Popen(
-                'cat %s/%s' % (BASE_DIR, json_file),
-                stdout=PIPE, shell=True
-            ).communicate()
-            providers = json.loads(out)
-        except Exception as e:
-            logger.error('Could not open the JSON file - %s' % e)
-            raise e
 
-        # Insert Providers JSON list
-        self.insert(providers)
+PASSWORD_HASHER = 'BCryptSHA256PasswordHasher'
 
 
 4)
-import os
-import json
-import logging
-import requests
-import logging.config
-from provider import Provider
-from config import ALLOWED_HOSTS
-from urllib.parse import urlparse
 
+
+class Register:
+    """User Registration"""
+
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
+		
 logger = logging.getLogger(__name__)
 
 
-class ProviderJSON(Provider):
-    """Provider JSON operations"""
+class Register:
+    """User Registration"""
 
-    def insert_from_url(self, json_url):
-
-        o = urlparse(json_url)
-        # JSON URL validation
-        if not (o.scheme == 'https' and o.hostname in ALLOWED_HOSTS):
-            logger.error('JSON URL host is not allowed')
-            return
-
-        providers = []
-        # GET providers list from JSON URL
-        try:
-            r = requests.get(o.geturl())
-            providers = r.json()
-        except Exception as e:
-            logger.error('Could not GET the JSON URL - %s' % e)
-            raise e
-
-        # Insert Providers JSON list
-        self.insert(providers)
-
-    def insert_from_file(self, json_file):
-
-        providers = []
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        try:
-            providers = json.load(os.popen('cat %s/%s' % (BASE_DIR, json_file)))
-        except Exception as e:
-            logger.error('Could not open the JSON file - %s' % e)
-            raise e
-
-        # Insert Providers JSON list
-        self.insert(providers)]
-		
-		
-		
-import os
-import json
-import logging
-import requests
-import logging.config
-from provider import Provider
-from config import ALLOWED_HOSTS
-from urllib.parse import urlparse
-
-logger = logging.getLogger(__name__)
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
 
-class ProviderJSON(Provider):
-    """Provider JSON operations"""
 
-    def insert_from_url(self, json_url):
 
-        o = urlparse(json_url)
-        # JSON URL validation
-        if not (o.scheme == 'https' and o.hostname in ALLOWED_HOSTS):
-            logger.error('JSON URL host is not allowed')
-            return
+def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
 
-        providers = []
-        # GET providers list from JSON URL
-        try:
-            r = requests.get(o.geturl())
-            providers = r.json()
-        except Exception as e:
-            logger.error('Could not GET the JSON URL - %s' % e)
-            raise e
+        encoded_password = self.password_hasher.encode(
+            password)
+			
+			
+ def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
 
-        # Insert Providers JSON list
-        self.insert(providers)
+        encoded_password = self.password_hasher.encode(
+            password, self.salt.decode())
+			
 
-    def insert_from_file(self, json_file):
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
 
-        providers = []
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        file_name = os.path.basename(json_file)
-        try:
-            with open(os.path.join(BASE_DIR, file_name)) as f:
-                providers = json.load(f)
-        except Exception as e:
-            logger.error('Could not open the JSON file - %s' % e)
-            raise e
 
-        # Insert Providers JSON list
-        self.insert(providers)
+PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
