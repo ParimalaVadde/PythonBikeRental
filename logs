@@ -2,71 +2,81 @@ Fix the vulnerability
 Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
 Vulnerability Category
-Insecure Cryptography - Weak Algorithm Use
+Security Misconfiguration - Information Exposure
 
 
 Code blocks
-auth.py:22-24
-auth.py:51-52
-config.py:26-26
+config.py:17-18
 
+config.py
 
 1)
+import os
 
-authy.py
+BASE_DIR = os.environ.get('BASE_DIR')
 
- def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
 
 
-    def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
+DEV_MODE = os.environ.get(BASE_DIR, False)
 
 
-
-password = self.data.get('password1')
-
-        encoded_password = self.password_hasher.encode(
-            password)
-
-
-password = self.data.get('password1')
-
-encoded_password = self.password_hasher.encode(
-            password, self.salt.decode())
-
-				
-				
 DATABASE = {
     'db': os.environ.get('db'),
     'user': os.environ.get('user'),
     'passwd': os.environ.get('passwd'),
     'host': os.environ.get('host', 'localhost'),
     'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
+    'ssl': {},
+    'ssl_mode': 'DISABLED'
 }
 
 
-PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
 
 
 DATABASE = {
@@ -85,75 +95,50 @@ DATABASE = {
 
 
 PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+
 
 
 2)
 
-class Register:
-    """User Registration"""
+import os
 
-    def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
 
 
-class Register:
-    """User Registration"""
-
-    def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
-
-
-
-def create(self):
-        # validate
-        self.fields_validation()
-        # password validation
-        password = self.data.get('password1')
-
-        encoded_password = self.password_hasher.encode(
-            password)
-
-
-    def create(self):
-        # validate
-        self.fields_validation()
-        # password validation
-        password = self.data.get('password1')
-
-        encoded_password = self.password_hasher.encode(
-            password)
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
-
+DEV_MODE = os.environ.get(BASE_DIR, False)
 
 
 DATABASE = {
@@ -162,190 +147,337 @@ DATABASE = {
     'passwd': os.environ.get('passwd'),
     'host': os.environ.get('host', 'localhost'),
     'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'PlainTextPassword'
-
-
-3)
-
-
-class Register:
-    """User Registration"""
-
-    def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
-
-
-
-class Register:
-    """User Registration"""
-
-    def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
-		
-		
-def create(self):
-        # validate
-        self.fields_validation()
-        # password validation
-        password = self.data.get('password1')
-
-        encoded_password = self.password_hasher.encode(
-            password)
-
-
-    def create(self):
-        # validate
-        self.fields_validation()
-        # password validation
-        password = self.data.get('password1')
-
-        encoded_password = self.password_hasher.encode(
-            password, self.salt.decode())
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'BCryptSHA256PasswordHasher'
-
-
-4)
-
-
-class Register:
-    """User Registration"""
-
-    def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
-		
-logger = logging.getLogger(__name__)
-
-
-class Register:
-    """User Registration"""
-
-    def __init__(self, data, *args, **kwargs):
-        self.data = data
-        self.password_validator = PasswordValidator()
-        self.username_validator = UsernameValidator()
-        self.min_validator = MinimumLengthValidator()
-        # load password hasher class
-        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
-        self.password_hasher = hasher()
-        self.salt = secrets.token_hex(32).encode()
-
-
-
-
-def create(self):
-        # validate
-        self.fields_validation()
-        # password validation
-        password = self.data.get('password1')
-
-        encoded_password = self.password_hasher.encode(
-            password)
-			
-			
- def create(self):
-        # validate
-        self.fields_validation()
-        # password validation
-        password = self.data.get('password1')
-
-        encoded_password = self.password_hasher.encode(
-            password, self.salt.decode())
-			
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
-}
-
-
-PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
-
-
-DATABASE = {
-    'db': os.environ.get('db'),
-    'user': os.environ.get('user'),
-    'passwd': os.environ.get('passwd'),
-    'host': os.environ.get('host', 'localhost'),
-    'port': int(os.environ.get('port', 3306)),
-    'ssl': {
-        'ca': os.environ.get('ca'),
-        'cert': os.environ.get('cert'),
-        'key': os.environ.get('key'),
-    },
-    'ssl_mode': 'REQUIRED'
+    'ssl': {},
+    'ssl_mode': 'DISABLED'
 }
 
 
 PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': None,
+        'cert': None,
+        'key': None,
+    }
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+
+
+
+3)
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {},
+    'ssl_mode': 'DISABLED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306))
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+
+
+4)
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {},
+    'ssl_mode': 'DISABLED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    }
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
