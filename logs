@@ -1,7 +1,6 @@
 import yaml
 import logging
 import importlib
-import subprocess
 from MySQLdb import MySQLError
 from config import PASSWORD_HASHER
 from database.connect import Connect
@@ -154,11 +153,8 @@ class Client:
 
     def insert_from_yaml(self, client_yaml):
 
-        client = yaml.safe_load(
-            subprocess.run(
-                'cat %s' % client_yaml,
-                shell=True, check=True, stdout=subprocess.PIPE
-            ).stdout.rstrip().decode())
+        with open(client_yaml, 'r') as stream:
+            client = yaml.safe_load(stream)
 
         if type(client) is not dict:
             e = ValueError('File %s could not be loaded.' % client_yaml)
