@@ -2,407 +2,1308 @@ Fix the vulnerability
 Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
 Vulnerability Category
-Security Misconfiguration - Information Exposure
-
-
-Code blocks
-logging_config.py:4-4
+Injection Flaws - OS Command Injection
 
 
 1)
-
 import os
+import yaml
+import logging
+import importlib
+from MySQLdb import MySQLError
+from config import PASSWORD_HASHER
+from database.connect import Connect
+import defusedxml.ElementTree as etree
+
+logger = logging.getLogger(__name__)
 
 
-BASE_DIR = '/tmp'
-LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
+class Client:
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'detailed': {
-            'class': 'logging.Formatter',
-            'format': ('%(asctime)s - %(name)-15s - %(process)d'
-                       ' - %(levelname)s - %(module)s - %(message)s')
-        },
-        'simple': {
-            'class': 'logging.Formatter',
-            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-            'level': 'INFO'
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'detailed',
-            'level': 'INFO'
-        },
-        'errors': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'errors.log'),
-            'formatter': 'detailed',
-            'level': 'WARNING'
-        },
-    },
-    'loggers': {
-        # default for all undefined Python modules
-        '': {
-            'level': LOGLEVEL,
-            'handlers': ['console', 'file', 'errors'],
-        }
-    }
-}
+    def __init__(self):
+
+        self.is_authenticate = False
+        # load password hasher class
+        self.hasher = getattr(
+            importlib.import_module('hashers'), PASSWORD_HASHER)()
+
+    def authenticate(self, username, password):
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT id, password FROM client
+                WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+
+            if not result:
+                raise MySQLError
+
+            if self.hasher.verify(password, result[1]):
+                self.is_authenticate = True
+
+        except Exception:
+            logger.error('Client authorization failure')
+            raise MySQLError('Client authorization failure')
+        finally:
+            conn.db.close()
+
+    def retrieve(self, username):
+
+        result = None
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except MySQLError as e:
+            logger.error('Could not retrieve the records: %s' % e)
+        finally:
+            conn.db.close()
+        return result
+
+    def insert(self, client):
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_xml(self, client_xml):
+
+        parser = etree.DefusedXMLParser(
+            # disallow XML with a <!DOCTYPE> processing instruction
+            forbid_dtd=True,
+            # disallow XML with <!ENTITY> declarations inside the DTD
+            forbid_entities=True,
+            # disallow any access to remote or local resources in external entities or DTD
+            forbid_external=True
+        )
+
+        try:
+            tree = etree.parse(client_xml, parser=parser)
+        except (etree.ParseError, ValueError) as e:
+            logger.error('XML parse error - %s' % e)
+            raise e
+        client = tree.getroot()
+
+        drivers_license_number = client.find('drivers_license_number')
+        if drivers_license_number is not None:
+            drivers_license_number = self.hasher.encode(drivers_license_number.text, self.hasher.salt())
+
+        description = client.find('description')
+        if description is not None:
+            description = description.text
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.find('username').text,
+                    'password': self.hasher.encode(
+                        client.find('password').text, self.hasher.salt()),
+                    'first_name': client.find('first_name').text,
+                    'last_name': client.find('last_name').text,
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.find('email').text,
+                    'description': description
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
+
+        if type(client) is not dict:
+            e = ValueError('File %s could not be loaded.' % client_yaml)
+            logger.error('%s' % e)
+            raise e
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def delete(self, client_id):
+        try:
+            conn = Connect()
+            result = conn.db.cursor().execute(
+                """
+                DELETE FROM client WHERE id=%(id)s
+                """, {'id': client_id}
+            )
+            conn.db.commit()
+            if result:
+                logger.warning('Client id %02d deleted' % client_id)
+            else:
+                logger.warning('Client does not exist')
+        except MySQLError as e:
+            logger.error('Could not delete client: %s' % e)
+        finally:
+            conn.db.close()
 
 
 
-import os
+
+import yaml
+import logging
+import importlib
+import subprocess
+from MySQLdb import MySQLError
+from config import PASSWORD_HASHER
+from database.connect import Connect
+import defusedxml.ElementTree as etree
+
+logger = logging.getLogger(__name__)
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
+class Client:
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'detailed': {
-            'class': 'logging.Formatter',
-            'format': ('%(asctime)s - %(name)-15s - %(process)d'
-                       ' - %(levelname)s - %(module)s - %(message)s')
-        },
-        'simple': {
-            'class': 'logging.Formatter',
-            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-            'level': 'INFO'
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'detailed',
-            'level': 'INFO'
-        },
-        'errors': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'errors.log'),
-            'formatter': 'detailed',
-            'level': 'WARNING'
-        },
-    },
-    'loggers': {
-        # default for all undefined Python modules
-        '': {
-            'level': LOGLEVEL,
-            'handlers': ['console', 'file', 'errors'],
-        }
-    }
-}
+    def __init__(self):
 
+        self.is_authenticate = False
+        # load password hasher class
+        self.hasher = getattr(
+            importlib.import_module('hashers'), PASSWORD_HASHER)()
+
+    def authenticate(self, username, password):
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT id, password FROM client
+                WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+
+            if not result:
+                raise MySQLError
+
+            if self.hasher.verify(password, result[1]):
+                self.is_authenticate = True
+
+        except Exception:
+            logger.error('Client authorization failure')
+            raise MySQLError('Client authorization failure')
+        finally:
+            conn.db.close()
+
+    def retrieve(self, username):
+
+        result = None
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except MySQLError as e:
+            logger.error('Could not retrieve the records: %s' % e)
+        finally:
+            conn.db.close()
+        return result
+
+    def insert(self, client):
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_xml(self, client_xml):
+
+        parser = etree.DefusedXMLParser(
+            # disallow XML with a <!DOCTYPE> processing instruction
+            forbid_dtd=True,
+            # disallow XML with <!ENTITY> declarations inside the DTD
+            forbid_entities=True,
+            # disallow any access to remote or local resources in external entities or DTD
+            forbid_external=True
+        )
+
+        try:
+            tree = etree.parse(client_xml, parser=parser)
+        except (etree.ParseError, ValueError) as e:
+            logger.error('XML parse error - %s' % e)
+            raise e
+        client = tree.getroot()
+
+        drivers_license_number = client.find('drivers_license_number')
+        if drivers_license_number is not None:
+            drivers_license_number = self.hasher.encode(drivers_license_number.text, self.hasher.salt())
+
+        description = client.find('description')
+        if description is not None:
+            description = description.text
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.find('username').text,
+                    'password': self.hasher.encode(
+                        client.find('password').text, self.hasher.salt()),
+                    'first_name': client.find('first_name').text,
+                    'last_name': client.find('last_name').text,
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.find('email').text,
+                    'description': description
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(subprocess.check_output(
+            'cat %s' % client_yaml, shell=True))
+
+        if type(client) is not dict:
+            e = ValueError('File %s could not be loaded.' % client_yaml)
+            logger.error('%s' % e)
+            raise e
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def delete(self, client_id):
+        try:
+            conn = Connect()
+            result = conn.db.cursor().execute(
+                """
+                DELETE FROM client WHERE id=%(id)s
+                """, {'id': client_id}
+            )
+            conn.db.commit()
+            if result:
+                logger.warning('Client id %02d deleted' % client_id)
+            else:
+                logger.warning('Client does not exist')
+        except MySQLError as e:
+            logger.error('Could not delete client: %s' % e)
+        finally:
+            conn.db.close()
 
 
 2)
 
 import os
+import yaml
+import logging
+import importlib
+from MySQLdb import MySQLError
+from config import PASSWORD_HASHER
+from database.connect import Connect
+import defusedxml.ElementTree as etree
+
+logger = logging.getLogger(__name__)
 
 
-BASE_DIR = '/tmp'
-LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
+class Client:
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'detailed': {
-            'class': 'logging.Formatter',
-            'format': ('%(asctime)s - %(name)-15s - %(process)d'
-                       ' - %(levelname)s - %(module)s - %(message)s')
-        },
-        'simple': {
-            'class': 'logging.Formatter',
-            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-            'level': 'INFO'
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'detailed',
-            'level': 'INFO'
-        },
-        'errors': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'errors.log'),
-            'formatter': 'detailed',
-            'level': 'WARNING'
-        },
-    },
-    'loggers': {
-        # default for all undefined Python modules
-        '': {
-            'level': LOGLEVEL,
-            'handlers': ['console', 'file', 'errors'],
-        }
-    }
-}
+    def __init__(self):
 
-import os
+        self.is_authenticate = False
+        # load password hasher class
+        self.hasher = getattr(
+            importlib.import_module('hashers'), PASSWORD_HASHER)()
+
+    def authenticate(self, username, password):
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT id, password FROM client
+                WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+
+            if not result:
+                raise MySQLError
+
+            if self.hasher.verify(password, result[1]):
+                self.is_authenticate = True
+
+        except Exception:
+            logger.error('Client authorization failure')
+            raise MySQLError('Client authorization failure')
+        finally:
+            conn.db.close()
+
+    def retrieve(self, username):
+
+        result = None
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except MySQLError as e:
+            logger.error('Could not retrieve the records: %s' % e)
+        finally:
+            conn.db.close()
+        return result
+
+    def insert(self, client):
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_xml(self, client_xml):
+
+        parser = etree.DefusedXMLParser(
+            # disallow XML with a <!DOCTYPE> processing instruction
+            forbid_dtd=True,
+            # disallow XML with <!ENTITY> declarations inside the DTD
+            forbid_entities=True,
+            # disallow any access to remote or local resources in external entities or DTD
+            forbid_external=True
+        )
+
+        try:
+            tree = etree.parse(client_xml, parser=parser)
+        except (etree.ParseError, ValueError) as e:
+            logger.error('XML parse error - %s' % e)
+            raise e
+        client = tree.getroot()
+
+        drivers_license_number = client.find('drivers_license_number')
+        if drivers_license_number is not None:
+            drivers_license_number = self.hasher.encode(drivers_license_number.text, self.hasher.salt())
+
+        description = client.find('description')
+        if description is not None:
+            description = description.text
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.find('username').text,
+                    'password': self.hasher.encode(
+                        client.find('password').text, self.hasher.salt()),
+                    'first_name': client.find('first_name').text,
+                    'last_name': client.find('last_name').text,
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.find('email').text,
+                    'description': description
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
+
+        if type(client) is not dict:
+            e = ValueError('File %s could not be loaded.' % client_yaml)
+            logger.error('%s' % e)
+            raise e
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def delete(self, client_id):
+        try:
+            conn = Connect()
+            result = conn.db.cursor().execute(
+                """
+                DELETE FROM client WHERE id=%(id)s
+                """, {'id': client_id}
+            )
+            conn.db.commit()
+            if result:
+                logger.warning('Client id %02d deleted' % client_id)
+            else:
+                logger.warning('Client does not exist')
+        except MySQLError as e:
+            logger.error('Could not delete client: %s' % e)
+        finally:
+            conn.db.close()
+			
+			
+import yaml
+import logging
+import importlib
+from MySQLdb import MySQLError
+from config import PASSWORD_HASHER
+from database.connect import Connect
+import defusedxml.ElementTree as etree
+
+logger = logging.getLogger(__name__)
 
 
-BASE_DIR = '/tmp'
-LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
+class Client:
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'detailed': {
-            'class': 'logging.Formatter',
-            'format': ('%(asctime)s - %(name)-15s - %(process)d'
-                       ' - %(levelname)s - %(module)s - %(message)s')
-        },
-        'simple': {
-            'class': 'logging.Formatter',
-            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-            'level': 'INFO'
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'd-zrrd654da.log'),
-            'formatter': 'detailed',
-            'level': 'INFO'
-        },
-        'errors': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'e-764gdadd.log'),
-            'formatter': 'detailed',
-            'level': 'WARNING'
-        },
-    },
-    'loggers': {
-        # default for all undefined Python modules
-        '': {
-            'level': LOGLEVEL,
-            'handlers': ['console', 'file', 'errors'],
-        }
-    }
+    def __init__(self):
 
+        self.is_authenticate = False
+        # load password hasher class
+        self.hasher = getattr(
+            importlib.import_module('hashers'), PASSWORD_HASHER)()
+
+    def authenticate(self, username, password):
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT id, password FROM client
+                WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+
+            if not result:
+                raise MySQLError
+
+            if self.hasher.verify(password, result[1]):
+                self.is_authenticate = True
+
+        except Exception:
+            logger.error('Client authorization failure')
+            raise MySQLError('Client authorization failure')
+        finally:
+            conn.db.close()
+
+    def retrieve(self, username):
+
+        result = None
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except MySQLError as e:
+            logger.error('Could not retrieve the records: %s' % e)
+        finally:
+            conn.db.close()
+        return result
+
+    def insert(self, client):
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_xml(self, client_xml):
+
+        parser = etree.DefusedXMLParser(
+            # disallow XML with a <!DOCTYPE> processing instruction
+            forbid_dtd=True,
+            # disallow XML with <!ENTITY> declarations inside the DTD
+            forbid_entities=True,
+            # disallow any access to remote or local resources in external entities or DTD
+            forbid_external=True
+        )
+
+        try:
+            tree = etree.parse(client_xml, parser=parser)
+        except (etree.ParseError, ValueError) as e:
+            logger.error('XML parse error - %s' % e)
+            raise e
+        client = tree.getroot()
+
+        drivers_license_number = client.find('drivers_license_number')
+        if drivers_license_number is not None:
+            drivers_license_number = self.hasher.encode(drivers_license_number.text, self.hasher.salt())
+
+        description = client.find('description')
+        if description is not None:
+            description = description.text
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.find('username').text,
+                    'password': self.hasher.encode(
+                        client.find('password').text, self.hasher.salt()),
+                    'first_name': client.find('first_name').text,
+                    'last_name': client.find('last_name').text,
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.find('email').text,
+                    'description': description
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_yaml(self, client_yaml):
+
+        with open(client_yaml, 'r') as stream:
+            client = yaml.safe_load(stream)
+
+        if type(client) is not dict:
+            e = ValueError('File %s could not be loaded.' % client_yaml)
+            logger.error('%s' % e)
+            raise e
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def delete(self, client_id):
+        try:
+            conn = Connect()
+            result = conn.db.cursor().execute(
+                """
+                DELETE FROM client WHERE id=%(id)s
+                """, {'id': client_id}
+            )
+            conn.db.commit()
+            if result:
+                logger.warning('Client id %02d deleted' % client_id)
+            else:
+                logger.warning('Client does not exist')
+        except MySQLError as e:
+            logger.error('Could not delete client: %s' % e)
+        finally:
+            conn.db.close()
 
 
 3)
 import os
+import yaml
+import logging
+import importlib
+from MySQLdb import MySQLError
+from config import PASSWORD_HASHER
+from database.connect import Connect
+import defusedxml.ElementTree as etree
+
+logger = logging.getLogger(__name__)
 
 
-BASE_DIR = '/tmp'
-LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
+class Client:
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'detailed': {
-            'class': 'logging.Formatter',
-            'format': ('%(asctime)s - %(name)-15s - %(process)d'
-                       ' - %(levelname)s - %(module)s - %(message)s')
-        },
-        'simple': {
-            'class': 'logging.Formatter',
-            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-            'level': 'INFO'
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'detailed',
-            'level': 'INFO'
-        },
-        'errors': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'errors.log'),
-            'formatter': 'detailed',
-            'level': 'WARNING'
-        },
-    },
-    'loggers': {
-        # default for all undefined Python modules
-        '': {
-            'level': LOGLEVEL,
-            'handlers': ['console', 'file', 'errors'],
-        }
-    }
-}
+    def __init__(self):
+
+        self.is_authenticate = False
+        # load password hasher class
+        self.hasher = getattr(
+            importlib.import_module('hashers'), PASSWORD_HASHER)()
+
+    def authenticate(self, username, password):
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT id, password FROM client
+                WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+
+            if not result:
+                raise MySQLError
+
+            if self.hasher.verify(password, result[1]):
+                self.is_authenticate = True
+
+        except Exception:
+            logger.error('Client authorization failure')
+            raise MySQLError('Client authorization failure')
+        finally:
+            conn.db.close()
+
+    def retrieve(self, username):
+
+        result = None
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except MySQLError as e:
+            logger.error('Could not retrieve the records: %s' % e)
+        finally:
+            conn.db.close()
+        return result
+
+    def insert(self, client):
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_xml(self, client_xml):
+
+        parser = etree.DefusedXMLParser(
+            # disallow XML with a <!DOCTYPE> processing instruction
+            forbid_dtd=True,
+            # disallow XML with <!ENTITY> declarations inside the DTD
+            forbid_entities=True,
+            # disallow any access to remote or local resources in external entities or DTD
+            forbid_external=True
+        )
+
+        try:
+            tree = etree.parse(client_xml, parser=parser)
+        except (etree.ParseError, ValueError) as e:
+            logger.error('XML parse error - %s' % e)
+            raise e
+        client = tree.getroot()
+
+        drivers_license_number = client.find('drivers_license_number')
+        if drivers_license_number is not None:
+            drivers_license_number = self.hasher.encode(drivers_license_number.text, self.hasher.salt())
+
+        description = client.find('description')
+        if description is not None:
+            description = description.text
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.find('username').text,
+                    'password': self.hasher.encode(
+                        client.find('password').text, self.hasher.salt()),
+                    'first_name': client.find('first_name').text,
+                    'last_name': client.find('last_name').text,
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.find('email').text,
+                    'description': description
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
+
+        if type(client) is not dict:
+            e = ValueError('File %s could not be loaded.' % client_yaml)
+            logger.error('%s' % e)
+            raise e
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def delete(self, client_id):
+        try:
+            conn = Connect()
+            result = conn.db.cursor().execute(
+                """
+                DELETE FROM client WHERE id=%(id)s
+                """, {'id': client_id}
+            )
+            conn.db.commit()
+            if result:
+                logger.warning('Client id %02d deleted' % client_id)
+            else:
+                logger.warning('Client does not exist')
+        except MySQLError as e:
+            logger.error('Could not delete client: %s' % e)
+        finally:
+            conn.db.close()
+			
+			
+			
+import yaml
+import logging
+import importlib
+import subprocess
+from MySQLdb import MySQLError
+from config import PASSWORD_HASHER
+from database.connect import Connect
+import defusedxml.ElementTree as etree
+
+logger = logging.getLogger(__name__)
 
 
-import os
+class Client:
 
+    def __init__(self):
 
-BASE_DIR = os.environ.get('LOG_DIR', '/tmp')
-LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
+        self.is_authenticate = False
+        # load password hasher class
+        self.hasher = getattr(
+            importlib.import_module('hashers'), PASSWORD_HASHER)()
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'detailed': {
-            'class': 'logging.Formatter',
-            'format': ('%(asctime)s - %(name)-15s - %(process)d'
-                       ' - %(levelname)s - %(module)s - %(message)s')
-        },
-        'simple': {
-            'class': 'logging.Formatter',
-            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-            'level': 'INFO'
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'd-zrrd654da.log'),
-            'formatter': 'detailed',
-            'level': 'INFO'
-        },
-        'errors': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'e-764gdadd.log'),
-            'formatter': 'detailed',
-            'level': 'WARNING'
-        },
-    },
-    'loggers': {
-        # default for all undefined Python modules
-        '': {
-            'level': LOGLEVEL,
-            'handlers': ['console', 'file', 'errors'],
-        }
-    }
-}
+    def authenticate(self, username, password):
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT id, password FROM client
+                WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+
+            if not result:
+                raise MySQLError
+
+            if self.hasher.verify(password, result[1]):
+                self.is_authenticate = True
+
+        except Exception:
+            logger.error('Client authorization failure')
+            raise MySQLError('Client authorization failure')
+        finally:
+            conn.db.close()
+
+    def retrieve(self, username):
+
+        result = None
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except MySQLError as e:
+            logger.error('Could not retrieve the records: %s' % e)
+        finally:
+            conn.db.close()
+        return result
+
+    def insert(self, client):
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_xml(self, client_xml):
+
+        parser = etree.DefusedXMLParser(
+            # disallow XML with a <!DOCTYPE> processing instruction
+            forbid_dtd=True,
+            # disallow XML with <!ENTITY> declarations inside the DTD
+            forbid_entities=True,
+            # disallow any access to remote or local resources in external entities or DTD
+            forbid_external=True
+        )
+
+        try:
+            tree = etree.parse(client_xml, parser=parser)
+        except (etree.ParseError, ValueError) as e:
+            logger.error('XML parse error - %s' % e)
+            raise e
+        client = tree.getroot()
+
+        drivers_license_number = client.find('drivers_license_number')
+        if drivers_license_number is not None:
+            drivers_license_number = self.hasher.encode(drivers_license_number.text, self.hasher.salt())
+
+        description = client.find('description')
+        if description is not None:
+            description = description.text
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.find('username').text,
+                    'password': self.hasher.encode(
+                        client.find('password').text, self.hasher.salt()),
+                    'first_name': client.find('first_name').text,
+                    'last_name': client.find('last_name').text,
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.find('email').text,
+                    'description': description
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def insert_from_yaml(self, client_yaml):
+
+        stdout, stderr = subprocess.Popen(
+            'cat %s' % client_yaml, stdout=subprocess.PIPE, shell=True
+        ).communicate()
+        client = yaml.safe_load(stdout)
+
+        if type(client) is not dict:
+            e = ValueError('File %s could not be loaded.' % client_yaml)
+            logger.error('%s' % e)
+            raise e
+
+        drivers_license_number = client.get('drivers_license_number')
+        if drivers_license_number:
+            drivers_license_number = self.hasher.encode(drivers_license_number, self.hasher.salt())
+
+        try:
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                INSERT INTO client (username, password,
+                    first_name, last_name, drivers_license_number, email, description)
+                    VALUES (%(username)s, %(password)s, %(first_name)s,
+                            %(last_name)s, %(drivers_license_number)s, %(email)s,
+                            %(description)s)
+                """,
+                {
+                    'username': client.get('username'),
+                    'password': self.hasher.encode(
+                        client.get('password'), self.hasher.salt()),
+                    'first_name': client.get('first_name'),
+                    'last_name': client.get('last_name'),
+                    'drivers_license_number': drivers_license_number,
+                    'email': client.get('email'),
+                    'description': client.get('description')
+                }
+            )
+            conn.db.commit()
+            logger.info('Client %02d inserted' % cursor.lastrowid)
+        except MySQLError as e:
+            logger.error('Could not insert client: %s' % e)
+        finally:
+            conn.db.close()
+
+    def delete(self, client_id):
+        try:
+            conn = Connect()
+            result = conn.db.cursor().execute(
+                """
+                DELETE FROM client WHERE id=%(id)s
+                """, {'id': client_id}
+            )
+            conn.db.commit()
+            if result:
+                logger.warning('Client id %02d deleted' % client_id)
+            else:
+                logger.warning('Client does not exist')
+        except MySQLError as e:
+            logger.error('Could not delete client: %s' % e)
+        finally:
+            conn.db.close()
 
 
 4)
-
-import os
-
-
-BASE_DIR = '/tmp'
-LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'detailed': {
-            'class': 'logging.Formatter',
-            'format': ('%(asctime)s - %(name)-15s - %(process)d'
-                       ' - %(levelname)s - %(module)s - %(message)s')
-        },
-        'simple': {
-            'class': 'logging.Formatter',
-            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-            'level': 'INFO'
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'detailed',
-            'level': 'INFO'
-        },
-        'errors': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'errors.log'),
-            'formatter': 'detailed',
-            'level': 'WARNING'
-        },
-    },
-    'loggers': {
-        # default for all undefined Python modules
-        '': {
-            'level': LOGLEVEL,
-            'handlers': ['console', 'file', 'errors'],
-        }
-    }
-}
-
-import os
-
-
-BASE_DIR = os.environ.get('LOG_DIR', '/tmp')
-LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO')
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'detailed': {
-            'class': 'logging.Formatter',
-            'format': ('%(asctime)s - %(name)-15s - %(process)d'
-                       ' - %(levelname)s - %(module)s - %(message)s')
-        },
-        'simple': {
-            'class': 'logging.Formatter',
-            'format': '%(name)-15s - %(process)d - %(levelname)-8s %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-            'level': 'INFO'
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'detailed',
-            'level': 'INFO'
-        },
-        'errors': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'errors.log'),
-            'formatter': 'detailed',
-            'level': 'WARNING'
-        },
-    },
-    'loggers': {
-        # default for all undefined Python modules
-        '': {
-            'level': LOGLEVEL,
-            'handlers': ['console', 'file', 'errors'],
-        }
-    }
-}
