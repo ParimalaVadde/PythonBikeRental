@@ -2,158 +2,189 @@ Fix the vulnerability
 Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
 Vulnerability Category
-Injection Flaws - OS Command Injection
+Security Misconfiguration - Information Exposure
+
 
 
 Code blocks
-user_profile.py:78-78
-
+clients.py:61-61
 
 1)
+ def retrieve(self, username):
 
- def set_picture(self, file):
-        self.check_user_auth()
-
-        name = os.path.basename(file.name)
+        result = None
         try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except Exception as e:
+            logger.error('Could not retrieve the records: %s' % e)
+            return '{} {}'.format(e, traceback.format_exc()
+			
+			
+			
+def retrieve(self, username):
 
-
-
-    def set_picture(self, data):
-        self.check_user_auth()
-
-        file = BytesIO(data)
+        result = None
         try:
-            image = Image.open(file)
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.path.join(path, '%s.%s' % (
-                datetime.utcnow().isoformat(), image.format.lower()))
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
-
-
-
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except Exception as e:
+            logger.error('Could not retrieve the records: %s' % e)
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            description = {
+                'formatted_lines': traceback.format_exc().splitlines(),
+                'format_exception': repr(traceback.format_exception(
+                                         exc_type, exc_value, exc_traceback)),
+                'extract_tb': repr(traceback.extract_tb(exc_traceback)),
+                'format_tb': traceback.format_tb(exc_traceback),
+                'tb_lineno': exc_traceback.tb_lineno
+            }
+            return ('{formatted_lines} {format_exception} {extract_tb} '
+                    '{format_tb} {tb_lineno}').format(**description)
+        finally:
+            conn.db.close()
+        return result
+		
+		
+		
+		
 2)
 
+def retrieve(self, username):
 
-def set_picture(self, file):
-        self.check_user_auth()
-
-        name = os.path.basename(file.name)
+        result = None
         try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except Exception as e:
+            logger.error('Could not retrieve the records: %s' % e)
+            return '{} {}'.format(e, traceback.format_exc())
+        finally:
+            conn.db.close()
+        return result
+		
+		
+def retrieve(self, username):
 
-
-    def set_picture(self, file):
-        self.check_user_auth()
-
-        name = os.path.basename(file.name)
+        result = None
         try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = subprocess.getoutput('echo %s/%s' % (path, name))
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
-
-
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except MySQLError as e:
+            logger.error('Could not retrieve the records: %s' % e)
+        finally:
+            conn.db.close()
+        return result
 
 
 3)
 
- def set_picture(self, file):
-        self.check_user_auth()
+ def retrieve(self, username):
 
-        name = os.path.basename(file.name)
+        result = None
         try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except Exception as e:
+            logger.error('Could not retrieve the records: %s' % e)
+            return '{} {}'.format(e, traceback.format_exc())
+        finally:
+            conn.db.close()
+        return result
+		
+		
+		
+def retrieve(self, username):
 
-
-
-def set_picture(self, file):
-        self.check_user_auth()
-
-        name = os.path.basename(file.name)
+        result = None
         try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = subprocess.Popen(
-                'echo %s/%s' % (path, name), shell=True, stdout=subprocess.PIPE
-            ).stdout.read().rstrip().decode()
-
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
-
-
-
-
-
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except Exception as e:
+            logger.error('Could not retrieve the records: %s' % e)
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            return 'Could not retrieve the records: {} {}'.format(
+                e, repr(traceback.format_exception(
+                        exc_type, exc_value, exc_traceback)))
+        finally:
+            conn.db.close()
+        return result
+		
+		
 4)
 
-def set_picture(self, file):
-        self.check_user_auth()
+def retrieve(self, username):
 
-        name = os.path.basename(file.name)
+        result = None
         try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except Exception as e:
+            logger.error('Could not retrieve the records: %s' % e)
+            return '{} {}'.format(e, traceback.format_exc())
+        finally:
+            conn.db.close()
+        return result
+		
+		
+		
+def retrieve(self, username):
 
-
-
-def set_picture(self, file):
-        self.check_user_auth()
-
-        name = os.path.basename(file.name)
+        result = None
         try:
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            with open(image_path, 'wb+') as destination:
-                destination.write(file.read())
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+            conn = Connect()
+            cursor = conn.db.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM client WHERE username=%(username)s
+                """, {'username': username}
+            )
+            result = cursor.fetchone()
+        except MySQLError as e:
+            logger.error('Could not retrieve the records: %s' % e)
+            return '{} {} {}'.format(e, username, result)
+        finally:
+            conn.db.close()
+        return result
