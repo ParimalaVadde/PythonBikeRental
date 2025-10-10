@@ -2,159 +2,243 @@ Fix the vulnerability
 Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
 Vulnerability Category
-Injection Flaws - OS Command Injection
+Insecure Cryptography - Weak Algorithm Use
 
 
 Code blocks
-user_profile.py:78-78
-
+auth.py:22-24
+auth.py:51-52
+config.py:26-26
 
 1)
 
-def set_picture(self, file):
-        self.check_user_auth()
+class Register:
+    """User Registration"""
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
 
+ def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
+
+        encoded_password = self.password_hasher.encode(
+            password)
+
+        new_user = {
+            'username': self.data.get('username'),
+            'password': encoded_password,
+            'email': self.data.get('email'),
+            'date_joined': datetime.utcnow().isoformat()
+        }
 
 
-    def set_picture(self, file):
-        self.check_user_auth()
+PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
 
-        name = os.path.basename(file.name)
-        try:
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            with open(image_path, 'wb+') as destination:
-                destination.write(file.read())
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
 
+***
+
+
+
+class Register:
+    """User Registration"""
+
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
+		
+		
+		
+def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
+
+        encoded_password = self.password_hasher.encode(
+            password, self.salt.decode())
+
+
+
+PASSWORD_HASHER = 'BCryptSHA256PasswordHasher'
 
 
 
 
 2)
 
-  def set_picture(self, file):
-        self.check_user_auth()
+class Register:
+    """User Registration"""
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
+
+ def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
+
+        encoded_password = self.password_hasher.encode(
+            password)
+			
+PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
 
 
-def set_picture(self, data):
-        self.check_user_auth()
+****
+class Register:
+    """User Registration"""
 
-        file = BytesIO(data)
-        try:
-            image = Image.open(file)
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.path.join(path, '%s.%s' % (
-                datetime.utcnow().isoformat(), image.format.lower()))
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
+    def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
+
+        encoded_password = self.password_hasher.encode(
+            password, self.salt.decode())
+
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
 
 
 3)
 
-def set_picture(self, file):
-        self.check_user_auth()
+class Register:
+    """User Registration"""
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
+		
+def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
+
+        encoded_password = self.password_hasher.encode(
+            password)	
+
+PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'			
+****************
 
 
+class Register:
+    """User Registration"""
 
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
-def set_picture(self, file):
-        self.check_user_auth()
+def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = subprocess.Popen(
-                'echo %s/%s' % (path, name), shell=True, stdout=subprocess.PIPE
-            ).stdout.read().rstrip().decode()
-
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
-
+        encoded_password = self.password_hasher.encode(
+            password, self.salt.decode())
+			
+			
+PASSWORD_HASHER = 'Argon2PasswordHasher'
 
 
 4)
+class Register:
+    """User Registration"""
 
-def set_picture(self, file):
-        self.check_user_auth()
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+ def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
+
+        encoded_password = self.password_hasher.encode(
+            password)
+
+PASSWORD_HASHER = 'UnsaltedMD5PasswordHasher'
+****
 
 
+class Register:
+    """User Registration"""
 
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        self.password_validator = PasswordValidator()
+        self.username_validator = UsernameValidator()
+        self.min_validator = MinimumLengthValidator()
+        # load password hasher class
+        hasher = getattr(importlib.import_module('hashers'), PASSWORD_HASHER)
+        self.password_hasher = hasher()
+        self.salt = secrets.token_hex(32).encode()
+		
+		
+   def create(self):
+        # validate
+        self.fields_validation()
+        # password validation
+        password = self.data.get('password1')
 
-def set_picture(self, file):
-        self.check_user_auth()
-
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = subprocess.getoutput('echo %s/%s' % (path, name))
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+        encoded_password = self.password_hasher.encode(
+            password)
+			
+			
+PASSWORD_HASHER = 'PlainTextPassword'
