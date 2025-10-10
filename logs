@@ -2,73 +2,479 @@ Fix the vulnerability
 Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
 Vulnerability Category
-Injection Flaws - OS Command Injection
-
+Security Misconfiguration - Information Exposure
 
 Code blocks
-clients.py:157-157
+config.py:17-18
 
 
-clients.py
+config.py
+
 
 1)
 
-def insert_from_yaml(self, client_yaml):
+import os
 
-        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {},
+    'ssl_mode': 'DISABLED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
 
 
 
-def insert_from_yaml(self, client_yaml):
 
-        stdout, stderr = subprocess.Popen(
-            'cat %s' % client_yaml, stdout=subprocess.PIPE, shell=True
-        ).communicate()
-        client = yaml.safe_load(stdout)
-		
-		
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306))
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+
 2)
 
- def insert_from_yaml(self, client_yaml):
+import os
 
-        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
-		
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
 
 
-def insert_from_yaml(self, client_yaml):
+DEV_MODE = os.environ.get(BASE_DIR, False)
 
-        client = yaml.safe_load(
-            subprocess.run(
-                'cat %s' % client_yaml,
-                shell=True, check=True, stdout=subprocess.PIPE
-            ).stdout.rstrip().decode())
-			
-			
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {},
+    'ssl_mode': 'DISABLED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+
 3)
 
- def insert_from_yaml(self, client_yaml):
+import os
 
-        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
-		
-		
-def insert_from_yaml(self, client_yaml):
+BASE_DIR = os.environ.get('BASE_DIR')
 
-        with open(client_yaml, 'r') as stream:
-            client = yaml.safe_load(stream)
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
 
-        if type(client) is not dict:
-            e = ValueError('File %s could not be loaded.' % client_yaml)
-            logger.error('%s' % e)
-            raise e
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {},
+    'ssl_mode': 'DISABLED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    }
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+
 
 4)
 
-def insert_from_yaml(self, client_yaml):
+import os
 
-        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
-		
-		
-def insert_from_yaml(self, client_yaml):
+BASE_DIR = os.environ.get('BASE_DIR')
 
-        client = yaml.safe_load(subprocess.check_output(
-            'cat %s' % client_yaml, shell=True))
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {},
+    'ssl_mode': 'DISABLED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': None,
+        'cert': None,
+        'key': None,
+    }
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
