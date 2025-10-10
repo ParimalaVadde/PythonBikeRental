@@ -2,245 +2,158 @@ Fix the vulnerability
 Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
 Vulnerability Category
-Access Control - Insecure Direct Object Reference
+Injection Flaws - OS Command Injection
 
 
+Code blocks
+user_profile.py:78-78
 
-
-users.py:125-132
 
 1)
 
- @is_authorized
-    def load_roles(self, filename='roles.json'):
+ def set_picture(self, file):
+        self.check_user_auth()
 
-        result = None
-
-        conn = Connect()
+        name = os.path.basename(file.name)
         try:
-            with open(Path(BASE_DIR, filename), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
-
-				
-				
+            image = Image.open(BytesIO(bytearray(file.read())))
+            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
+            os.makedirs(path, exist_ok=True)
+            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
+            image.save(image_path)
+        except Exception:
+            raise InputError(
+                'Set a valid image. The image data was either not an '
+                'image or a corrupted image.', 'invalid_image_data')
 
 
- @is_authorized
-    def load_roles(self):
 
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-            return result
+    def set_picture(self, data):
+        self.check_user_auth()
 
-        conn = Connect()
+        file = BytesIO(data)
         try:
-            with open(Path(BASE_DIR, 'roles.json'), 'r') as file:
-                roles = json.load(file)
+            image = Image.open(file)
+            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
+            os.makedirs(path, exist_ok=True)
+            image_path = os.path.join(path, '%s.%s' % (
+                datetime.utcnow().isoformat(), image.format.lower()))
+            image.save(image_path)
+        except Exception:
+            raise InputError(
+                'Set a valid image. The image data was either not an '
+                'image or a corrupted image.', 'invalid_image_data')
 
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
 
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
-				
-				
-				
 
 2)
 
- @is_authorized
-    def load_roles(self, filename='roles.json'):
 
-        result = None
+def set_picture(self, file):
+        self.check_user_auth()
 
-        conn = Connect()
+        name = os.path.basename(file.name)
         try:
-            with open(Path(BASE_DIR, filename), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
+            image = Image.open(BytesIO(bytearray(file.read())))
+            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
+            os.makedirs(path, exist_ok=True)
+            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
+            image.save(image_path)
+        except Exception:
+            raise InputError(
+                'Set a valid image. The image data was either not an '
+                'image or a corrupted image.', 'invalid_image_data')
 
 
-@is_authorized
-    def load_roles(self, **kwargs):
+    def set_picture(self, file):
+        self.check_user_auth()
 
-        result = None
-        roles = self.roles()
-        if not (roles and 'administrator' in roles):
-            logger.error('Forbidden')
-
-        filename = 'roles.json'
-        if kwargs.get('filename'):
-            filename = kwargs.get('filename')
-
-        conn = Connect()
+        name = os.path.basename(file.name)
         try:
-            with open(Path(BASE_DIR, filename), 'r') as file:
-                roles = json.load(file)
+            image = Image.open(BytesIO(bytearray(file.read())))
+            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
+            os.makedirs(path, exist_ok=True)
+            image_path = subprocess.getoutput('echo %s/%s' % (path, name))
+            image.save(image_path)
+        except Exception:
+            raise InputError(
+                'Set a valid image. The image data was either not an '
+                'image or a corrupted image.', 'invalid_image_data')
 
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
 
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
-		
-		
+
+
 3)
 
- @is_authorized
-    def load_roles(self, filename='roles.json'):
+ def set_picture(self, file):
+        self.check_user_auth()
 
-        result = None
-
-        conn = Connect()
+        name = os.path.basename(file.name)
         try:
-            with open(Path(BASE_DIR, filename), 'r') as file:
-                roles = json.load(file)
+            image = Image.open(BytesIO(bytearray(file.read())))
+            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
+            os.makedirs(path, exist_ok=True)
+            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
+            image.save(image_path)
+        except Exception:
+            raise InputError(
+                'Set a valid image. The image data was either not an '
+                'image or a corrupted image.', 'invalid_image_data')
 
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
 
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
-		
-		
 
-@is_authorized
-    def load_roles(self, filename):
+def set_picture(self, file):
+        self.check_user_auth()
 
-        result = None
-
-        conn = Connect()
+        name = os.path.basename(file.name)
         try:
-            with open(Path(BASE_DIR, filename), 'r') as file:
-                roles = json.load(file)
+            image = Image.open(BytesIO(bytearray(file.read())))
+            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
+            os.makedirs(path, exist_ok=True)
+            image_path = subprocess.Popen(
+                'echo %s/%s' % (path, name), shell=True, stdout=subprocess.PIPE
+            ).stdout.read().rstrip().decode()
 
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
+            image.save(image_path)
+        except Exception:
+            raise InputError(
+                'Set a valid image. The image data was either not an '
+                'image or a corrupted image.', 'invalid_image_data')
 
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
 
-		
-		
+
+
+
 4)
 
- @is_authorized
-    def load_roles(self, filename='roles.json'):
+def set_picture(self, file):
+        self.check_user_auth()
 
-        result = None
-
-        conn = Connect()
+        name = os.path.basename(file.name)
         try:
-            with open(Path(BASE_DIR, filename), 'r') as file:
-                roles = json.load(file)
+            image = Image.open(BytesIO(bytearray(file.read())))
+            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
+            os.makedirs(path, exist_ok=True)
+            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
+            image.save(image_path)
+        except Exception:
+            raise InputError(
+                'Set a valid image. The image data was either not an '
+                'image or a corrupted image.', 'invalid_image_data')
 
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
 
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
-				
-				
-    @is_authorized
-    def load_roles(self, filename='roles.json'):
 
-        result = None
-        roles = self.roles()
-        if not (roles and ('administrator' in roles or 'staff' in roles)):
-            logger.error('Forbidden')
+def set_picture(self, file):
+        self.check_user_auth()
 
-        conn = Connect()
+        name = os.path.basename(file.name)
         try:
-            with open(Path(BASE_DIR, filename), 'r') as file:
-                roles = json.load(file)
-
-            if not (roles and type(roles) is list):
-                logger.error('JSON file could not be loaded')
-
-            cursor = conn.db.cursor()
-            cursor.executemany(
-                'INSERT INTO roles (id, name) VALUES (%(id)s, %(name)s)',
-                roles)
-            conn.db.commit()
-            logger.info('Roles %02d inserted' % cursor.lastrowid)
-        except (OSError, ValueError, MySQLError) as e:
-            logger.error(f'User roles could not be loaded: {e}')
-        finally:
-            conn.db.close()
-        return result
+            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
+            os.makedirs(path, exist_ok=True)
+            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
+            with open(image_path, 'wb+') as destination:
+                destination.write(file.read())
+        except Exception:
+            raise InputError(
+                'Set a valid image. The image data was either not an '
+                'image or a corrupted image.', 'invalid_image_data')
