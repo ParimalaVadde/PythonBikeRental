@@ -1,3 +1,74 @@
-So close! Your answer was incorrect and you have reached your attempt limit.
+Fix the vulnerability
+Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
-Allowing users to retrieve and update their information based on user-supplied parameters, would allow a malicious actor to perform those operations for any application user.
+Vulnerability Category
+Injection Flaws - OS Command Injection
+
+
+Code blocks
+clients.py:157-157
+
+
+clients.py
+
+1)
+
+def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
+
+
+
+def insert_from_yaml(self, client_yaml):
+
+        stdout, stderr = subprocess.Popen(
+            'cat %s' % client_yaml, stdout=subprocess.PIPE, shell=True
+        ).communicate()
+        client = yaml.safe_load(stdout)
+		
+		
+2)
+
+ def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
+		
+
+
+def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(
+            subprocess.run(
+                'cat %s' % client_yaml,
+                shell=True, check=True, stdout=subprocess.PIPE
+            ).stdout.rstrip().decode())
+			
+			
+3)
+
+ def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
+		
+		
+def insert_from_yaml(self, client_yaml):
+
+        with open(client_yaml, 'r') as stream:
+            client = yaml.safe_load(stream)
+
+        if type(client) is not dict:
+            e = ValueError('File %s could not be loaded.' % client_yaml)
+            logger.error('%s' % e)
+            raise e
+
+4)
+
+def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(os.popen('cat %s' % client_yaml))
+		
+		
+def insert_from_yaml(self, client_yaml):
+
+        client = yaml.safe_load(subprocess.check_output(
+            'cat %s' % client_yaml, shell=True))
