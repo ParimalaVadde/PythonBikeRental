@@ -2,153 +2,519 @@ Fix the vulnerability
 Find and select the solution that fixes the vulnerability listed below. Each solution may take a different approach to address the problem, but only one solution is correct.
 
 Vulnerability Category
-Injection Flaws - OS Command Injection
+Security Misconfiguration - Information Exposure
 
-Code blocks
-user_profile.py:78-78
+config.py
 
 
 1)
 
-def set_picture(self, file):
-        self.check_user_auth()
+import os
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
 
 
+DEV_MODE = os.environ.get(BASE_DIR, False)
 
-def set_picture(self, file):
-        self.check_user_auth()
 
-        name = os.path.basename(file.name)
-        try:
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            with open(image_path, 'wb+') as destination:
-                destination.write(file.read())
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+AWS_S3_USE_SSL = False
+
+
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+AWS_S3_USE_SSL = os.environ.get('AWS_S3_USE_SSL', 'True') in ['True', 'true']
 
 
 
 2)
 
-def set_picture(self, file):
-        self.check_user_auth()
+import os
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
 
 
+DEV_MODE = os.environ.get(BASE_DIR, False)
 
-def set_picture(self, file):
-        self.check_user_auth()
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = subprocess.Popen(
-                'echo %s/%s' % (path, name), shell=True, stdout=subprocess.PIPE
-            ).stdout.read().rstrip().decode()
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
 
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+AWS_S3_USE_SSL = False
+
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'DISABLED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
 
 
 3)
+import os
 
-  def set_picture(self, file):
-        self.check_user_auth()
+BASE_DIR = os.environ.get('BASE_DIR')
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
 
 
+DEV_MODE = os.environ.get(BASE_DIR, False)
 
-def set_picture(self, file):
-        self.check_user_auth()
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = subprocess.getoutput('echo %s/%s' % (path, name))
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+AWS_S3_USE_SSL = False
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+AWS_S3_USE_SSL = os.environ.get('AWS_S3_USE_SSL', 'True') in ['True', 'true']
 
 
 
 4)
+import os
 
-def set_picture(self, file):
-        self.check_user_auth()
+BASE_DIR = os.environ.get('BASE_DIR')
 
-        name = os.path.basename(file.name)
-        try:
-            image = Image.open(BytesIO(bytearray(file.read())))
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.popen('echo %s/%s' % (path, name)).read().rstrip()
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
 
 
+DEV_MODE = os.environ.get(BASE_DIR, False)
 
-def set_picture(self, data):
-        self.check_user_auth()
 
-        file = BytesIO(data)
-        try:
-            image = Image.open(file)
-            path = os.path.join(PROFILES_DIR, self.userprofile_uuid)
-            os.makedirs(path, exist_ok=True)
-            image_path = os.path.join(path, '%s.%s' % (
-                datetime.utcnow().isoformat(), image.format.lower()))
-            image.save(image_path)
-        except Exception:
-            raise InputError(
-                'Set a valid image. The image data was either not an '
-                'image or a corrupted image.', 'invalid_image_data')
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+AWS_S3_USE_SSL = False
+
+
+
+import os
+
+BASE_DIR = os.environ.get('BASE_DIR')
+
+PROFILES_DIR = os.path.join(BASE_DIR, 'profiles')
+
+
+DEV_MODE = os.environ.get(BASE_DIR, False)
+
+
+DATABASE = {
+    'db': os.environ.get('db'),
+    'user': os.environ.get('user'),
+    'passwd': os.environ.get('passwd'),
+    'host': os.environ.get('host', 'localhost'),
+    'port': int(os.environ.get('port', 3306)),
+    'ssl': {
+        'ca': os.environ.get('ca'),
+        'cert': os.environ.get('cert'),
+        'key': os.environ.get('key'),
+    },
+    'ssl_mode': 'REQUIRED'
+}
+
+
+PASSWORD_HASHER = 'Argon2PasswordHasher'
+
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'auth.securecodewarrior.com')
+
+
+# Symmetric Encryption and Decryption Key
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+
+# Asymmetric Encryption and Decryption RSA Keys
+
+PRIVATE_KEY = os.environ.get('PRIVATE_KEY')
+
+PUBLIC_KEY = os.environ.get('PUBLIC_KEY')
+
+
+# AWS S3 Storage
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=%s' % os.environ.get('CacheControl'),
+}
+
+AWS_LOCATION = os.environ.get('AWS_LOCATION')
+
+
+2)
+
+
