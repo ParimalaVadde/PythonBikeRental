@@ -1,68 +1,17 @@
-Sure! Here's the rewritten user story description with the work you've done, matching the format you provided. I also created two subtasks and closing comments as requested:
+Sure! Here are closing comments for each subtask you can add:
 
 ---
 
-### User Story Name:
+### Subtask 1 Closing Comments:
 
-**SDS Data Processing: Fix issues in PDF pipeline and implement retry logic for landing job failures**
-
----
-
-### Description:
-
-Fix identified data inconsistencies and bugs in the PDF processing pipeline to ensure data correctness and case-insensitive matching. Implement retry logic for the landing job failures by moving failed files to a designated S3 location for later reprocessing.
-
-Note: Work related to the Spend table and handling partial failures during data load will not be covered in this story.
+All identified data inconsistencies in the PDF pipeline have been addressed successfully. The related identifier lookup now correctly sources from the client relationship table, the credit rating dates are accurately populated from the source file, and the case-insensitive handling of `ind_card_match` ensures proper association name assignment. These fixes have been tested and validated.
 
 ---
 
-### Tasks:
+### Subtask 2 Closing Comments:
 
-* Fix incorrect related identifier lookup for ECID by changing the source from supplier to client business entity relationship.
-* Correct date population for credit rating characteristics by reading from the source file instead of using the current date.
-* Fix case sensitivity issue in the `association_name` column by using a case-insensitive comparison for the `ind_card_match` column.
-* Analyze and plan retry logic to move failed files from the landing job to a separate S3 location for subsequent reprocessing.
+The analysis for implementing retry logic on landing job failures is complete. A clear approach for moving failed files to a separate S3 location has been defined, ensuring failed files are isolated for reprocessing without data duplication. Development of this retry mechanism will be scheduled for the upcoming sprint.
 
 ---
 
-### Acceptance Criteria:
-
-* Data fields are populated correctly according to source specifications without errors.
-* Case-insensitive matching of `ind_card_match` values is implemented and verified.
-* Failed landing job files are moved to the designated S3 location for retries (analysis completed).
-* No duplicate or incorrect data inserted due to case sensitivity or incorrect lookup issues.
-
----
-
-### Definition of Done:
-
-* Data fixes are implemented and tested in the PDF pipeline.
-* Retry logic analysis is complete and documented for implementation in the next sprint.
-* Code changes committed and reviewed.
-* Relevant unit and integration tests are added/passed.
-* Stakeholders have verified data correctness and retry strategy.
-
----
-
-### Subtasks:
-
-1. **Fix Data Issues in PDF Pipeline**
-
-   * Update related identifier lookup for ECID to source from client relationship table.
-   * Correct credit rating date fields to read from source file.
-   * Implement case-insensitive handling of `ind_card_match` column values.
-
-2. **Analyze Retry Logic for Landing Job Failures**
-
-   * Investigate and define approach for moving failed landing job files to a different S3 location.
-   * Document the retry handling plan for upcoming sprint development.
-
----
-
-### Closing Comments:
-
-The PDF pipeline issues related to identifier lookup, date population, and case sensitivity have been successfully identified and fixed. Additionally, the retry logic for handling landing job failures has been analyzed, and a clear plan is in place for implementation in the next sprint. The work on Spend table deduplication and partial failure handling will be deferred as per updated scope.
-
----
-
-Let me know if you want me to tweak the wording or add anything else!
+If you want, I can also help format these directly inside your story document!
