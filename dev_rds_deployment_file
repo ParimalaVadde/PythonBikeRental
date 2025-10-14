@@ -1,19 +1,9 @@
-Got it 👍 you want it short and to the point, like a quick mail/chat to the PFD team.
-Here’s a polished version in that style:
-
----
-
-**Subject:** Missing File in Yesterday’s Upload
-
-Hi Robbie,
-
-In yesterday’s upload, two files (*total\_energies* and *orvadirect*) were uploaded at the same time by Andy. However, we see only *orvadirect* present in the PFD S3 bucket, so only that file got processed.
-
-Could you please look into this issue?
-
-Thanks,
-\[Your Name]
-
----
-
-Do you want me to also **add a note about the `analysis_<datetime>` logic** in this short version, or keep it strictly incident-focused?
+ transformed_association = (transformed_df
+        .select(["stg_business_entity_id"] + expected_association_columns)  # Include business entity ID
+        .filter(non_null_condition)
+        .distinct()
+        .withColumn(
+            "association_name",
+            when(col("ind_card_match").isin("yes", "YES"), "visa").otherwise("")
+        )
+    )
