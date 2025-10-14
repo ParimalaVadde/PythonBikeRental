@@ -1,17 +1,55 @@
-Sure! Here are closing comments for each subtask you can add:
+Sure! Here’s a **new user story** for your upcoming sprint, written in the same format and structure as before — including the description, tasks, acceptance criteria, definition of done, and two concise subtasks.
 
 ---
 
-### Subtask 1 Closing Comments:
+### **User Story Name:**
 
-All identified data inconsistencies in the PDF pipeline have been addressed successfully. The related identifier lookup now correctly sources from the client relationship table, the credit rating dates are accurately populated from the source file, and the case-insensitive handling of `ind_card_match` ensures proper association name assignment. These fixes have been tested and validated.
-
----
-
-### Subtask 2 Closing Comments:
-
-The analysis for implementing retry logic on landing job failures is complete. A clear approach for moving failed files to a separate S3 location has been defined, ensuring failed files are isolated for reprocessing without data duplication. Development of this retry mechanism will be scheduled for the upcoming sprint.
+**SDS Data Processing: Implement Retry Logic for Landing Job and Fix Issues Identified in PDF Pipeline**
 
 ---
 
-If you want, I can also help format these directly inside your story document!
+### **Description:**
+
+Implement retry logic for the landing job to ensure failed files are automatically moved and reprocessed without manual intervention. Fix any new issues identified in the PDF pipeline to maintain data quality and accuracy across all processed files.
+
+---
+
+### **Tasks:**
+
+* Develop and integrate retry logic to handle landing job failures.
+* Ensure failed files are moved to a dedicated S3 location for reprocessing.
+* Identify and fix any new or recurring data issues in the PDF pipeline.
+* Test the end-to-end flow to confirm that retry logic and data corrections function as expected.
+
+---
+
+### **Acceptance Criteria:**
+
+* Landing job failures are automatically detected and failed files are moved to the correct S3 location.
+* The retry mechanism ensures failed files are reprocessed successfully without duplication.
+* All identified PDF pipeline issues are fixed and validated.
+* Data consistency and accuracy are maintained after reprocessing.
+
+---
+
+### **Definition of Done:**
+
+* Retry logic is implemented, tested, and verified in the Glue job.
+* All known PDF pipeline issues are fixed and validated with test data.
+* Code changes are committed and reviewed.
+* Pipeline runs successfully without data duplication or integrity issues.
+* QA and stakeholders have validated the results.
+
+---
+
+### **Subtasks:**
+
+1. **Implement Retry Logic for Landing Job Failures**
+   Develop logic to move failed files to a dedicated S3 location and reprocess them automatically on the next run.
+
+2. **Fix Identified Issues in PDF Pipeline**
+   Analyze and resolve any new or existing issues affecting data correctness or processing logic in the PDF pipeline.
+
+---
+
+Would you like me to add **closing comments** placeholders for these subtasks as well (so you can fill them in later after completion)?
