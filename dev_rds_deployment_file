@@ -1,100 +1,68 @@
-user story name:
-SDS Data Processing : Check for idempotency and ensure any issues are resolved
+Sure! Here's the rewritten user story description with the work you've done, matching the format you provided. I also created two subtasks and closing comments as requested:
 
-description:
-Implement idempotent data loading in the Spend table to ensure no duplicates are created when the same data file is uploaded multiple times. Handle partial failures by processing only new records on re-run without duplicating existing data.
+---
 
-In order to restart the job from the failed step we need to track the step in the log table
+### User Story Name:
 
-Tasks
+**SDS Data Processing: Fix issues in PDF pipeline and implement retry logic for landing job failures**
 
-create the step in the glue job
-write the dataframes to a s3 bucket
-track the step in the log table
-check the status in the log table for every step before executing the step
-Acceptance criteria
+---
 
-      No issues should face in token expiry when user loads the pdf file
+### Description:
 
-Definition of Done
+Fix identified data inconsistencies and bugs in the PDF processing pipeline to ensure data correctness and case-insensitive matching. Implement retry logic for the landing job failures by moving failed files to a designated S3 location for later reprocessing.
 
-     Token needs to refresh in batches way , so that no token expiry issue occurs
-	 
-	 
+Note: Work related to the Spend table and handling partial failures during data load will not be covered in this story.
 
+---
 
-Acceptance Criteria:
-  No issues should face in token expiry when user loads the pdf file
+### Tasks:
 
+* Fix incorrect related identifier lookup for ECID by changing the source from supplier to client business entity relationship.
+* Correct date population for credit rating characteristics by reading from the source file instead of using the current date.
+* Fix case sensitivity issue in the `association_name` column by using a case-insensitive comparison for the `ind_card_match` column.
+* Analyze and plan retry logic to move failed files from the landing job to a separate S3 location for subsequent reprocessing.
 
+---
 
-subtasks
+### Acceptance Criteria:
 
-1)Implement Duplicate Prevention in Spend Table
-Develop logic to prevent duplicate records in the Spend table when the same data file is uploaded multiple times.
+* Data fields are populated correctly according to source specifications without errors.
+* Case-insensitive matching of `ind_card_match` values is implemented and verified.
+* Failed landing job files are moved to the designated S3 location for retries (analysis completed).
+* No duplicate or incorrect data inserted due to case sensitivity or incorrect lookup issues.
 
-2)Handle Partial Failures During Data Load
-Ensure the pipeline processes only new records after a partial failure, avoiding duplicate inserts in the Spend table.
+---
 
+### Definition of Done:
 
-above is my current user story
+* Data fixes are implemented and tested in the PDF pipeline.
+* Retry logic analysis is complete and documented for implementation in the next sprint.
+* Code changes committed and reviewed.
+* Relevant unit and integration tests are added/passed.
+* Stakeholders have verified data correctness and retry strategy.
 
-but i have been asked not to work on spend table n Handle Partial Failures During Data Load
+---
 
+### Subtasks:
 
-2 subtasks wat i have worked on is
-1st sub task 
-1) identified issues fix in pfd pipeline
- a) related identifier in identifiers table for ecid was incorrect. earlier related identifier was fetched from relationship table of supplier business entity role and buyer "related business entity role" 
- which should be fetched   from relationship table of client business entity role and firm "related business entity role" 
- which is fixed now
- 
- 
-b) the date for characteristics type credit_rating_moody and credit_rating_sp date was incorrectly populated. this issue is fixed . it was taking current date instead reading rating date from src file
+1. **Fix Data Issues in PDF Pipeline**
 
-c) values for association_name col in associates table weren't populating as ind_card_match value was casesensentive. this issue is fixed.
+   * Update related identifier lookup for ECID to source from client relationship table.
+   * Correct credit rating date fields to read from source file.
+   * Implement case-insensitive handling of `ind_card_match` column values.
 
-earlier when(col("ind_card_match").isin("yes", "YES"), "visa").otherwise("")
+2. **Analyze Retry Logic for Landing Job Failures**
 
-now when(lower(col("ind_card_match")) == "yes", "visa").otherwise("")
+   * Investigate and define approach for moving failed landing job files to a different S3 location.
+   * Document the retry handling plan for upcoming sprint development.
 
+---
 
+### Closing Comments:
 
-2) retry logic when landing job fails
+The PDF pipeline issues related to identifier lookup, date population, and case sensitivity have been successfully identified and fixed. Additionally, the retry logic for handling landing job failures has been analyzed, and a clear plan is in place for implementation in the next sprint. The work on Spend table deduplication and partial failure handling will be deferred as per updated scope.
 
+---
 
-analysis complete
-when landing job fails to process files. the files need to be moved to different s3 location
-analysis complete development will be taken up in upcoming sprint
-
-
-can u write story story desription above work in same below format
-
-description:
-Implement idempotent data loading in the Spend table to ensure no duplicates are created when the same data file is uploaded multiple times. Handle partial failures by processing only new records on re-run without duplicating existing data.
-
-In order to restart the job from the failed step we need to track the step in the log table
-
-Tasks
-
-create the step in the glue job
-write the dataframes to a s3 bucket
-track the step in the log table
-check the status in the log table for every step before executing the step
-Acceptance criteria
-
-      No issues should face in token expiry when user loads the pdf file
-
-Definition of Done
-
-     Token needs to refresh in batches way , so that no token expiry issue occurs
-	 
-	 
-
-
-Acceptance Criteria:
-  No issues should face in token expiry when user loads the pdf file
-
-
-and create 2 subtasks
-also write closing comments
+Let me know if you want me to tweak the wording or add anything else!
