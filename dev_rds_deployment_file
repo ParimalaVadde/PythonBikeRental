@@ -1,9 +1,100 @@
- transformed_association = (transformed_df
-        .select(["stg_business_entity_id"] + expected_association_columns)  # Include business entity ID
-        .filter(non_null_condition)
-        .distinct()
-        .withColumn(
-            "association_name",
-            when(col("ind_card_match").isin("yes", "YES"), "visa").otherwise("")
-        )
-    )
+user story name:
+SDS Data Processing : Check for idempotency and ensure any issues are resolved
+
+description:
+Implement idempotent data loading in the Spend table to ensure no duplicates are created when the same data file is uploaded multiple times. Handle partial failures by processing only new records on re-run without duplicating existing data.
+
+In order to restart the job from the failed step we need to track the step in the log table
+
+Tasks
+
+create the step in the glue job
+write the dataframes to a s3 bucket
+track the step in the log table
+check the status in the log table for every step before executing the step
+Acceptance criteria
+
+      No issues should face in token expiry when user loads the pdf file
+
+Definition of Done
+
+     Token needs to refresh in batches way , so that no token expiry issue occurs
+	 
+	 
+
+
+Acceptance Criteria:
+  No issues should face in token expiry when user loads the pdf file
+
+
+
+subtasks
+
+1)Implement Duplicate Prevention in Spend Table
+Develop logic to prevent duplicate records in the Spend table when the same data file is uploaded multiple times.
+
+2)Handle Partial Failures During Data Load
+Ensure the pipeline processes only new records after a partial failure, avoiding duplicate inserts in the Spend table.
+
+
+above is my current user story
+
+but i have been asked not to work on spend table n Handle Partial Failures During Data Load
+
+
+2 subtasks wat i have worked on is
+1st sub task 
+1) identified issues fix in pfd pipeline
+ a) related identifier in identifiers table for ecid was incorrect. earlier related identifier was fetched from relationship table of supplier business entity role and buyer "related business entity role" 
+ which should be fetched   from relationship table of client business entity role and firm "related business entity role" 
+ which is fixed now
+ 
+ 
+b) the date for characteristics type credit_rating_moody and credit_rating_sp date was incorrectly populated. this issue is fixed . it was taking current date instead reading rating date from src file
+
+c) values for association_name col in associates table weren't populating as ind_card_match value was casesensentive. this issue is fixed.
+
+earlier when(col("ind_card_match").isin("yes", "YES"), "visa").otherwise("")
+
+now when(lower(col("ind_card_match")) == "yes", "visa").otherwise("")
+
+
+
+2) retry logic when landing job fails
+
+
+analysis complete
+when landing job fails to process files. the files need to be moved to different s3 location
+analysis complete development will be taken up in upcoming sprint
+
+
+can u write story story desription above work in same below format
+
+description:
+Implement idempotent data loading in the Spend table to ensure no duplicates are created when the same data file is uploaded multiple times. Handle partial failures by processing only new records on re-run without duplicating existing data.
+
+In order to restart the job from the failed step we need to track the step in the log table
+
+Tasks
+
+create the step in the glue job
+write the dataframes to a s3 bucket
+track the step in the log table
+check the status in the log table for every step before executing the step
+Acceptance criteria
+
+      No issues should face in token expiry when user loads the pdf file
+
+Definition of Done
+
+     Token needs to refresh in batches way , so that no token expiry issue occurs
+	 
+	 
+
+
+Acceptance Criteria:
+  No issues should face in token expiry when user loads the pdf file
+
+
+and create 2 subtasks
+also write closing comments
