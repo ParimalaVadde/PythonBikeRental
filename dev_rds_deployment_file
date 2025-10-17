@@ -15,35 +15,42 @@ from awsglue.dynamicframe import DynamicFrame
 from pyspark.sql.functions import col, lit, current_date, current_timestamp, struct
 from pyspark.sql.types import StringType
 from functools import reduce
- 
+
 ## @params: [JOB_NAME]
 args = getResolvedOptions(sys.argv, ['JOB_NAME'])
- 
-sc = SparkContext()
+
+# sc = SparkContext()
+# glueContext = GlueContext(sc)
+# spark = glueContext.spark_session
+# job = Job(glueContext)
+
+sc = SparkContext.getOrCreate()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
- 
+
+job.init(args['JOB_NAME'], args)
+
 region = "us-east-1"
 rds_host = "rdsapg86a8-auroratdb-v1-node-1.chzdhpfung6p.us-east-1.rds.amazonaws.com"
 rds_port = 6160
 db_name = "xbsddevdb"
 db_user = "xbsddevdbAuroraAppAdmin"
 ssl_cert_s3_path = "s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/cert/us-east-1-bundle.pem"
- 
+
 rds_client = boto3.client("rds", region_name=region)
 rds_token = rds_client.generate_db_auth_token(
     DBHostname=rds_host,
     Port=rds_port,
     DBUsername=db_user
 )
- 
+
 pg_connection_options = {
     "url": f"jdbc:postgresql://{rds_host}:{rds_port}/{db_name}?sslmode=require&sslrootcert={ssl_cert_s3_path}",
     "user": db_user,
     "password": rds_token
 }
- 
+
 # UDF to compute UUID from concatenated column values
 def compute_uuid(data_row, decimal_columns):
     values = []
@@ -56,7 +63,7 @@ def compute_uuid(data_row, decimal_columns):
             values.append(str(val).strip().lower())
     name = ','.join(values)
     return str(uuid.UUID(bytes=hashlib.sha256(name.encode()).digest()[:16])) if name else None
- 
+
 decimal_columns = [
     "sum_of_payments", "chargeback_amount", "chargeback_percentage", "payment_terms_discount_rate",
     "card_revenue__1m__average_monthly_amount", "card_revenue__3m__average_monthly_amount",
@@ -66,9 +73,9 @@ decimal_columns = [
     "card_transactions_stability__3m__monthly_coverage_ratio", "card_transactions_stability__12m__daily_coverage_ratio",
     "card_transactions_stability__12m__weekly_coverage_ratio", "card_transactions_stability__12m__monthly_coverage_ratio"
 ]
- 
+
 compute_uuid_udf = spark.udf.register("compute_uuid_udf", lambda x: compute_uuid(x, decimal_columns), StringType())
- 
+
 def get_landing_data():
     try:
         select_columns = [
@@ -96,8 +103,9 @@ def get_landing_data():
 	    	'cnt."MailingState"',
 		    'cnt."MailingPostalCode"',
 		    'cnt."MailingCountry"'
+	    	
         ]
- 
+
         address_types = [
             {
                 "type": "billing",
@@ -141,7 +149,7 @@ def get_landing_data():
                 }
             }
          ]
- 
+
         query = f""" (SELECT DISTINCT  {', '.join(select_columns)} \
         FROM sds_landing.account_ccpresales act \
         LEFT JOIN sds_landing.case_ccpresales cs ON act."Id" = cs."AccountId" \
@@ -149,21 +157,21 @@ def get_landing_data():
         LEFT JOIN sds_landing.suppliercampaignphase__c_ccpresales scp ON act."Id" = scp."Client_Account__c" \
         INNER JOIN sds_main.business_entity_details bed ON lower(act."Name") = lower(bed."business_entity_name")) AS temp_table"""
 
+        print("****query read is completed****")
 
-print("****query read is completed****")
- 
         source_df = glueContext.read.format("jdbc").options(
             dbtable=query,
             **pg_connection_options
         ).load()
         print("****data read completed****")
- 
+
         # Collect all needed source columns for select
         print("before address types....")
         all_fields = set(["business_entity_id"])
         for addr in address_types:
             all_fields.update(addr["fields"].values())
         account_df = source_df.select([col(f) for f in all_fields])
+        
         print("before addres types condtion...")
         address_dfs = []
         for addr in address_types:
@@ -174,20 +182,24 @@ print("****query read is completed****")
             address_condition = not_null_conditions[0]
             for cond in not_null_conditions[1:]:
                 address_condition = address_condition | cond
+            
             # Handle street_line_2: use actual column if present, else None
             street_line_2_col = addr["fields"].get("street_line_2", None)
             if street_line_2_col:
                 street_line_2_expr = col(street_line_2_col).alias("street_line_2")
             else:
                 street_line_2_expr = lit(None).alias("street_line_2")
+        
             # Similarly for street_line_3 if needed
             street_line_3_col = addr["fields"].get("street_line_3", None)
             if street_line_3_col:
                 street_line_3_expr = col(street_line_3_col).alias("street_line_3")
             else:
                 street_line_3_expr = lit(None).alias("street_line_3")    
+            
             related_identifier_source_value = "contacts" if addr["type"] == "mailing" else "business_entity"    
             print("before select_exprs ...")
+            
             select_exprs = [
                 col("business_entity_id").alias("related_identifier"),
                 # lit(related_identifier_source_value).alias("related_identifier_source"),
@@ -204,27 +216,31 @@ print("****query read is completed****")
                 lit("cc_salesforce").alias("created_by"),
                 current_timestamp().alias("created_date"),
             ]
+            
             print("after select_exprs ...")
             filtered_df = account_df.filter(address_condition).select(*select_exprs)
             address_dfs.append(filtered_df)
- 
+
         transformed_physical_address = reduce(lambda df1, df2: df1.unionByName(df2), address_dfs)
         print("***************final_df****************")
         # transformed_physical_address.show()
         # print(transformed_physical_address.columns)
         transformed_physical_address.show()
+        
         uuid_columns = ["related_identifier", "related_identifier_source", "physical_address_type", "street_line_1", "street_line_2", "country", "city", "state_province", "postal_code", "is_active"]
+        
         transformed_physical_address = transformed_physical_address.withColumn(
             "physical_address_id",
             compute_uuid_udf(struct(*[col(c) for c in uuid_columns]))
         )
+        
         # transformed_physical_address = transformed_physical_address.withColumn(
         #     "physical_address_id",
         #     compute_uuid_udf(struct(*transformed_physical_address.columns))
         # )
         print("hash_id creation is completed...")
         # print(transformed_physical_address.head(5))
- 
+
         # Final static select/cast for output columns
         output_columns = [
             "CAST(lower(physical_address_id) AS STRING) AS physical_address_id",
@@ -242,13 +258,13 @@ print("****query read is completed****")
             "CAST(lower(created_by) AS STRING) AS created_by",
             "CAST(current_timestamp() AS TIMESTAMP) AS created_date"
         ]
- 
+
         transformed_physical_address = transformed_physical_address.filter(
             col("physical_address_id").isNotNull() & col("related_identifier").isNotNull()
         ).selectExpr(*output_columns).distinct()
         print("after columns ordered...")
         print(transformed_physical_address.head(5))
- 
+
         temp_path = "s3://app-id-111597-dep-id-114116-uu-id-9x0jt94siuto/sales_outputs/"
         transformed_physical_address.coalesce(1).write.mode("overwrite") \
             .option("header", "true") \
@@ -260,10 +276,54 @@ print("****query read is completed****")
             .option("dateFormat", "yyyy-MM-dd") \
             .csv(temp_path)
         print("writing to s3 is completed...")
+        
+        # # Truncate the physical_address table before writing
+        # try:
+        #     conn = psycopg2.connect(
+        #         host=rds_host,
+        #         port=rds_port,
+        #         dbname=db_name,
+        #         user=db_user,
+        #         password=rds_token,
+        #         sslmode="require",
+        #         sslrootcert=ssl_cert_s3_path    #.replace("s3://", "/tmp/")  # Download cert if needed
+        #     )
+        #     conn.autocommit = True
+        #     cur = conn.cursor()
+        #     cur.execute("TRUNCATE TABLE sds_staging.physical_address;")
+        #     cur.close()
+        #     conn.close()
+        #     print("Truncated physical_address table successfully.")
+        # except Exception as e:
+        #     print("Error truncating table:", e)
+        
+        # # Write to PostgreSQL
+        # table_name = "physical_address"
+        # schema_name = "sds_staging" 
+        
+        # connection_options = {
+        #     "url": jdbc_url,
+        #     "user": db_user,
+        #     "password": rds_token,
+        #     "dbtable": f"{schema_name}.{table_name}",
+        #     "batchsize": "1000"
+        # }
+        
+        # dynamic_frame = DynamicFrame.fromDF(transformed_physical_address, glueContext, "physical_address")
+        # glueContext.write_dynamic_frame.from_options(
+        #     frame=dynamic_frame,
+        #     connection_type="postgresql",
+        #     connection_options=connection_options,
+        #     transformation_ctx="write_physical_address"
+        # )
+        # print("writing to PostgreSQL is completed...")
+            
 
- 
     except Exception as e:
         print('Error Message is:', e)
         return None
- 
+
 landing_tables = get_landing_data()
+
+job.commit()
+
