@@ -1,12 +1,10 @@
-################################ pfd_staging ##################################################
-
-
 import sys
 import boto3
 from awsglue.utils import getResolvedOptions
 from awsglue.context import GlueContext
 from awsglue.job import Job
 from pyspark.context import SparkContext
+from pyspark.sql.functions import col, struct, when
 import staging_schema as ss
 import utils as utl
 import time
@@ -21,69 +19,166 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
-# Initialize RDS client
+# Initialize RDS client ONCE
 rds_client = boto3.client("rds", region_name=ss.region)
 
-# Step 1: Extract landing data
+# ============================================================================
+# STEP 1: EXTRACT LANDING DATA
+# ============================================================================
 print("\n" + "="*80)
 print("STEP 1: EXTRACTING LANDING DATA")
 print("="*80)
+
+# Generate fresh token for read
+read_token = rds_client.generate_db_auth_token(
+    DBHostname=ss.rds_host,
+    Port=ss.rds_port,
+    DBUsername=ss.db_user
+)
 
 source_df = glueContext.read.format("jdbc").option(
     "url", f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}"
 ).option(
     "user", ss.db_user
 ).option(
-    "password", rds_client.generate_db_auth_token(
-        DBHostname=ss.rds_host, Port=ss.rds_port, DBUsername=ss.db_user
-    )
+    "password", read_token
 ).option(
-    "query", "SELECT * FROM sds_landing.analysis_pfd WHERE filter_employee='N'"
+    "query", "SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee='N'"
 ).load()
 
-print(f"✅ Fetched {source_df.count()} rows from landing data")
+# CRITICAL: Cache the source DataFrame immediately after reading
+# This materializes the data so subsequent operations don't re-execute with expired token
+source_df.cache()
+row_count = source_df.count()  # This triggers caching
+print(f"✓ Fetched and cached {row_count} rows from landing data")
 
-# Step 2: Transformations (placeholder)
+# ============================================================================
+# STEP 2: TRANSFORMATIONS
+# ============================================================================
 print("\n" + "="*80)
 print("STEP 2: TRANSFORMING DATA")
 print("="*80)
-# (Your transformation logic remains unchanged)
-# transformed_business_entity = ...
+
+# Add computed columns to source_df
+print("Computing UUID columns...")
+source_df = source_df.withColumn(
+    "stg_business_entity_id",
+    when(
+        col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+    ).otherwise(
+        compute_uuid_udf(struct("vendor_name_cleaned"))  # Your UDF
+    )
+)
+
+source_df = source_df.withColumn(
+    "stg_buying_entity",
+    compute_uuid_udf(struct("client_name"))  # Your UDF
+)
+
+print("✓ UUID columns added")
+
+# YOUR TRANSFORMATION LOGIC HERE
+# Example:
+# transformed_business_entity = source_df.select(...).filter(...)
+# transformed_business_entity_details = source_df.select(...).join(...)
 # etc.
 
-# Step 3: Prepare table map
+# For demonstration, assuming you have these transformations:
+transformed_business_entity = source_df.select("stg_business_entity_id", "vendor_name_cleaned")  # Your actual logic
+transformed_business_entity_details = source_df.select("stg_business_entity_id", "client_name")  # Your actual logic
+# ... all other transformations ...
+
+# ============================================================================
+# STEP 3: CACHE ALL TRANSFORMED DATAFRAMES
+# ============================================================================
 print("\n" + "="*80)
-print("STEP 3: PREPARING DATA FOR LOAD")
+print("STEP 3: CACHING TRANSFORMED DATAFRAMES")
 print("="*80)
-dataframes_with_tables = {
+
+# CRITICAL: Cache all DataFrames before writing to avoid re-execution with expired tokens
+dataframes_to_cache = {
     "business_entity": transformed_business_entity,
     "business_entity_details": transformed_business_entity_details,
-    # ... other tables ...
-    "business_entity_relationships": transformed_relationship
+    "business_entity_characteristics": transformed_melt_characteristics,
+    "physical_address": transformed_physical_address,
+    "business_entity_identifiers": transformed_identifiers,
+    "telecommunication_address": transformed_melt_telecommunication_address,
+    "electronic_address": transformed_melt_electronic_address,
+    "business_entity_spend_analysis": transformed_spend_analysis,
+    "restrictions": transformed_melt_restrictions,
+    "business_entity_industry_classification": transformed_melt_industry_classification,
+    "business_entity_card_association": transformed_association,
+    "business_entity_contacts": transformed_contacts,
+    "business_entity_relationships": transformed_relationship,
+    "business_entity_card_transactions_stability": transformed_transaction_stability,
+    "business_entity_card_revenues": transformed_revenue,
+    "business_entity_receivables_attribute": transformed_melt_payment_profile_attribute,
 }
-print(f"Prepared {len(dataframes_with_tables)} tables for loading.")
 
-# Step 4: Truncate existing staging tables
+print(f"Caching {len(dataframes_to_cache)} DataFrames...")
+cached_dataframes = {}
+for table_name, df in dataframes_to_cache.items():
+    print(f"  Caching {table_name}...")
+    df.cache()
+    # Trigger caching by counting (optional, but ensures data is materialized)
+    # count = df.count()
+    # print(f"    ✓ Cached {table_name} ({count} rows)")
+    cached_dataframes[table_name] = df
+
+print(f"✓ All DataFrames cached successfully\n")
+
+# ============================================================================
+# STEP 4: TRUNCATE STAGING TABLES
+# ============================================================================
 print("\n" + "="*80)
 print("STEP 4: TRUNCATING STAGING TABLES")
 print("="*80)
-utl.truncate_tables(ss.rds_host, ss.rds_port, ss.db_name, ss.db_user, rds_client, ss.ssl_cert_s3_path)
 
-# Step 5: Parallel load
-print("\n" + "="*80)
-print("STEP 5: LOADING DATA TO POSTGRES (PARALLEL)")
-print("="*80)
-load_results = utl.load_dataframes_to_postgres_parallel(
-    dataframes_with_tables=dataframes_with_tables,
-    glueContext=glueContext,
-    ss=ss,
-    rds_client=rds_client,
-    max_parallel_writes=4,
+utl.truncate_tables(
+    ss.rds_host,
+    ss.rds_port,
+    ss.db_name,
+    ss.db_user,
+    rds_client,
+    ss.ssl_cert_s3_path,
     max_retries=3
 )
 
-print(f"\n✅ All data loaded successfully in {load_results['duration_seconds']} seconds")
+# ============================================================================
+# STEP 5: PARALLEL LOAD TO POSTGRES
+# ============================================================================
+print("\n" + "="*80)
+print("STEP 5: LOADING DATA TO POSTGRES (PARALLEL)")
+print("="*80)
+
+load_results = utl.load_dataframes_to_postgres_parallel(
+    dataframes_with_tables=cached_dataframes,  # Use cached DataFrames
+    glueContext=glueContext,
+    ss=ss,
+    rds_client=rds_client,
+    max_parallel_writes=4,  # Adjust based on your DB capacity
+    max_retries=3
+)
+
+print(f"\n✓ All data loaded successfully in {load_results['duration_seconds']} seconds")
+
+# ============================================================================
+# CLEANUP AND COMMIT
+# ============================================================================
+print("\n" + "="*80)
+print("CLEANUP")
+print("="*80)
+
+# Unpersist cached DataFrames to free memory
+print("Unpersisting cached DataFrames...")
+source_df.unpersist()
+for df in cached_dataframes.values():
+    df.unpersist()
+print("✓ Cache cleared")
+
+# Commit the job
 job.commit()
+
 print("\n" + "="*80)
 print("JOB COMPLETED SUCCESSFULLY")
 print("="*80)
