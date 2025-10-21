@@ -1,0 +1,186 @@
+import sys
+import os
+import boto3
+import json
+import hashlib
+import uuid
+import psycopg2
+import utils_token_Omshanti_old as utl
+import staging_schema as ss
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from pyspark.sql import SparkSession
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue.dynamicframe import DynamicFrame
+from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, from_json, struct, coalesce, trim, upper
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType, NullType
+from pyspark.sql.utils import AnalysisException
+from datetime import datetime, timedelta
+from pyspark.sql.functions import concat_ws, current_timestamp, broadcast, round, regexp_replace, size
+from pyspark.sql import DataFrame
+from functools import reduce
+from pyspark.sql.functions import col, lit, when, isnan, isnull, lower
+from pyspark.sql.functions import split, array_union, array_distinct, array
+import time
+
+## @params: [JOB_NAME]
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+s3 = boto3.client("s3")
+
+# Initialize RDS client ONCE at the top level for reuse
+rds_client = boto3.client("rds", region_name=ss.region)
+
+# Generate initial token for READ operations
+rds_token = rds_client.generate_db_auth_token(
+    DBHostname=ss.rds_host,
+    Port=ss.rds_port,
+    DBUsername=ss.db_user
+)
+
+pg_connection_options = {
+    "url": f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
+    "user": ss.db_user,
+    "password": rds_token
+}
+
+
+def get_landing_data():
+    """Extract landing data with fresh token if needed"""
+    try:
+        # Generate fresh token for reading
+        fresh_read_token = rds_client.generate_db_auth_token(
+            DBHostname=ss.rds_host,
+            Port=ss.rds_port,
+            DBUsername=ss.db_user
+        )
+        
+        # Update connection options with fresh token
+        read_options = {
+            "url": f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
+            "user": ss.db_user,
+            "password": fresh_read_token
+        }
+        
+        # Query to fetch data
+        query = "(SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee = 'N') AS temp_table"
+
+        # Read the query result into a Spark DataFrame
+        source_df = glueContext.read.format("jdbc").options(
+            dbtable=query,
+            **read_options
+        ).load()
+
+        # Cache the dataframe since we'll use it multiple times
+        source_df.cache()
+        
+        print(f"Fetched {source_df.count()} rows from landing table")
+
+        # Add computed columns
+        print("Computing UUID for business entity...")
+        source_df = source_df.withColumn(
+            "stg_business_entity_id",
+            when(
+                col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+            ).otherwise(
+                compute_uuid_udf(struct("vendor_name_cleaned"))
+            )
+        )
+        print("stg_business_entity_id column added.")
+
+        source_df = source_df.withColumn(
+            "stg_buying_entity",
+            compute_uuid_udf(struct("client_name"))
+        )
+        print("stg_buying_entity column added.")
+
+        print("Sample of UUID columns:")
+        source_df.select("stg_business_entity_id", "stg_buying_entity").show(5, truncate=False)
+        
+        return source_df
+
+    except Exception as e:
+        print(f'Error in get_landing_data: {e}')
+        raise
+
+
+# Extract data
+print("\n" + "="*80)
+print("STEP 1: EXTRACTING LANDING DATA")
+print("="*80)
+source_df = get_landing_data()
+
+# Your transformations here...
+print("\n" + "="*80)
+print("STEP 2: TRANSFORMING DATA")
+print("="*80)
+
+# ... (all your transformation code for creating the dataframes) ...
+# transformed_business_entity = ...
+# transformed_business_entity_details = ...
+# etc.
+
+# After all transformations are done:
+print("\n" + "="*80)
+print("STEP 3: PREPARING DATA FOR LOAD")
+print("="*80)
+
+# List of DataFrames and their corresponding table names
+dataframes_with_tables = {
+    "business_entity": transformed_business_entity,
+    "business_entity_details": transformed_business_entity_details,
+    "business_entity_characteristics": transformed_melt_characteristics,
+    "physical_address": transformed_physical_address,
+    "business_entity_identifiers": transformed_identifiers,
+    "telecommunication_address": transformed_melt_telecommunication_address,
+    "electronic_address": transformed_melt_electronic_address,
+    "business_entity_spend_analysis": transformed_spend_analysis,
+    "restrictions": transformed_melt_restrictions,
+    "business_entity_industry_classification": transformed_melt_industry_classification,
+    "business_entity_card_association": transformed_association,
+    "business_entity_contacts": transformed_contacts,
+    "business_entity_relationships": transformed_relationship,
+    "business_entity_card_transactions_stability": transformed_transaction_stability,
+    "business_entity_card_revenues": transformed_revenue,
+    "business_entity_receivables_attribute": transformed_melt_payment_profile_attribute,
+}
+
+print(f"Prepared {len(dataframes_with_tables)} tables for loading")
+
+# Truncate tables
+print("\n" + "="*80)
+print("STEP 4: TRUNCATING STAGING TABLES")
+print("="*80)
+truncate_result = utl.truncate_tables(ss.rds_host, ss.rds_port, ss.db_name, ss.db_user, rds_client, ss.ssl_cert_s3_path)
+print(truncate_result)
+
+# Load data with parallel writes
+print("\n" + "="*80)
+print("STEP 5: LOADING DATA TO POSTGRES (PARALLEL)")
+print("="*80)
+
+load_results = utl.load_dataframes_to_postgres_parallel(
+    dataframes_with_tables=dataframes_with_tables,
+    glueContext=glueContext,
+    ss=ss,
+    rds_client=rds_client,
+    max_parallel_writes=4,  # Write 4 tables in parallel - adjust based on DB capacity
+    max_retries=3  # Retry up to 3 times for auth failures
+)
+
+print(f"\n All data loaded successfully in {load_results['duration_seconds']} seconds")
+
+# Commit the job
+job.commit()
+print("\n" + "="*80)
+print("JOB COMPLETED SUCCESSFULLY")
+print("="*80)
