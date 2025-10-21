@@ -1,5 +1,96 @@
-import builtins  # add at top of utils.py
-
-row_count = df.count()
-optimal_partitions = builtins.max(4, builtins.min(20, row_count // 1000))
-df_optimized = df.repartition(optimal_partitions)
+2025-10-21T09:54:29.722Z
+Truncated 16 tables successfully
+2025-10-21T09:54:29.722Z
+========================================
+2025-10-21T09:54:29.722Z
+STEP 5: LOADING DATA TO POSTGRES (PARALLEL)
+2025-10-21T09:54:29.735Z
+========================================
+2025-10-21T09:54:29.735Z
+======================================== Starting parallel data loading for 16 tables
+2025-10-21T09:54:29.735Z
+Max parallel writes: 2
+2025-10-21T09:54:29.735Z
+2025-10-21T09:54:29.735Z
+Max retries per table: 3 ========================================
+2025-10-21T09:54:29.735Z
+2025-10-21T09:54:29.735Z
+[business_entity] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:54:29.735Z
+[business_entity_details] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:54:29.735Z
+2025-10-21T09:54:38.343Z
+[business_entity] Data written successfully (3691 rows) [business_entity_characteristics] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:54:39.631Z
+[business_entity_details] Data written successfully (3740 rows)
+2025-10-21T09:54:39.632Z
+[physical_address] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:54:48.197Z
+[physical_address] Data written successfully (3823 rows)
+2025-10-21T09:54:48.198Z
+[business_entity_identifiers] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:55:08.331Z
+[business_entity_characteristics] Data written successfully (12722 rows)
+2025-10-21T09:55:08.331Z
+[telecommunication_address] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:55:08.331Z
+2025-10-21T09:55:11.838Z
+[telecommunication_address] Data written successfully (967 rows)
+2025-10-21T09:55:11.839Z
+[electronic_address] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:55:11.839Z
+2025-10-21T09:55:17.387Z
+[electronic_address] Data written successfully (2785 rows)
+2025-10-21T09:55:17.388Z
+[business_entity_spend_analysis] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:55:23.386Z
+[business_entity_spend_analysis] Data written successfully (3920 rows) [restrictions] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:55:25.397Z
+[restrictions] Data written successfully (842 rows)
+2025-10-21T09:55:25.398Z
+[business_entity_industry_classification] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:56:07.227Z
+[business_entity_industry_classification] Data written successfully (26157 rows)
+2025-10-21T09:56:07.227Z
+[business_entity_card_association] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:56:07.227Z
+2025-10-21T09:56:38.555Z
+[business_entity_card_association] Data written successfully (3415 rows)
+2025-10-21T09:56:38.556Z
+[business_entity_contacts] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:56:38.556Z
+2025-10-21T09:56:42.284Z
+[business_entity_contacts] Data written successfully (2 rows)
+2025-10-21T09:56:42.284Z
+[business_entity_relationships] Attempt 1: Generating fresh token and writing data...
+2025-10-21T09:56:42.284Z
+2025-10-21T10:00:27.074Z
+[business_entity_identifiers] Data written successfully (7535 rows)
+2025-10-21T10:00:27.075Z
+[business_entity_card_transactions_stability] Attempt 1: Generating fresh token and writing data...
+2025-10-21T10:00:27.075Z
+2025-10-21T10:00:27.519Z
+[business_entity_card_transactions_stability] Data written successfully (0 rows)
+2025-10-21T10:00:27.520Z
+[business_entity_card_revenues] Attempt 1: Generating fresh token and writing data...
+2025-10-21T10:00:27.907Z
+[business_entity_card_revenues] Data written successfully (0 rows)
+2025-10-21T10:00:27.908Z
+[business_entity_receivables_attribute] Attempt 1: Generating fresh token and writing data...
+2025-10-21T10:01:04.075Z
+[business_entity_receivables_attribute] Data written successfully (24774 rows)
+2025-10-21T10:04:48.393Z
+[business_entity_relationships] Authentication failed. Retrying in 2s... (Attempt 1/3)
+2025-10-21T10:04:50.396Z
+[business_entity_relationships] Attempt 2: Generating fresh token and writing data...
+2025-10-21T10:04:52.164Z
+[business_entity_relationships] Authentication failed. Retrying in 4s... (Attempt 2/3)
+2025-10-21T10:04:56.006Z
+[business_entity_relationships] Attempt 3: Generating fresh token and writing data...
+2025-10-21T10:04:57.355Z
+[business_entity_relationships] Failed after 3 attempts: An error occurred while calling o2887.count. : org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 1004.0 failed 4 times, most recent failure: Lost task 0.3 in stage 1004.0 (TID 5529) (100.74.16.123 executor 7): org.postgresql.util.PSQLException: FATAL: PAM authentication failed for user "xbsddevdbAuroraAppAdmin" at org.postgresql.core.v3.ConnectionFactoryImpl.doAuthentication(ConnectionFactoryImpl.java:646) at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:180) at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:235) at org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:49) at org.postgresql.jdbc.PgConnection.<init>(PgConnection.java:223) at org.postgresql.Driver.makeConnection(Driver.java:402) at org.postgresql.Driver.connect(Driver.java:261) at org.apache.spark.sql.execution.datasources.jdbc.connection.BasicConnectionProvider.getConnection(BasicConnectionProvider.scala:49) at org.apache.spark.sql.execution.datasources.jdbc.connection.ConnectionProviderBase.create(ConnectionProvider.scala:102) at org.apache.spark.sql.jdbc.JdbcDialect.$anonfun$createConnectionFactory$1(JdbcDialects.scala:122) at org.apache.spark.sql.jdbc.JdbcDialect.$anonfun$createConnectionFactory$1$adapted(JdbcDialects.scala:118) at org.apache.spark.sql.execution.datasources.jdbc.JDBCRDD.compute(JDBCRDD.scala:273) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.shuffle.ShuffleWriteProcessor.write(ShuffleWriteProcessor.scala:59) at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:99) at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:52) at org.apache.spark.scheduler.Task.run(Task.scala:138) at org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$3(Executor.scala:548) at org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:1516) at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:551) at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149) at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624) at java.lang.Thread.run(Thread.java:750) Driver stacktrace: at org.apache.spark.scheduler.DAGScheduler.failJobAndIndependentStages(DAGScheduler.scala:2863) at org.apache.spark.scheduler.DAGScheduler.$anonfun$abortStage$2(DAGScheduler.scala:2799) at org.apache.spark.scheduler.DAGScheduler.$anonfun$abortStage$2$adapted(DAGScheduler.scala:2798) at scala.collection.mutable.ResizableArray.foreach(ResizableArray.scala:62) at scala.collection.mutable.ResizableArray.foreach$(ResizableArray.scala:55) at scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:49) at org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:2798) at org.apache.spark.scheduler.DAGScheduler.$anonfun$handleTaskSetFailed$1(DAGScheduler.scala:1239) at org.apache.spark.scheduler.DAGScheduler.$anonfun$handleTaskSetFailed$1$adapted(DAGScheduler.scala:1239) at scala.Option.foreach(Option.scala:407) at org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:1239) at org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:3051) at org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:2993) at org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:2982) at org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:49) at org.apache.spark.sql.execution.adaptive.AdaptiveExecutor.checkNoFailures(AdaptiveExecutor.scala:154) at org.apache.spark.sql.execution.adaptive.AdaptiveExecutor.doRun(AdaptiveExecutor.scala:88) at org.apache.spark.sql.execution.adaptive.AdaptiveExecutor.tryRunningAndGetFuture(AdaptiveExecutor.scala:66) at org.apache.spark.sql.execution.adaptive.AdaptiveExecutor.execute(AdaptiveExecutor.scala:57) at org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanExec.$anonfun$getFinalPhysicalPlan$1(AdaptiveSparkPlanExec.scala:237) at org.apache.spark.sql.SparkSession.withActive(SparkSession.scala:779) at org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanExec.getFinalPhysicalPlan(AdaptiveSparkPlanExec.scala:236) at org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanExec.withFinalPlanUpdate(AdaptiveSparkPlanExec.scala:505) at org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanExec.executeCollect(AdaptiveSparkPlanExec.scala:467) at org.apache.spark.sql.Dataset.$anonfun$count$1(Dataset.scala:3202) at org.apache.spark.sql.Dataset.$anonfun$count$1$adapted(Dataset.scala:3201) at org.apache.spark.sql.Dataset.$anonfun$withAction$2(Dataset.scala:3922) at org.apache.spark.sql.execution.QueryExecution$.withInternalError(QueryExecution.scala:552) at org.apache.spark.sql.Dataset.$anonfun$withAction$1(Dataset.scala:3920) at org.apache.spark.sql.catalyst.QueryPlanningTracker$.withTracker(QueryPlanningTracker.scala:107) at org.apache.spark.sql.execution.SQLExecution$.withTracker(SQLExecution.scala:224) at org.apache.spark.sql.execution.SQLExecution$.executeQuery$1(SQLExecution.scala:114) at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId$7(SQLExecution.scala:139) at org.apache.spark.sql.catalyst.QueryPlanningTracker$.withTracker(QueryPlanningTracker.scala:107) at org.apache.spark.sql.execution.SQLExecution$.withTracker(SQLExecution.scala:224) at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId$6(SQLExecution.scala:139) at org.apache.spark.sql.execution.SQLExecution$.withSQLConfPropagated(SQLExecution.scala:245) at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId$1(SQLExecution.scala:138) at org.apache.spark.sql.SparkSession.withActive(SparkSession.scala:779) at org.apache.spark.sql.execution.SQLExecution$.withNewExecutionId(SQLExecution.scala:68) at org.apache.spark.sql.Dataset.withAction(Dataset.scala:3920) at org.apache.spark.sql.Dataset.count(Dataset.scala:3201) at sun.reflect.GeneratedMethodAccessor126.invoke(Unknown Source) at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) at java.lang.reflect.Method.invoke(Method.java:498) at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244) at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357) at py4j.Gateway.invoke(Gateway.java:282) at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132) at py4j.commands.CallCommand.execute(CallCommand.java:79) at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:182) at py4j.ClientServerConnection.run(ClientServerConnection.java:106) at java.lang.Thread.run(Thread.java:750) Caused by: org.postgresql.util.PSQLException: FATAL: PAM authentication failed for user "xbsddevdbAuroraAppAdmin" at org.postgresql.core.v3.ConnectionFactoryImpl.doAuthentication(ConnectionFactoryImpl.java:646) at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:180) at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:235) at org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:49) at org.postgresql.jdbc.PgConnection.<init>(PgConnection.java:223) at org.postgresql.Driver.makeConnection(Driver.java:402) at org.postgresql.Driver.connect(Driver.java:261) at org.apache.spark.sql.execution.datasources.jdbc.connection.BasicConnectionProvider.getConnection(BasicConnectionProvider.scala:49) at org.apache.spark.sql.execution.datasources.jdbc.connection.ConnectionProviderBase.create(ConnectionProvider.scala:102) at org.apache.spark.sql.jdbc.JdbcDialect.$anonfun$createConnectionFactory$1(JdbcDialects.scala:122) at org.apache.spark.sql.jdbc.JdbcDialect.$anonfun$createConnectionFactory$1$adapted(JdbcDialects.scala:118) at org.apache.spark.sql.execution.datasources.jdbc.JDBCRDD.compute(JDBCRDD.scala:273) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52) at org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:365) at org.apache.spark.rdd.RDD.iterator(RDD.scala:329) at org.apache.spark.shuffle.ShuffleWriteProcessor.write(ShuffleWriteProcessor.scala:59) at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:99) at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:52) at org.apache.spark.scheduler.Task.run(Task.scala:138) at org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$3(Executor.scala:548) at org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:1516) at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:551) at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149) at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624) ... 1 more
+No newer events at this moment. 
+Auto retry paused.
+ 
+Resume
+ 
