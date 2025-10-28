@@ -1,0 +1,1421 @@
+import sys
+import os
+import boto3
+import json
+import hashlib
+import uuid
+import psycopg2
+import utils as utl
+import staging_schema as ss
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from pyspark.sql import SparkSession
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue.dynamicframe import DynamicFrame
+from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, from_json, struct,coalesce,trim,upper
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType, NullType
+from pyspark.sql.utils import AnalysisException
+from datetime import datetime
+from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round, regexp_replace, size, lower
+from pyspark.sql import DataFrame
+from functools import reduce
+from pyspark.sql.functions import col, lit, when, isnan, isnull
+from pyspark.sql.functions import split, array_union, array_distinct, array
+
+
+
+## @params: [JOB_NAME]
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+
+s3 = boto3.client("s3")
+#s3.download_file(s3_bucket,ssl_cert_s3_path,local_ssl_cert_path)
+
+
+rds_client = boto3.client ("rds",region_name=ss.region)
+rds_token = rds_client.generate_db_auth_token(
+    DBHostname = ss.rds_host,
+    Port = ss.rds_port,
+    DBUsername = ss.db_user
+    )
+    
+pg_connection_options = {
+    "url" : f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
+    "user" : ss.db_user,
+    "password" : rds_token
+   # "db_table":source_table
+    }
+
+# Register the UDF
+compute_uuid_udf = udf(lambda x: utl.compute_uuid(x, ss.decimal_columns), StringType())
+
+
+def get_landing_data():
+    try:
+        # Query to fetch data
+        query = "(SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee = 'N') AS temp_table"
+
+        # Read the query result into a Spark DataFrame
+        source_df = glueContext.read.format("jdbc").options(
+                dbtable=query,
+                **pg_connection_options
+            ).load()
+
+        # Define UDFs for computing business entity ID and buying entity ID
+        
+        
+        print("printing compute uuid bussiness entity")
+        source_df = source_df.withColumn(
+                        "stg_business_entity_id",
+                        when(
+                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+                            ).otherwise(
+                                compute_uuid_udf(struct("vendor_name_cleaned"))
+                            )
+                            )
+                
+
+        print("stg_business_entity_id column added.")
+
+
+        source_df = source_df.withColumn(
+                "stg_buying_entity",
+            compute_uuid_udf(struct("client_name"))
+                )
+    
+        print("stg_buying_entity column added.")
+
+        print("After adding the UUID columns")
+        source_df.select("stg_business_entity_id").show()
+        # Return the Spark DataFrame
+        return source_df
+
+    except Exception as e:
+        print('Error Message is:', e)
+        return None
+        
+
+def sanitize_and_add_missing_columns(df, required_columns):
+    """
+    adds missing columns with null values.
+    
+    Args:
+        df (DataFrame): The input Spark DataFrame.
+        required_columns (list): List of required column names.
+    
+    Returns:
+        DataFrame: The updated DataFrame with sanitized column names and all required columns.
+    """
+    print("required columns", required_columns)
+    print("existing columns in pfd file",  df.columns)
+    
+    
+    # : Add missing columns with null values
+    existing_columns = df.columns
+    missing_columns = [col for col in required_columns if col not in existing_columns]
+    for col in missing_columns:
+        df = df.withColumn(col, lit(None))
+    
+    return df
+
+
+def process_mapping_and_transform_data(source_df,  output_data_path):
+    """
+    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
+    """
+        
+    mapping_file = utl.read_map_file('pfd_mapping')
+    print("Reading mapping file completed")
+       
+
+    mapping_df = spark.createDataFrame(mapping_file)
+    
+    print("Converting mapping file to Dataframe completed")
+
+    # Validate mapping DataFrame
+    if mapping_df.rdd.isEmpty():
+        raise ValueError("The mapping DataFrame is empty. Please check the mapping file.")
+    if "source_column" not in mapping_df.columns or "target_column" not in mapping_df.columns:
+        raise ValueError("The mapping DataFrame does not contain the required columns: 'source_column' and 'target_column'.")
+
+    # Initialize variables
+    column_mapping = {}
+    current_date = datetime.today().strftime("%Y-%m-%d")
+
+    # Iterate through the mapping DataFrame to create the column mapping dictionary
+    for row in mapping_df.collect():
+        source_col = str(row["source_column"]).strip().lower()
+        target_col = row["target_column"]
+        column_mapping[source_col] = target_col
+
+   # print("Column Mapping Dictionary:")
+   # print(column_mapping)
+
+    # Read the input data into a Glue DynamicFrame
+    source_df.show()
+    data = source_df
+    print("data:", data.show())
+
+    # Validate input DataFrame
+    if data.rdd.isEmpty():
+      print("The input DataFrame is empty. Please check the source data.")
+        
+    print("before transforming the data")
+
+    # Rename columns in the input DataFrame using the column mapping
+    transformed_df = data.select(
+        [col(c).alias(column_mapping[c]) if c in column_mapping else col(c) for c in data.columns]
+    )
+    # Add a new column "stg_jpmc_business_entity_id" based on the condition
+    transformed_df = transformed_df.withColumn(
+        "stg_jpmc_business_entity_id",
+        when(
+            (col("client_ecid").isNotNull()) | (col("ind_jpmc") == 'Y'),
+            lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33")
+        ).otherwise(None)
+    )
+    
+    print("after transforming the data")
+
+    print("Transformed DataFrame:")
+    #transformed_df.show()
+    
+    
+    transformed_df = transformed_df.withColumn(
+            "product_segmentation_applicable",
+            concat_ws(";", 
+                array_distinct(
+                    array_union(
+                        when(col("product_segmentation_applicable").isNotNull(), 
+                            split(col("product_segmentation_applicable"), ";")).otherwise(array()),
+                        when(col("stg_codelist").isNotNull(), 
+                            split(col("stg_codelist"), ";")).otherwise(array())
+                    )
+                )
+            )
+        )
+    
+
+    # Validate transformed DataFrame
+    if transformed_df.rdd.isEmpty():
+        raise ValueError("The transformed DataFrame is empty after applying column mappings.")
+
+    # Convert the Spark DataFrame to a Glue DynamicFrame
+    #transformed_dynamic_frame = DynamicFrame.fromDF(transformed_df, glueContext, "transformed_dynamic_frame")
+
+
+    
+
+    print("Transformation and writing completed")
+    return transformed_df
+    
+    
+landing_tables= get_landing_data()
+
+# Assume `source_df` is your Spark DataFrame
+fixing_source_df = sanitize_and_add_missing_columns(landing_tables, ss.pfd_mandatory_columns)
+
+# Show the updated DataFrame
+fixing_source_df.show()
+
+    
+#landing_tables.show()
+transformed_df = process_mapping_and_transform_data(fixing_source_df, ss.output_data_path)
+
+transformed_df.show()
+
+
+def transform_dataframes(transformed_df, ss, glueContext, compute_uuid_udf, utl):
+    """
+    Function to transform multiple DataFrames based on the provided schemas and logic.
+    Args:
+        transformed_df (DataFrame): The input PySpark DataFrame.
+        ss (object): An object containing schema definitions and column mappings.
+        glueContext (GlueContext): The AWS Glue context.
+        compute_uuid_udf (UDF): A UDF to compute UUIDs.
+        utl (module): A utility module containing helper functions like `flatten_nested_json_column` and `melt_dataframe`.
+    Returns:
+        dict: A dictionary of transformed DataFrames.
+    """
+    
+    flattened_dfs = {}
+    
+    # Step 1: Split into json_to_flatten and json_not_flatten
+    json_to_flatten = []
+    json_not_flatten = []
+    
+    json_col = [i for i in ss.jsoncol if i != ss.base_col]
+    
+    for i in json_col:
+        non_null_count = (
+            transformed_df.filter((col(i).isNotNull()) & (col(i) != ""))
+            .limit(1).count()
+        )
+        if non_null_count > 0:
+            json_to_flatten.append(i)
+        else:
+            json_not_flatten.append(i)
+            
+    print("************json_to_flatten******************",json_to_flatten)
+    print("******************json_not_flatten************",json_not_flatten)
+    
+    # Step 2: Flatten only required JSON fields
+    if len(json_to_flatten) > 0:
+        #Handle JSON_FIELD_CONFIGS-driven columns
+        json_fields_to_flatten = [c for c in json_to_flatten if c in ss.JSON_FIELD_CONFIGS]
+
+        if json_fields_to_flatten:
+            JSON_FIELD_CONFIGS_v1 = {k: v for k, v in ss.JSON_FIELD_CONFIGS.items() if k in json_fields_to_flatten}
+
+            for col_name, config in JSON_FIELD_CONFIGS_v1.items():
+                df_flat = utl.flatten_json_column_improved(transformed_df, col_name, config, base_columns=[ss.base_col])
+                if df_flat is not None and df_flat.count() > 0:
+                    flattened_dfs[col_name] = df_flat
+
+        #Handle registered_agents separately
+        if "registered_agents" in json_to_flatten:
+            reg_agents_df = (
+                transformed_df
+                .filter(~utl.is_empty_or_null("registered_agents"))
+                .withColumn("registered_agents_json", regexp_replace(col("registered_agents"), "'", "\""))
+                .withColumn("registered_agents", from_json(col("registered_agents_json"), ArrayType(StringType())))
+                .withColumn(
+                    "registered_agents",
+                    when(size(col("registered_agents")) > 0, concat_ws(";", col("registered_agents"))).otherwise(lit(None))
+                )
+                .select(ss.base_col, "registered_agents")
+            )
+            if reg_agents_df.count() > 0:
+                flattened_dfs["registered_agents"] = reg_agents_df
+
+        #Combine results
+        transformed_json_df = utl.combine_flattened_results(
+            transformed_df.select(ss.base_col).distinct(),
+            flattened_dfs
+        )
+    else:
+        transformed_json_df = transformed_df.select(ss.base_col).limit(0)
+        
+    # Step 3: Handle json_not_flatten → add null columns
+    if len(json_not_flatten) > 0:
+        for i in json_not_flatten:
+            if i not in ss.json_col_dict.keys():
+                transformed_json_df = transformed_json_df.withColumn(i, lit(None))
+            else:
+                mapped_name = ss.json_col_dict[i]        # e.g. "contacts"
+                required_cols = getattr(ss, mapped_name)  # e.g. ss.contacts
+                for c in required_cols:
+                    if c != ss.base_col:
+                        transformed_json_df = transformed_json_df.withColumn(c, lit(None))
+    
+    # Transform `transformed_business_entity`
+    transformed_business_entity = transformed_df.select(
+        col("stg_business_entity_id").alias("stg_business_entity_id")
+    ).union(
+        transformed_df.select(col("stg_payor_business_entity_id").alias("stg_business_entity_id"))
+    ).union(
+        transformed_df.select(col("stg_jpmc_business_entity_id").alias("stg_business_entity_id"))
+    ).dropDuplicates()
+    
+    #transformed_business_entity = transformed_business_entity.filter(col("stg_business_entity_id").isNotNull())
+    
+    # Transform `transformed_business_entity_details`
+    transformed_business_entity_details = transformed_df.select(*ss.business_entity_details).withColumn(
+    "company_structure",
+    when(col("filter_individual") == "Y", "individual").otherwise(col("company_structure"))).drop("filter_individual").dropDuplicates()
+
+    # Add additional rows to `transformed_business_entity_details`
+    for additional_row in [
+        transformed_df.select(
+            col("stg_jpmc_business_entity_id").alias("stg_business_entity_id"),
+            lit("jpmc").alias("business_entity_name"),
+            lit("").alias("company_structure"),
+            lit("").alias("year_incorporated"),
+            lit("").alias("reported_annual_revenue")
+        ),
+        transformed_df.select(
+            col("stg_payor_business_entity_id").alias("stg_business_entity_id"),
+            col("client_name").alias("business_entity_name"),
+            lit("").alias("company_structure"),
+            lit("").alias("year_incorporated"),
+            lit("").alias("reported_annual_revenue")
+        )
+    ]:
+        transformed_business_entity_details = transformed_business_entity_details.union(additional_row)
+    
+    transformed_business_entity_details = transformed_business_entity_details.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+
+    transformed_business_entity_details = transformed_business_entity_details.withColumn(
+        "business_entity_details_id",
+        compute_uuid_udf(struct(*transformed_business_entity_details.columns))
+    )
+
+
+    transformed_business_entity_details.show()
+    
+    # Transform `transformed_contacts`
+    
+    # Transform contacts from associated_people data
+    people_contacts = (transformed_json_df
+                  .select(*ss.contacts)
+                  .distinct()
+                  .filter(
+                      (col("associated_people__name").isNotNull() & 
+                       (trim(col("associated_people__name")) != "") & 
+                       (col("associated_people__name") != "none")) |
+                      (col("associated_people__titles").isNotNull() & 
+                       (trim(col("associated_people__titles")) != "") & 
+                       (col("associated_people__titles") != "none"))
+                  )
+                  .withColumnRenamed("associated_people__name", "contact_name")
+                  .withColumnRenamed("associated_people__titles", "contact_title"))
+
+    # Process vendor contacts - ONLY if vendor_contact_name is not null
+    vendor_contacts_raw = transformed_df.select(*ss.vendor_contact).distinct()
+    vendor_contacts_filtered = vendor_contacts_raw.filter(col("vendor_contact_name").isNotNull())
+
+    # Check if there are any non-null vendor contacts
+    vendor_contact_count = vendor_contacts_filtered.count()
+
+    if vendor_contact_count > 0:
+        vendor_contacts_final = vendor_contacts_filtered.select(
+            col("stg_business_entity_id"),
+            col("vendor_contact_name").alias("contact_name"),
+            lit(None).cast("string").alias("contact_title")
+        )
+        # Union the two dataframes
+        all_contacts = people_contacts.unionByName(vendor_contacts_final)
+    else:
+        #Use only the people contacts data
+        all_contacts = people_contacts
+
+    # Only keep contacts that actually have contact names
+    transformed_contacts = all_contacts.filter(col("contact_name").isNotNull())
+
+    transformed_contacts = transformed_contacts.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+
+    # Generate UUIDs only for valid contacts
+    if transformed_contacts.count() > 0:
+        transformed_contacts = transformed_contacts.withColumn(
+            "business_entity_contact_id",
+            compute_uuid_udf(struct(*transformed_contacts.columns))
+        )
+    else:
+        # Ensure schema compatibility: add empty columns
+        transformed_contacts = vendor_contacts_raw.select(
+            col("stg_business_entity_id"),
+            lit(None).cast("string").alias("contact_name"),
+            lit(None).cast("string").alias("contact_title"),
+            lit(True).cast("boolean").alias("is_active"),
+            lit(None).cast("string").alias("business_entity_contact_id")
+        ).limit(0)
+    
+    # Transform `transformed_revenue`
+    
+    # Get expected columns (excluding business entity id)
+    expected_revenue_columns = [col for col in ss.revenue if col != "stg_business_entity_id"]
+    
+    # For small datasets, coalesce to single partition to reduce overhead
+    transformed_json_df = transformed_json_df.coalesce(1)
+    
+    # Step 1: Add ALL missing columns in single operation using select
+    existing_columns = set(transformed_json_df.columns)
+    missing_columns = [col_name for col_name in expected_revenue_columns 
+                      if col_name not in existing_columns]
+    
+    # Build select expression with missing columns added
+    select_expressions = []
+    for col_name in ss.revenue:
+        if col_name in existing_columns:
+            select_expressions.append(col(col_name))
+        else:
+            print(f"Adding missing column: {col_name}")
+            dtype = (
+                "date" if "date" in col_name
+                else "double" if "amount" in col_name  
+                else "string"
+            )
+            select_expressions.append(lit(None).cast(dtype).alias(col_name))
+    
+    # Step 2: Single operation - select with missing columns + rename + filter + distinct
+    revenue_value_columns = ["end_date" if c == "card_revenue__end_date" else c 
+                            for c in expected_revenue_columns]
+    
+    # Build non-null condition using coalesce (most efficient for small data)
+    non_null_condition = coalesce(*[col(c) for c in revenue_value_columns]).isNotNull()
+    
+    # Single-pass operation combining everything
+    transformed_revenue = (transformed_json_df
+                          .select(*select_expressions)
+                          .withColumnRenamed("card_revenue__end_date", "end_date")  
+                          .filter(non_null_condition)
+                          .distinct())
+
+    transformed_revenue = transformed_revenue.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+    
+    # Get columns present in both transformed_revenue and decimal_columns
+    columns_to_round = [col for col in ss.decimal_columns if col in transformed_revenue.columns]
+    
+    # Apply rounding to decimal columns
+    for col_name in columns_to_round:
+        transformed_revenue = transformed_revenue.withColumn(
+            col_name,
+            round(col(col_name), 2)
+        )
+    
+    transformed_revenue = transformed_revenue.withColumn(
+        "revenue_id",
+        compute_uuid_udf(struct(*transformed_revenue.columns))
+    ).dropDuplicates()
+    
+    # Transform `transformed_transaction_stability`
+
+    # Get expected columns (excluding stg_business_entity_id)
+    expected_transaction_columns = [col for col in ss.transaction_stability if col != "stg_business_entity_id"]
+    
+    # Step 1: Build select expressions and track final column names
+    existing_columns = set(transformed_json_df.columns)
+    select_expressions = []
+    final_column_names = []  # Track what the column names will be after renaming
+    
+    for col_name in ss.transaction_stability:
+        if col_name in existing_columns:
+            if col_name == "card_transactions_stability__end_date":
+                select_expressions.append(col(col_name).alias("end_date"))
+                final_column_names.append("end_date")  # Track the renamed column
+            else:
+                select_expressions.append(col(col_name))
+                final_column_names.append(col_name)  # Track the original column name
+        else:
+            print(f"Adding missing column: {col_name}")
+            dtype = "date" if "date" in col_name else "double" if "amount" in col_name else "string"
+            alias_name = "end_date" if col_name == "card_transactions_stability__end_date" else col_name
+            select_expressions.append(lit(None).cast(dtype).alias(alias_name))
+            final_column_names.append(alias_name)
+    
+    # Step 2: Apply select transformation
+    temp_df = transformed_json_df.select(*select_expressions)
+    
+    print("Columns after select:", temp_df.columns)
+    print("Before filtering - total rows:", temp_df.count())
+    
+    # Step 3: Build dynamic filter condition using FINAL column names (after renaming)
+    # Get the columns to check (exclude stg_business_entity_id from the final column names)
+    columns_to_check = [name for name in final_column_names if name != "stg_business_entity_id"]
+    
+    print("Columns to check for meaningful data:", columns_to_check)
+    
+    # Build condition to keep records where AT LEAST ONE column has meaningful data
+    keep_conditions = []
+    
+    for col_name in columns_to_check:
+        if col_name in temp_df.columns:
+            # Single condition for all columns - exclude null, empty string, and "null" string
+            meaningful_condition = col(col_name).isNotNull() & (col(col_name) != "") & (col(col_name) != "null")
+            keep_conditions.append(meaningful_condition)
+            print(f"Added condition for column: {col_name}")
+    
+    # Step 4: Combine conditions with OR - keep record if ANY column has meaningful data
+    if keep_conditions:
+        final_condition = keep_conditions[0]
+        for condition in keep_conditions[1:]:
+            final_condition = final_condition | condition
+        
+        # Apply the filter
+        filtered_df = temp_df.filter(final_condition)
+        print("After filtering - remaining rows:", filtered_df.count())
+    else:
+        print("No conditions to apply, keeping all records")
+        filtered_df = temp_df
+    
+    # Step 5: Add remaining columns and finalize
+    transformed_transaction_stability = (filtered_df
+                                       .withColumn("is_active", lit(True))
+                                       .distinct())
+    
+    # Add UUID
+    transformed_transaction_stability = transformed_transaction_stability.withColumn(
+        "card_transactions_stability_id",
+        compute_uuid_udf(struct(*transformed_transaction_stability.columns))
+    ).dropDuplicates()
+    
+    print("Final result rows:", transformed_transaction_stability.count())
+    print("Final columns:", transformed_transaction_stability.columns)
+    
+    # Transform technology data
+    technology_used = (transformed_json_df
+        .select(*ss.technology)
+        .distinct()
+        .filter(
+            (col("technologies__vendor_name").isNotNull() & 
+             (trim(col("technologies__vendor_name")) != "") & 
+             (col("technologies__vendor_name") != "none")) |
+            (col("technologies__category").isNotNull() & 
+             (trim(col("technologies__category")) != "") & 
+             (col("technologies__category") != "none"))
+        )
+        .withColumnRenamed("technologies__vendor_name", "technologies_vendor_name")
+        .withColumnRenamed("technologies__category", "technologies_category")
+    )
+    
+    # Create receivables dataframe
+    receivables_df1 = transformed_df.select(*ss.payment_profile).distinct()
+    
+    
+    receivables_df = (receivables_df1
+        .join(technology_used, on="stg_business_entity_id", how="left")
+        .dropDuplicates()
+    )
+    
+    # Transform using melt operation
+    transformed_melt_payment_profile_attribute = utl.melt_dataframe(
+        receivables_df,
+        id_column="stg_business_entity_id",
+        columns_to_melt=ss.payment_profile_columns,
+        melted_column_names=("receivables_attribute_type", "receivables_attribute_value")
+    )
+    
+    transformed_melt_payment_profile_attribute = transformed_melt_payment_profile_attribute.filter(
+        (col("receivables_attribute_value").isNotNull()) & 
+        (col("receivables_attribute_value") != "")
+    )
+    
+    # ADDED: Rename technologies_vendor_name to payment_tech_used
+    transformed_melt_payment_profile_attribute = (transformed_melt_payment_profile_attribute
+        .withColumn("receivables_attribute_type", 
+            when(col("receivables_attribute_type") == "technologies_vendor_name", "payment_tech_used")
+            .otherwise(col("receivables_attribute_type"))
+        )
+    )
+
+    transformed_melt_payment_profile_attribute = transformed_melt_payment_profile_attribute.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+
+    transformed_melt_payment_profile_attribute = transformed_melt_payment_profile_attribute.withColumn(
+        "attribute_id",
+        compute_uuid_udf(struct(*transformed_melt_payment_profile_attribute.columns))
+    ).select(
+        col("attribute_id"), col("stg_business_entity_id"), col("receivables_attribute_type"), col("receivables_attribute_value"), col("is_active")
+    )
+    
+    # Transform `transformed_melt_telecommunication_address`
+    transformed_melt_telecommunication_address = utl.melt_dataframe(
+        transformed_df.select(*ss.telecommunication_address),
+        id_column="stg_business_entity_id",
+        columns_to_melt=ss.telecommunication_address_columns,
+        melted_column_names=("telecommunication_address_type", "phone_number")
+    ).withColumn(
+        "telecommunication_address_type",
+        when(col("telecommunication_address_type") == "primary_phone_number", "primary").otherwise(col("telecommunication_address_type"))
+    ).withColumnRenamed(
+        "stg_business_entity_id", "related_identifier"
+    ).withColumn(
+        "related_identifier_source", lit("business_entity")
+    )
+
+    transformed_melt_telecommunication_address = transformed_melt_telecommunication_address.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+    
+    print("**************** transformed_melt_telecommunication_address columns*******************")
+    print(transformed_melt_telecommunication_address.columns)
+
+    transformed_melt_telecommunication_address = transformed_melt_telecommunication_address.withColumn(
+        "telecommunication_address_id",
+        compute_uuid_udf(struct(*transformed_melt_telecommunication_address.columns))
+    )
+
+    # Transform `transformed_melt_electronic_address`
+    transformed_melt_electronic_address = utl.melt_dataframe(
+        transformed_df.select(*ss.electronic_address),
+        id_column="stg_business_entity_id",
+        columns_to_melt=ss.electronic_address_columns,
+        melted_column_names=("electronic_address_type", "electronic_address")
+    ).withColumn(
+        "electronic_address_type",
+        when(col("electronic_address_type") == "email", "primary").otherwise(col("electronic_address_type"))
+    ).withColumnRenamed(
+        "stg_business_entity_id", "related_identifier"
+    ).withColumn(
+        "related_identifier_source", lit("business_entity")
+    )
+
+    transformed_melt_electronic_address = transformed_melt_electronic_address.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+    transformed_melt_electronic_address = transformed_melt_electronic_address.withColumn(
+        "electronic_address_id",
+        compute_uuid_udf(struct(*transformed_melt_electronic_address.columns))
+    )
+    
+    print("**************** transformed_melt_electronic_address columns*******************")
+    print(transformed_melt_electronic_address.columns)
+    
+    # Transform `transformed_melt_restrictions`
+    transformed_melt_restrictions = utl.melt_dataframe(
+        transformed_df.select(*ss.restrictions),
+        id_column="stg_business_entity_id",
+        columns_to_melt=ss.restrictions_columns,
+        melted_column_names=("restriction_type", "restriction_indicator")
+    ).withColumnRenamed(
+        "stg_business_entity_id", "related_identifier"
+    ).withColumn(
+        "related_identifier_source", lit("business_entity")
+    )
+
+    transformed_melt_restrictions = transformed_melt_restrictions.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+    
+    print("**************** transformed_melt_restrictions columns*******************")
+    print(transformed_melt_restrictions.columns)
+    
+    transformed_melt_restrictions = transformed_melt_restrictions.withColumn(
+        "restriction_id",
+        compute_uuid_udf(struct(*transformed_melt_restrictions.columns))
+    )
+    
+    transformed_melt_restrictions.show()
+    
+    # Transform `transformed_melt_industry_classification`
+    transformed_melt_industry_classification = utl.melt_dataframe(
+        transformed_df.select(*ss.industry_classification).distinct(),
+        id_column="stg_business_entity_id",
+        columns_to_melt=ss.industry_classification_columns,
+        melted_column_names=("classification_code", "classification_description")
+    ).withColumn(
+        "classification_type",
+        when(col("classification_code").isin("level-1", "level-2", "level-3"), "bloomberg").otherwise("internal")
+    )
+
+    transformed_melt_industry_classification = transformed_melt_industry_classification.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+
+    transformed_melt_industry_classification = transformed_melt_industry_classification.withColumn(
+        "classification_id",
+        compute_uuid_udf(struct(*transformed_melt_industry_classification.columns))
+    )
+    
+    # ####business_entity_characteristics 
+    # transformed_characteristics = transformed_df.select(*ss.characteristics).distinct()
+    
+    rating_date_cols = ['vendor_credit_rating_moody_date','vendor_credit_rating_sp_date']
+    characteristics_cols = ss.characteristics + rating_date_cols
+
+    # Select all columns including the date columns
+    transformed_characteristics = transformed_df.select(*characteristics_cols).distinct()
+    
+    registered_agents_df = (transformed_json_df
+                       .select("stg_business_entity_id", "registered_agents")
+                       .distinct()
+                       .filter(
+                           col("registered_agents").isNotNull() &
+                           (trim(col("registered_agents")) != "") &
+                           (upper(trim(col("registered_agents"))) != "NONE")
+                       ))
+    
+    transformed_characteristics = transformed_characteristics.join(
+    registered_agents_df,
+    on="stg_business_entity_id",
+    how="left"
+    )
+    
+    
+    # Update sp column: concatenate with date when sp is not null or empty
+    transformed_characteristics = transformed_characteristics.withColumn(
+        'sp',
+        F.when(
+            (F.col('sp').isNotNull()) & 
+            (F.col('sp') != ''),
+            F.concat(
+                F.lit('sp;'),
+                F.col('sp'),
+                F.lit(';'),
+                F.col('vendor_credit_rating_sp_date')
+            )
+        ).otherwise(F.col('sp'))
+    )
+    
+    # Update moody column: concatenate with date when moody is not null or empty
+    transformed_characteristics = transformed_characteristics.withColumn(
+        'moody',
+        F.when(
+            (F.col('moody').isNotNull()) & 
+            (F.col('moody') != ''),
+            F.concat(
+                F.lit('moody;'),
+                F.col('moody'),
+                F.lit(';'),
+                F.col('vendor_credit_rating_moody_date')
+            )
+        ).otherwise(F.col('moody'))
+    )
+    
+    
+    # Drop the date columns
+    transformed_characteristics = transformed_characteristics.drop(*rating_date_cols)
+
+    # Perform a left join between `transformed_characteristics` and `transformed_json_df`
+    transformed_melt_characteristics = utl.melt_dataframe(
+    transformed_characteristics,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.characteristics_columns,
+    melted_column_names=("characteristic_type", "characteristic_value"))
+
+    # Get the current date
+    current_date = datetime.today().strftime("%Y-%m-%d")
+
+    # Update the `characteristic_type` column based on the condition
+    transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+		"characteristic_type",
+		F.when(F.col("characteristic_type") == "moody", F.lit("credit_rating_moody"))
+         .when(F.col("characteristic_type") == "sp", F.lit("credit_rating_sp"))
+         .otherwise(F.col("characteristic_type"))
+	)
+    transformed_melt_characteristics = transformed_melt_characteristics.filter(
+		col("characteristic_value").isNotNull()
+	)
+
+    transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+
+    transformed_melt_characteristics = transformed_melt_characteristics.withColumn(
+		"characteristics_id",
+        compute_uuid_udf(struct(*transformed_melt_characteristics.columns))
+	)
+    
+    transformed_physical_address = transformed_df.select(*ss.physical_address).withColumn("physical_address_type", lit("billing")).withColumnRenamed("stg_business_entity_id", "related_identifier").withColumn("related_identifier_source", lit("business_entity"))
+    
+    transformed_physical_address = transformed_physical_address.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+    
+    transformed_physical_address = transformed_physical_address.withColumn("physical_address_id",
+        compute_uuid_udf(struct(*transformed_physical_address.columns))
+	)
+	
+	# Get expected columns (excluding business entity id for null filtering)
+    expected_association_columns = [col for col in ss.association if col != "stg_business_entity_id"]
+    
+    # Build comprehensive non-null condition (checks for null, empty string, and "null" string)
+    individual_conditions = [
+        (col(col_name).isNotNull()) & (col(col_name) != "") & (col(col_name) != "null")
+        for col_name in expected_association_columns
+    ]
+    # At least one column should meet all the non-null/non-empty conditions
+    non_null_condition = reduce(lambda a, b: a | b, individual_conditions)
+    
+    # CORRECTED: Include stg_business_entity_id in select and fix method chaining
+    transformed_association = (transformed_df
+        .select(["stg_business_entity_id"] + expected_association_columns)  # Include business entity ID
+        .filter(non_null_condition)
+        .distinct()
+        .withColumn(
+            "association_name",
+            when(lower(col("ind_card_match")) == "yes", "visa").otherwise("")
+        )
+    )
+
+    
+#     transformed_association = transformed_df.select(*ss.association).distinct().withColumn(
+#         "association_name",
+# 		when(col("ind_card_match").isin("yes","YES")  , "visa" ).otherwise(""))
+
+    transformed_association = transformed_association.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+    
+    columns_to_convert = ['matched_level_2', 'matched_level_3_summary', 'matched_level_3_lineitem']
+
+    for col_name in columns_to_convert:
+        transformed_association = transformed_association.withColumn(
+            col_name,
+            F.when(F.lower(F.col(col_name)) == 'yes', True)
+             .when(F.lower(F.col(col_name)) == 'no', False)
+             .otherwise(None)  # Keep empty/null values as None
+        )
+    transformed_association_columns = [
+    col for col in transformed_association.columns 
+    if col not in ['ind_card_match']
+    ]
+    transformed_association = transformed_association.withColumn(
+    "card_association_id",
+    compute_uuid_udf(struct(*[col(c) for c in transformed_association_columns]))
+    )
+    
+    transformed_spend_analysis = transformed_df.select(*ss.spend_analysis).distinct().withColumnRenamed(
+		"stg_business_entity_id", "stg_payee_business_entity_id"
+	)
+
+    # Rename the column `stg_business_entity_id` to `stg_payee_business_entity_id`
+    transformed_spend_analysis = transformed_spend_analysis.withColumnRenamed(
+        "stg_business_entity_id", "stg_payee_business_entity_id"
+    ).withColumn(
+        "analysis_conducted_dt",
+        when(
+            col("analysis_conducted_dt").isNotNull(),
+            to_date(col("analysis_conducted_dt").substr(1, 8), "yyyyMMdd")
+        )
+    ).withColumn(
+        "period_start_date",
+        when(col("period_start_date").isNotNull(), to_date(col("period_start_date")))
+    ).withColumn(
+        "period_end_date",
+        when(col("period_end_date").isNotNull(), to_date(col("period_end_date")))
+    )
+
+    transformed_spend_analysis = transformed_spend_analysis.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+
+    transformed_spend_analysis = transformed_spend_analysis.withColumn(
+		"spend_analysis_id",
+        compute_uuid_udf(struct(*transformed_spend_analysis.columns))
+	)
+
+    # Return all transformed DataFrames as a dictionary
+    return {
+        "transformed_business_entity": transformed_business_entity,
+        "transformed_business_entity_details": transformed_business_entity_details,
+        "transformed_contacts": transformed_contacts,
+        "transformed_revenue": transformed_revenue,
+        "transformed_transaction_stability": transformed_transaction_stability,
+        "transformed_melt_payment_profile_attribute": transformed_melt_payment_profile_attribute,
+        "transformed_melt_telecommunication_address": transformed_melt_telecommunication_address,
+        "transformed_melt_electronic_address": transformed_melt_electronic_address,
+        "transformed_melt_restrictions": transformed_melt_restrictions,
+        "transformed_melt_industry_classification": transformed_melt_industry_classification,
+        "transformed_melt_characteristics":transformed_melt_characteristics,
+        "transformed_physical_address":transformed_physical_address,
+		"transformed_association":transformed_association,
+		"transformed_spend_analysis":transformed_spend_analysis
+    }
+    
+
+
+transformed_dataframes = transform_dataframes(transformed_df, ss, glueContext, compute_uuid_udf, utl)
+
+# Access individual DataFrames
+transformed_business_entity = transformed_dataframes["transformed_business_entity"]
+transformed_business_entity_details = transformed_dataframes["transformed_business_entity_details"]
+transformed_contacts = transformed_dataframes["transformed_contacts"]
+transformed_revenue = transformed_dataframes["transformed_revenue"]
+transformed_transaction_stability = transformed_dataframes["transformed_transaction_stability"]
+transformed_melt_payment_profile_attribute = transformed_dataframes["transformed_melt_payment_profile_attribute"]
+transformed_melt_telecommunication_address = transformed_dataframes["transformed_melt_telecommunication_address"]
+transformed_melt_electronic_address = transformed_dataframes["transformed_melt_electronic_address"]
+transformed_melt_restrictions = transformed_dataframes["transformed_melt_restrictions"]
+transformed_melt_industry_classification = transformed_dataframes["transformed_melt_industry_classification"]
+transformed_melt_characteristics = transformed_dataframes["transformed_melt_characteristics"]
+transformed_physical_address = transformed_dataframes["transformed_physical_address"]
+transformed_association = transformed_dataframes["transformed_association"]
+transformed_spend_analysis = transformed_dataframes["transformed_spend_analysis"]
+
+
+def relationship(transformed_business_entity,ss, transformed_df,compute_uuid_udf):
+    
+    # Process vendor contacts - ONLY if vendor_contact_name is not null
+    vendor_contacts_raw = transformed_df.select(*ss.vendor_contact).distinct()
+    vendor_contacts_filtered = vendor_contacts_raw.filter(col("vendor_contact_name").isNotNull())
+    
+    
+    vendor_contacts_final = vendor_contacts_filtered.select(
+    	col("stg_business_entity_id"),
+    	col("vendor_contact_name").alias("contact_name"),
+    	lit(None).cast("string").alias("contact_title")
+    )
+    
+    
+    # Only keep contacts that actually have contact names
+    transformed_contacts = vendor_contacts_final.filter(col("contact_name").isNotNull())
+    
+    transformed_contacts = transformed_contacts.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+    )
+    
+    # Generate UUIDs only for valid contacts
+    if transformed_contacts.count() > 0:
+        transformed_contacts = transformed_contacts.dropDuplicates()
+        transformed_contacts = transformed_contacts.withColumn(
+            "business_entity_contact_id",
+            compute_uuid_udf(struct(*transformed_contacts.columns))
+        )
+    else:
+        # Ensure schema compatibility: add empty columns
+        transformed_contacts = vendor_contacts_raw.select(
+            col("stg_business_entity_id"),
+            lit(None).cast("string").alias("contact_name"),
+            lit(None).cast("string").alias("contact_title"),
+            lit(True).cast("boolean").alias("is_active"),
+            lit(None).cast("string").alias("business_entity_contact_id")
+        ).limit(0)   # makes it empty but with schema
+    
+    # Joining this with transformed_contacts to get the accurate business_entity_contact_id
+    preferred_contacts = transformed_contacts.select("stg_business_entity_id", "contact_name", "business_entity_contact_id")
+        
+    
+    # Print column names for debugging
+    print("transformed_business_entity columns:", transformed_business_entity.columns)
+    print("transformed_df columns:", transformed_df.columns)
+
+    # Create a mapping from client_name to stg_business_entity_id using business_entity_details
+    client_mapping = transformed_business_entity.select(
+        col("business_entity_name").alias("client_name"),
+        col("stg_business_entity_id").alias("client_stg_business_entity_id")
+    )
+    
+
+    # Initialize list to collect all relationship DataFrames
+    relationship_dfs = []
+    
+    # 1. Create client -> firm relationships first (for distinct clients)
+    # Filter out empty/null stg_business_entity_id and join with transformed_df to get required columns
+    distinct_clients = transformed_df.select(
+        "client_name", 
+        "stg_business_entity_id",
+        "client_vendor_id",
+        "client_vendor_site_id", 
+        "client_ecid",
+        "supplier_ecid"
+    ).filter(
+        col("client_name").isNotNull() & 
+        (col("client_name") != "") &
+        col("stg_business_entity_id").isNotNull() & 
+        (col("stg_business_entity_id") != "") &
+        (col("stg_business_entity_id") != "null") &
+        (col("stg_business_entity_id") != "none")
+    ).distinct()
+    
+    client_firm_df = distinct_clients.join(
+        client_mapping,
+        on="client_name",
+        how="inner"
+    ).select(
+        col("client_stg_business_entity_id").alias("stg_business_entity_id"),
+        lit(None).alias("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("client").alias("business_entity_role"),
+        lit("firm").alias("related_business_entity_role"),
+        lit(None).alias("client_vendor_id"),
+        lit(None).alias("client_vendor_site_id"),
+        lit(None).alias("client_ecid"),
+        lit(None).alias("supplier_ecid")
+    )
+    
+    relationship_dfs.append(client_firm_df)
+    
+    # 2. Create supplier -> client relationships
+    # Filter out empty/null stg_business_entity_id
+    # Alias the dataframes before join
+    df = transformed_df.alias("df")
+    pc = preferred_contacts.alias("pc")
+    
+    supplier_client_base = df.filter(
+        col("df.stg_business_entity_id").isNotNull() & 
+        (col("df.stg_business_entity_id") != "") & 
+        (col("df.stg_business_entity_id") != "null") & 
+        (col("df.stg_business_entity_id") != "none")
+    ).join(
+        client_mapping.alias("cm"),
+        df["client_name"] == col("cm.client_name"),
+        how="inner"
+    ).join(
+        pc,
+        (df["stg_business_entity_id"] == pc["stg_business_entity_id"]) &
+        (df["vendor_contact_name"] == pc["contact_name"]),
+        how="left"
+    )
+    
+    supplier_client_df = supplier_client_base.select(
+        df["stg_business_entity_id"],
+        pc["business_entity_contact_id"],
+        col("cm.client_stg_business_entity_id").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("supplier").alias("business_entity_role"),
+        lit("buyer").alias("related_business_entity_role"),
+        df["client_vendor_id"],
+        df["client_vendor_site_id"],
+        df["client_ecid"],
+        df["supplier_ecid"]
+    )
+    
+    relationship_dfs.append(supplier_client_df)
+    
+    # 3. Create supplier -> firm relationships (only when supplier_ecid is not null/empty)
+    supplier_firm_base = transformed_df.filter(
+        col("supplier_ecid").isNotNull() & 
+        (col("supplier_ecid") != "") & 
+        (col("supplier_ecid") != "NULL") &
+        col("stg_business_entity_id").isNotNull() & 
+        (col("stg_business_entity_id") != "") &
+        (col("stg_business_entity_id") != "null") &
+        (col("stg_business_entity_id") != "none")
+    ).join(
+        preferred_contacts,
+        on="stg_business_entity_id",
+        how="left"
+    )
+    
+    supplier_firm_df = supplier_firm_base.select(
+        col("stg_business_entity_id"),
+        lit(None).alias("business_entity_contact_id"),
+        lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33").alias("stg_related_business_entity_id"),
+        lit(None).alias("related_business_entity_contact_id"),
+        lit("client").alias("business_entity_role"),
+        lit("firm").alias("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("client_ecid"),
+        col("supplier_ecid")
+    )
+
+    relationship_dfs.append(supplier_firm_df)
+    
+    # Union all relationship DataFrames
+    union_df = relationship_dfs[0]
+    for df in relationship_dfs[1:]:
+        union_df = union_df.union(df)
+    
+    # Drop duplicates
+    union_df = union_df.dropDuplicates()
+
+
+    return union_df
+    
+    
+
+
+# Call the `relationship` function and assign the result to `transformed_relationship`
+transformed_relationship = relationship(transformed_business_entity_details, ss, transformed_df,compute_uuid_udf)
+
+transformed_relationship = transformed_relationship.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
+
+
+# Remove the line that renames "related_business_entity_id" since it doesn't exist in our schema
+# transformed_relationship = transformed_relationship.withColumnRenamed("related_business_entity_id", "stg_related_business_entity_id")
+
+# Check for void data types before proceeding
+print("Data types in transformed_relationship:")
+for col_name, col_type in transformed_relationship.dtypes:
+    print(f"{col_name}: {col_type}")
+
+
+# Find columns with void data type
+void_columns = [col_name for col_name, col_type in transformed_relationship.dtypes if col_type == 'void']
+print(f"Void columns found: {void_columns}")
+
+
+if void_columns:
+    print(f"Fixing void columns: {void_columns}")
+    for void_col in void_columns:
+        transformed_relationship = transformed_relationship.withColumn(
+            void_col, 
+            lit(None).cast(StringType())  # Cast void to nullable string
+        )
+
+# Generate UUID for business_entity_relationship_id
+transformed_relationship_columns = [
+    col for col in transformed_relationship.columns 
+    if col not in ['client_ecid', 'client_vendor_id', 'client_vendor_site_id', 'supplier_ecid']
+]
+
+transformed_relationship = transformed_relationship.withColumn(
+    "business_entity_relationship_id",
+    compute_uuid_udf(struct(*[col(c) for c in transformed_relationship_columns]))
+)
+
+# Show distinct rows in the resulting DataFrame
+transformed_relationship.distinct().show(truncate=False)
+
+
+# Create dataset for supplier-buyer relationships
+supplier_buyer_data = (transformed_relationship
+    .filter(
+        (col("business_entity_role") == "supplier") & 
+        (col("related_business_entity_role") == "buyer")
+    )
+    .select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        col("stg_related_business_entity_id"),
+        col("related_business_entity_contact_id"),
+        col("business_entity_role"),
+        col("related_business_entity_role"),
+        col("client_vendor_id"),
+        col("client_vendor_site_id"),
+        col("is_active"),
+        col("business_entity_relationship_id"),
+        lit(None).cast("string").alias("supplier_ecid")  # Add null supplier_ecid for union compatibility
+    )
+)
+
+# Create dataset for client-firm relationships
+client_firm_data = (transformed_relationship
+    .filter(
+        (col("business_entity_role") == "client") & 
+        (col("related_business_entity_role") == "firm")
+    )
+    .select(
+        col("stg_business_entity_id"),
+        col("business_entity_contact_id"),
+        col("stg_related_business_entity_id"),
+        col("related_business_entity_contact_id"),
+        col("business_entity_role"),
+        col("related_business_entity_role"),
+        lit(None).cast("string").alias("client_vendor_id"),      # Add null client_vendor_id for union compatibility
+        lit(None).cast("string").alias("client_vendor_site_id"), # Add null client_vendor_site_id for union compatibility
+        col("is_active"),
+        col("business_entity_relationship_id"),
+        col("supplier_ecid")
+    )
+)
+
+# Union both datasets
+transformed_rel_identifiers = client_firm_data.union(supplier_buyer_data)
+
+# List of columns to melt for `transformed_rel_identifiers`
+transformed_rel_identifiers_columns = ["client_vendor_id", "client_vendor_site_id","supplier_ecid"]
+
+
+# Melt `transformed_rel_identifiers` using the `melt_dataframe` function
+transformed_rel_identifiers_v1 = utl.melt_dataframe(
+    transformed_rel_identifiers,
+    id_column="business_entity_relationship_id",
+    columns_to_melt=transformed_rel_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+transformed_df_iden1 = (transformed_df.select("stg_payor_business_entity_id","client_ecid")
+                    .distinct()
+                      )
+
+# Join to get business_entity_relationship_id where stg_business_entity_id matches stg_payor_business_entity_id
+transformed_df_iden = transformed_df_iden1.join(
+    transformed_relationship.select("stg_business_entity_id", "business_entity_relationship_id"),
+    col("stg_payor_business_entity_id") == col("stg_business_entity_id"),
+    how="inner"
+).select(
+    col("business_entity_relationship_id"),
+    col("client_ecid")
+)
+                    
+                    
+transformed_rel_identifiers_v2 = utl.melt_dataframe(
+    transformed_df_iden,
+    id_column="business_entity_relationship_id",
+    columns_to_melt=["client_ecid"],
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+# Fix: Use proper union syntax
+transformed_rel_identifiers = transformed_rel_identifiers_v1.union(transformed_rel_identifiers_v2)
+transformed_rel_identifiers = transformed_rel_identifiers.dropDuplicates()
+
+# Perform a left join between `transformed_identifiers` and `transformed_rel_identifiers`
+transformed_rel_identifiers = transformed_rel_identifiers.join(
+    transformed_relationship,
+    on="business_entity_relationship_id",  # Use the common column for the join
+    how="left"
+)
+
+transformed_rel_identifiers = transformed_rel_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("business_entity_relationship_id").alias("related_identifier")).withColumn("related_identifier_source", lit("relationship"))
+
+ 
+#transformed_rel_identifiers.show(truncate=False)
+
+relationship_key_pairs = transformed_rel_identifiers.select(
+    "identifier_type", "identifier_value"
+).distinct()
+
+# Select columns from `transformed_df` for `transformed_identifiers`
+transformed_identifiers = transformed_df.select(*ss.identifiers)
+
+# Melt `transformed_identifiers` using the `melt_dataframe` function
+melted_business_identifiers = utl.melt_dataframe(
+    transformed_identifiers,
+    id_column="stg_business_entity_id",
+    columns_to_melt=ss.transformed_identifiers_columns,
+    melted_column_names=("identifier_type", "identifier_value")
+)
+
+
+melted_business_identifiers = melted_business_identifiers.dropDuplicates()
+
+#Apply Anti-join using only identifier_type + identifier_value
+filtered_business_identifiers = melted_business_identifiers.alias("biz").join(
+    broadcast(relationship_key_pairs).alias("rel"),
+    on=[
+        col("biz.identifier_type") == col("rel.identifier_type"),
+        col("biz.identifier_value") == col("rel.identifier_value")
+    ],
+    how="left_anti"
+)
+
+# Final selection with source
+transformed_identifiers = filtered_business_identifiers.select(
+    col("identifier_type"),
+    col("identifier_value"),
+    col("stg_business_entity_id").alias("related_identifier")
+).withColumn("related_identifier_source", lit("business_entity"))
+
+transformed_identifiers = transformed_identifiers.union(transformed_rel_identifiers)
+
+# Drop duplicates
+transformed_identifiers = transformed_identifiers.dropDuplicates()
+
+transformed_identifiers = transformed_identifiers.filter(
+    col("identifier_value").isNotNull()
+)
+
+# Update identifier_type column in transformed_identifiers
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_type",
+    when(col("identifier_type") == "client_ecid", "ecid")
+    .when(col("identifier_type") == "supplier_ecid", "ecid")
+    .otherwise(col("identifier_type"))
+)
+
+transformed_identifiers = transformed_identifiers.withColumn(
+    "is_active", 
+    lit(True)  # This creates a Boolean column with True values for all rows
+)
+
+
+transformed_identifiers = transformed_identifiers.withColumn(
+    "identifier_id",
+    compute_uuid_udf(struct(*transformed_identifiers.columns))
+)
+
+# Show the resulting DataFrame
+transformed_identifiers.show(truncate=False)
+
+transformed_relationship = transformed_relationship.select(col("business_entity_relationship_id"),col("stg_business_entity_id"),col("business_entity_contact_id"),col("stg_related_business_entity_id"),col("related_business_entity_contact_id"),col("business_entity_role"),col("related_business_entity_role"),col("is_active")).distinct()
+
+    
+transformed_business_entity = transformed_business_entity.filter(
+    col("stg_business_entity_id").isNotNull()).selectExpr(*ss.business_entity_schema).distinct()
+	
+transformed_business_entity_details = transformed_business_entity_details.filter(
+    col("stg_business_entity_id").isNotNull() & col("business_entity_details_id").isNotNull()
+).selectExpr(*ss.business_entity_details_schema).distinct()
+
+transformed_contacts = transformed_contacts.filter(
+    col("stg_business_entity_id").isNotNull() & col("business_entity_contact_id").isNotNull()
+).selectExpr(*ss.contacts_schema).distinct()
+
+transformed_revenue = transformed_revenue.filter(
+    col("stg_business_entity_id").isNotNull() & col("revenue_id").isNotNull()
+).selectExpr(*ss.revenue_schema).distinct()
+
+transformed_transaction_stability = transformed_transaction_stability.filter(
+    col("stg_business_entity_id").isNotNull()).selectExpr(*ss.transaction_stability_schema).distinct()
+
+# transformed_transaction_stability = transformed_transaction_stability.selectExpr(*ss.transaction_stability_schema).distinct()
+
+transformed_melt_payment_profile_attribute = transformed_melt_payment_profile_attribute.filter(
+    col("stg_business_entity_id").isNotNull() & col("attribute_id").isNotNull()
+).selectExpr(*ss.payment_profile_attribute_schema).distinct()
+
+transformed_melt_telecommunication_address = transformed_melt_telecommunication_address.filter(
+    col("telecommunication_address_id").isNotNull() & col("related_identifier").isNotNull()
+).selectExpr(*ss.telecommunication_address_schema).distinct()
+
+transformed_melt_electronic_address = transformed_melt_electronic_address.filter(
+    col("electronic_address_id").isNotNull() & col("related_identifier").isNotNull()
+).selectExpr(*ss.electronic_address_schema).distinct()
+
+transformed_melt_restrictions = transformed_melt_restrictions.filter(
+    col("restriction_id").isNotNull() & col("related_identifier").isNotNull()
+).selectExpr(*ss.restrictions_schema).distinct()
+
+transformed_melt_industry_classification = transformed_melt_industry_classification.filter(
+    col("classification_id").isNotNull() & col("stg_business_entity_id").isNotNull()
+).selectExpr(*ss.industry_classification_schema).distinct()
+
+transformed_melt_characteristics = transformed_melt_characteristics.filter(
+    col("stg_business_entity_id").isNotNull() & col("characteristics_id").isNotNull()
+).selectExpr(*ss.characteristics_schema).distinct()
+
+transformed_physical_address = transformed_physical_address.filter(
+    col("physical_address_id").isNotNull() & col("related_identifier").isNotNull()
+).selectExpr(*ss.physical_address_schema).distinct()
+
+transformed_association = transformed_association.filter(
+    col("stg_business_entity_id").isNotNull() & col("card_association_id").isNotNull()
+).selectExpr(*ss.association_schema).distinct()
+
+transformed_spend_analysis = transformed_spend_analysis.filter(
+    col("spend_analysis_id").isNotNull() & col("stg_payee_business_entity_id").isNotNull()
+).selectExpr(*ss.spend_analysis_schema).distinct()
+
+transformed_relationship = transformed_relationship.filter(
+    col("stg_business_entity_id").isNotNull() & col("business_entity_relationship_id").isNotNull()
+).selectExpr(*ss.relationship_schema).distinct()
+
+transformed_identifiers = transformed_identifiers.filter(
+    col("identifier_id").isNotNull() & col("related_identifier").isNotNull()
+).selectExpr(*ss.identifiers_schema).distinct()
+
+
+# List of DataFrames and their corresponding table names
+dataframes_with_tables = {
+    "business_entity": transformed_business_entity,
+    "business_entity_details": transformed_business_entity_details,
+    "business_entity_characteristics": transformed_melt_characteristics,
+    "physical_address": transformed_physical_address,
+    "business_entity_identifiers": transformed_identifiers,
+    "telecommunication_address": transformed_melt_telecommunication_address,
+    "electronic_address": transformed_melt_electronic_address,
+    "business_entity_spend_analysis": transformed_spend_analysis,
+    "restrictions": transformed_melt_restrictions,
+    "business_entity_industry_classification": transformed_melt_industry_classification,
+    "business_entity_card_association": transformed_association,
+    "business_entity_contacts": transformed_contacts,
+    "business_entity_relationships": transformed_relationship,
+    "business_entity_card_transactions_stability": transformed_transaction_stability,
+    "business_entity_card_revenues": transformed_revenue,
+    "business_entity_receivables_attribute": transformed_melt_payment_profile_attribute,
+}
+
+truncate = utl.truncate_tables(ss.rds_host,ss.rds_port,ss.db_name,ss.db_user,rds_token,ss.ssl_cert_s3_path)
+load_data = utl.load_dataframes_to_postgres(dataframes_with_tables, glueContext, ss, rds_token)
+
+
+job.commit()
