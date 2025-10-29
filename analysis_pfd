@@ -1,333 +1,51 @@
-in my project below is the code for establishing connection to aws postgres DB.
-but whats happening is data is less in df like in input table i.e in  sds_landing.analysis_pfd if its less than 3k records its working fine 
-but if data is huge anywhere between 3k to 20k
+Description
+As a developer, understand how data is coming from UT and create a design document on how an this be integrated with our existing data pipeline.
 
-then getting below errornot sure if conenect is getting closed or token is getting expired
+Tasks:
 
-but i heread that once connection is established it will be active for 8hrs .is it true?
+1. Ask Andy team to share a sample UT file
 
+2. Understand file formats, data structure
 
+3. Finalize on how will the files be received
+4. create a design document to load to sds with existing data pipeline
 
+5. Update confluence 
 
-####### pfd_staging.py ##########################################################################################################
+6. Prod fix in PFD pipeline if occurred
 
-import sys
-import os
-import boto3
-import json
-import hashlib
-import uuid
-import psycopg2
-import utils_token_Omshanti_old as utl
-import staging_schema as ss
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from pyspark.sql import SparkSession
-from awsglue.context import GlueContext
-from awsglue.job import Job
-from awsglue.dynamicframe import DynamicFrame
-from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, from_json, struct,coalesce,trim,upper
-from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType, NullType
-from pyspark.sql.utils import AnalysisException
-from datetime import datetime, timedelta
-from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round, regexp_replace, size
-from pyspark.sql import DataFrame
-from functools import reduce
-from pyspark.sql.functions import col, lit, when, isnan, isnull, lower
-from pyspark.sql.functions import split, array_union, array_distinct, array
-import time
-#from utils import load_dataframes_to_postgres_bulk_parallel  # or define it in this file
+ 
 
-## @params: [JOB_NAME]
-args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+Acceptance Criteria:
 
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-
-s3 = boto3.client("s3")
-#s3.download_file(s3_bucket,ssl_cert_s3_path,local_ssl_cert_path)
-
-rds_client = boto3.client ("rds",region_name=ss.region)
-rds_token = rds_client.generate_db_auth_token(
-    DBHostname = ss.rds_host,
-    Port = ss.rds_port,
-    DBUsername = ss.db_user
-    )
-
-pg_connection_options = {
-    "url" : f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
-    "user" : ss.db_user,
-    "password" : rds_token
-   # "db_table":source_table
-    }
+Design document on how to consume UT data and integrate in our data pipeline
 
 
-# Extract landing data
-def get_landing_data():
-    try:
-        # Query to fetch data
-        query = "(SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee = 'N') AS temp_table"
-
-        # Read the query result into a Spark DataFrame
-        source_df = glueContext.read.format("jdbc").options(
-                dbtable=query,
-                **pg_connection_options
-            ).load()
-
-        # Define UDFs for computing business entity ID and buying entity ID
-        
-        
-        print("printing compute uuid bussiness entity")
-        source_df = source_df.withColumn(
-                        "stg_business_entity_id",
-                        when(
-                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
-                            ).otherwise(
-                                compute_uuid_udf(struct("vendor_name_cleaned"))
-                            )
-                            )
-                
-
-        print("stg_business_entity_id column added.")
+****************************************************************************************************************************************************************************************************************
 
 
-        source_df = source_df.withColumn(
-                "stg_buying_entity",
-            compute_uuid_udf(struct("client_name"))
-                )
-    
-        print("stg_buying_entity column added.")
-
-        print("After adding the UUID columns")
-        source_df.select("stg_business_entity_id").show()
-        # Return the Spark DataFrame
-        return source_df
-
-    except Exception as e:
-        print('Error Message is:', e)
-        return None
-        
-        
-        
-
-
-############### some transformations for each df listed below #######################################
-
-
-# List of DataFrames and their corresponding table names
-dataframes_with_tables = {
-    "business_entity": transformed_business_entity,
-    "business_entity_details": transformed_business_entity_details,
-    "business_entity_characteristics": transformed_melt_characteristics,
-    "physical_address": transformed_physical_address,
-    "business_entity_identifiers": transformed_identifiers,
-    "telecommunication_address": transformed_melt_telecommunication_address,
-    "electronic_address": transformed_melt_electronic_address,
-    "business_entity_spend_analysis": transformed_spend_analysis,
-    "restrictions": transformed_melt_restrictions,
-    "business_entity_industry_classification": transformed_melt_industry_classification,
-    "business_entity_card_association": transformed_association,
-    "business_entity_contacts": transformed_contacts,
-    "business_entity_relationships": transformed_relationship,
-    "business_entity_card_transactions_stability": transformed_transaction_stability,
-    "business_entity_card_revenues": transformed_revenue,
-    "business_entity_receivables_attribute": transformed_melt_payment_profile_attribute,
-}
-
-truncate = utl.truncate_tables(ss.rds_host,ss.rds_port,ss.db_name,ss.db_user,rds_token,ss.ssl_cert_s3_path)
-load_data = utl.load_dataframes_to_postgres(dataframes_with_tables, glueContext, ss, rds_token)
-
-
-
-job.commit()
-
-
-#######################################################################################################################################
-
-
-
-
-########################################### utils.py ##################################################################################
-import sys
-import boto3
-import json
-import hashlib
-import pandas as pd
-import uuid
-import psycopg2
-from psycopg2 import sql
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from pyspark.sql import SparkSession
-from awsglue.context import GlueContext
-from awsglue.job import Job
-from awsglue.dynamicframe import DynamicFrame
-from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, coalesce
-from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType
-from pyspark.sql.utils import AnalysisException
-from datetime import datetime
-from pyspark.sql.functions import when, lit, col, explode,from_json
-from pyspark.sql.functions import  concat_ws,current_timestamp
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
-import staging_schema as ss
-
-def truncate_tables(rds_host, rds_port, db_name, db_user, rds_token, ssl_cert_s3_path):
-    connection = None
-    cursor = None
-
-    try:
-        # Establish a connection to the database
-        connection = psycopg2.connect(
-            host=rds_host,
-            port=rds_port,
-            database=db_name,
-            user=db_user,
-            password=rds_token,
-            sslmode="require",
-            sslrootcert=ssl_cert_s3_path
-        )
-        cursor = connection.cursor()
-
-        # Fetch all table names in the schema
-        selecting_tables = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'sds_staging'"
-        cursor.execute(selecting_tables)
-        tables = [row[0] for row in cursor.fetchall()]  # Fetch all rows and extract table names
-        print("Tables to truncate:", tables)
-
-        # Truncate each table
-        for table in tables:
-            #truncate_query = f'TRUNCATE TABLE sds_staging.{table} CASCADE'
-            #nosec - this query uses psycopg2.sql.identifier to safely format the table name
-            truncate_query = sql.SQL("TRUNCATE TABLE {}.{} CASCADE").format(
-                sql.Identifier('sds_staging'),  # Schema name
-                sql.Identifier(table)  # Table name
-            )
-
-            cursor.execute(truncate_query)
-            print(f"Truncated table: sds_staging.{table}")
-
-        # Commit the transaction
-        connection.commit()
-        print("All tables in the schema have been truncated successfully.")
-
-    except Exception as e:
-        print(f"Error truncating tables: {e}")
-        if connection:
-            connection.rollback()  # Rollback the transaction on error
-
-    finally:
-        # Close the cursor and connection if they were created
-        if cursor:
-            cursor.close()
-        if connection:
-            connection.close()
-            
-            
-
-
-def load_dataframes_to_postgres(dataframes_with_tables, glueContext, ss, rds_token):
-    """
-    Function to load multiple PySpark DataFrames into PostgreSQL using AWS Glue.
-
-    Args:
-        dataframes_with_tables (dict): A dictionary where keys are table names and values are PySpark DataFrames.
-        glueContext (GlueContext): The AWS Glue context.
-        ss (object): An object containing database connection details (e.g., `rds_host`, `rds_port`, `db_name`, `ssl_cert_s3_path`, `db_user`).
-        rds_token (str): The RDS authentication token.
-
-    Returns:
-        None
-    """
-
-
-    # Add common columns to all DataFrames
-    for table_name, df in dataframes_with_tables.items():
-        dataframes_with_tables[table_name] = df  # Update the DataFrame in the dictionary
-
-    # Load each DataFrame into its corresponding table
-    for table_name, df in dataframes_with_tables.items():
-        try:
-            # Convert PySpark DataFrame to Glue DynamicFrame
-            dynamic_frame = DynamicFrame.fromDF(df, glueContext, table_name)
-            
-            # Define connection options
-            connection_options = {
-                "url": f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
-                "user": ss.db_user,
-                "password": rds_token,
-                "dbtable": f"sds_staging.{table_name}",  # Specify the target table name here
-            }
-
-            # Write the DynamicFrame to the database
-            glueContext.write_dynamic_frame.from_options(
-                frame=dynamic_frame,
-                connection_type="postgresql",  # Specify the connection type
-                connection_options=connection_options,
-                transformation_ctx=f"write_{table_name}"
-            )
-            
-            print(f"Data written successfully to the table {table_name}.")
-        except Exception as e:
-            print(f"Error loading data into {table_name}: {e}")
-			
-    return "Data written successfully to all tables"
-    
-    
-    
-    
-
-
-**********************************************************************************************
-
-
-when data  is huge. it load data for few tables later its failing
-
-
-2025-10-21T07:15:51.180Z
-Truncated table: sds_staging.physical_address
-2025-10-21T07:15:51.693Z
-All tables in the schema have been truncated successfully.
-2025-10-21T07:15:56.240Z
-Data written successfully to the table business_entity.
-2025-10-21T07:16:00.101Z
-Data written successfully to the table business_entity_details.
-2025-10-21T07:16:10.035Z
-Data written successfully to the table business_entity_characteristics.
-2025-10-21T07:16:12.097Z
-Data written successfully to the table physical_address.
-2025-10-21T07:17:48.239Z
-Data written successfully to the table business_entity_identifiers.
-2025-10-21T07:17:49.611Z
-Data written successfully to the table telecommunication_address.
-2025-10-21T07:17:51.186Z
-Data written successfully to the table electronic_address.
-2025-10-21T07:17:53.661Z
-Data written successfully to the table business_entity_spend_analysis.
-2025-10-21T07:17:54.877Z
-Data written successfully to the table restrictions.
-2025-10-21T07:18:00.292Z
-Data written successfully to the table business_entity_industry_classification.
-2025-10-21T07:18:02.381Z
-Data written successfully to the table business_entity_card_association.
-2025-10-21T07:18:03.758Z
-Data written successfully to the table business_entity_contacts.
-2025-10-21T07:24:35.013Z
-Error loading data into business_entity_relationships: An error occurred while calling o2948.pyWriteDynamicFrame. : org.apache.spark.SparkException: Job aborted due to stage failure: Task 31 in stage 297.0 failed 4 times, most recent failure: Lost task 31.3 in stage 297.0 (TID 3408) (100.74.16.108 executor 5): org.postgresql.util.PSQLException: FATAL: PAM authentication failed for user "xbsddevdbAuroraAppAdmin" at org.postgresql.Driver$ConnectThread.getResult(Driver.java:353) at org.postgresql.Driver.connect(Driver.java:268) at org.apache.spark.sql.jdbc.glue.GlueJDBCUtils$.$anonfun$createConnectionFactory$1(GlueJDBCUtils.scala:38) at org.apache.spark.sql.jdbc.glue.GlueJDBCSink$.savePartition(GlueJDBCSink.scala:227) at org.apache.spark.sql.jdbc.glue.GlueJDBCSink$.$anonfun$saveTable$3(GlueJDBCSink.scala:77) at org.apache.spark.sql.jdbc.glue.GlueJDBCSink$.$anonfun$saveTable$3$adapted(GlueJDBCSink.scala:76) at org.apache.spark.rdd.RDD.$anonfun$foreachPartition$2(RDD.scala:1011) at org.apache.spark.rdd.RDD.$anonfun$foreachPartition$2$adapted(RDD.scala:1011) at org.apache.spark.SparkContext.$anonfun$runJob$5(SparkContext.scala:2269) at org.apache.spark.scheduler.ResultTask.runTask(ResultTask.scala:90) at org.apache.spark.scheduler.Task.run(Task.scala:138) at org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$3(Executor.scala:548) at org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:1516) at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:551) at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149) at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624) at java.lang.Thread.run(Thread.java:750) Driver stacktrace: at org.apache.spark.scheduler.DAGScheduler.failJobAndIndependentStages(DAGScheduler.scala:2863) at org.apache.spark.scheduler.DAGScheduler.$anonfun$abortStage$2(DAGScheduler.scala:2799) at org.apache.spark.scheduler.DAGScheduler.$anonfun$abortStage$2$adapted(DAGScheduler.scala:2798) at scala.collection.mutable.ResizableArray.foreach(ResizableArray.scala:62) at scala.collection.mutable.ResizableArray.foreach$(ResizableArray.scala:55) at scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:49) at org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:2798) at org.apache.spark.scheduler.DAGScheduler.$anonfun$handleTaskSetFailed$1(DAGScheduler.scala:1239) at org.apache.spark.scheduler.DAGScheduler.$anonfun$handleTaskSetFailed$1$adapted(DAGScheduler.scala:1239) at scala.Option.foreach(Option.scala:407) at org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:1239) at org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:3051) at org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:2993) at org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:2982) at org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:49) at org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:1009) at org.apache.spark.SparkContext.runJob(SparkContext.scala:2229) at org.apache.spark.SparkContext.runJob(SparkContext.scala:2250) at org.apache.spark.SparkContext.runJob(SparkContext.scala:2269) at org.apache.spark.SparkContext.runJob(SparkContext.scala:2294) at org.apache.spark.rdd.RDD.$anonfun$foreachPartition$1(RDD.scala:1011) at org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:151) at org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:112) at org.apache.spark.rdd.RDD.withScope(RDD.scala:406) at org.apache.spark.rdd.RDD.foreachPartition(RDD.scala:1009) at org.apache.spark.sql.Dataset.$anonfun$foreachPartition$1(Dataset.scala:3102) at org.apache.spark.sql.Dataset.$anonfun$foreachPartition$1$adapted(Dataset.scala:3102) at org.apache.spark.sql.Dataset$RDDQueryExecution.$anonfun$withNewExecutionId$1(Dataset.scala:4019) at org.apache.spark.sql.catalyst.QueryPlanningTracker$.withTracker(QueryPlanningTracker.scala:107) at org.apache.spark.sql.execution.SQLExecution$.withTracker(SQLExecution.scala:224) at org.apache.spark.sql.execution.SQLExecution$.executeQuery$1(SQLExecution.scala:114) at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId$7(SQLExecution.scala:139) at org.apache.spark.sql.catalyst.QueryPlanningTracker$.withTracker(QueryPlanningTracker.scala:107) at org.apache.spark.sql.execution.SQLExecution$.withTracker(SQLExecution.scala:224) at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId$6(SQLExecution.scala:139) at org.apache.spark.sql.execution.SQLExecution$.withSQLConfPropagated(SQLExecution.scala:245) at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId$1(SQLExecution.scala:138) at org.apache.spark.sql.SparkSession.withActive(SparkSession.scala:779) at org.apache.spark.sql.execution.SQLExecution$.withNewExecutionId(SQLExecution.scala:68) at org.apache.spark.sql.Dataset$RDDQueryExecution.withNewExecutionId(Dataset.scala:4017) at org.apache.spark.sql.Dataset.withNewRDDExecutionId(Dataset.scala:3911) at org.apache.spark.sql.Dataset.foreachPartition(Dataset.scala:3102) at org.apache.spark.sql.jdbc.glue.GlueJDBCSink$.saveTable(GlueJDBCSink.scala:76) at org.apache.spark.sql.jdbc.glue.GlueJDBCSink$.save(GlueJDBCSink.scala:37) at com.amazonaws.services.glue.util.JDBCWrapper.writeDF(JDBCUtils.scala:992) at com.amazonaws.services.glue.sinks.PostgresDataSink.writeDynamicFrame(PostgresDataSink.scala:42) at com.amazonaws.services.glue.DataSink.pyWriteDynamicFrame(DataSink.scala:73) at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) at java.lang.reflect.Method.invoke(Method.java:498) at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244) at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357) at py4j.Gateway.invoke(Gateway.java:282) at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132) at py4j.commands.CallCommand.execute(CallCommand.java:79) at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:182) at py4j.ClientServerConnection.run(ClientServerConnection.java:106) at java.lang.Thread.run(Thread.java:750) Caused by: org.postgresql.util.PSQLException: FATAL: PAM authentication failed for user "xbsddevdbAuroraAppAdmin" at org.postgresql.Driver$ConnectThread.getResult(Driver.java:353) at org.postgresql.Driver.connect(Driver.java:268) at org.apache.spark.sql.jdbc.glue.GlueJDBCUtils$.$anonfun$createConnectionFactory$1(GlueJDBCUtils.scala:38) at org.apache.spark.sql.jdbc.glue.GlueJDBCSink$.savePartition(GlueJDBCSink.scala:227) at org.apache.spark.sql.jdbc.glue.GlueJDBCSink$.$anonfun$saveTable$3(GlueJDBCSink.scala:77) at org.apache.spark.sql.jdbc.glue.GlueJDBCSink$.$anonfun$saveTable$3$adapted(GlueJDBCSink.scala:76) at org.apache.spark.rdd.RDD.$anonfun$foreachPartition$2(RDD.scala:1011) at org.apache.spark.rdd.RDD.$anonfun$foreachPartition$2$adapted(RDD.scala:1011) at org.apache.spark.SparkContext.$anonfun$runJob$5(SparkContext.scala:2269) at org.apache.spark.scheduler.ResultTask.runTask(ResultTask.scala:90) at org.apache.spark.scheduler.Task.run(Task.scala:138) at org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$3(Executor.scala:548) at org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:1516) at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:551) at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149) at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624) ... 1 more
-2025-10-21T07:24:37.011Z
-Error loading data into business_entity_card_transactions_stability: An error occurred while calling o2953.pyWriteDynamicFrame. : org.postgresql.util.PSQLException: FATAL: PAM authentication failed for user "xbsddevdbAuroraAppAdmin" at org.postgresql.core.v3.ConnectionFactoryImpl.doAuthentication(ConnectionFactoryImpl.java:646) at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:180) at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:235) at org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:49) at org.postgresql.jdbc.PgConnection.<init>(PgConnection.java:223) at org.postgresql.Driver.makeConnection(Driver.java:402) at org.postgresql.Driver.connect(Driver.java:261) at com.amazonaws.services.glue.util.JDBCWrapper$.$anonfun$connectionProperties$5(JDBCUtils.scala:1124) at com.amazonaws.services.glue.util.JDBCWrapper$.$anonfun$connectWithSSLAttempt$2(JDBCUtils.scala:1074) at scala.Option.getOrElse(Option.scala:189) at com.amazonaws.services.glue.util.JDBCWrapper$.$anonfun$connectWithSSLAttempt$1(JDBCUtils.scala:1074) at scala.Option.getOrElse(Option.scala:189) at com.amazonaws.services.glue.util.JDBCWrapper$.connectWithSSLAttempt(JDBCUtils.scala:1074) at com.amazonaws.services.glue.util.JDBCWrapper$.connectionProperties(JDBCUtils.scala:1120) at com.amazonaws.services.glue.util.JDBCWrapper.connectionProperties$lzycompute(JDBCUtils.scala:825) at com.amazonaws.services.glue.util.JDBCWrapper.connectionProperties(JDBCUtils.scala:825) at com.amazonaws.services.glue.util.JDBCWrapper.writeDF(JDBCUtils.scala:983) at com.amazonaws.services.glue.sinks.PostgresDataSink.writeDynamicFrame(PostgresDataSink.scala:42) at com.amazonaws.services.glue.DataSink.pyWriteDynamicFrame(DataSink.scala:73) at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) at java.lang.reflect.Method.invoke(Method.java:498) at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244) at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357) at py4j.Gateway.invoke(Gateway.java:282) at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132) at py4j.commands.CallCommand.execute(CallCommand.java:79) at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:182) at py4j.ClientServerConnection.run(ClientServerConnection.java:106) at java.lang.Thread.run(Thread.java:750)
-2025-10-21T07:24:37.177Z
-Error loading data into business_entity_card_revenues: An error occurred while calling o2957.pyWriteDynamicFrame. : org.postgresql.util.PSQLException: FATAL: PAM authentication failed for user "xbsddevdbAuroraAppAdmin" at org.postgresql.core.v3.ConnectionFactoryImpl.doAuthentication(ConnectionFactoryImpl.java:646) at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:180) at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:235) at org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:49) at org.postgresql.jdbc.PgConnection.<init>(PgConnection.java:223) at org.postgresql.Driver.makeConnection(Driver.java:402) at org.postgresql.Driver.connect(Driver.java:261) at com.amazonaws.services.glue.util.JDBCWrapper$.$anonfun$connectionProperties$5(JDBCUtils.scala:1124) at com.amazonaws.services.glue.util.JDBCWrapper$.$anonfun$connectWithSSLAttempt$2(JDBCUtils.scala:1074) at scala.Option.getOrElse(Option.scala:189) at com.amazonaws.services.glue.util.JDBCWrapper$.$anonfun$connectWithSSLAttempt$1(JDBCUtils.scala:1074) at scala.Option.getOrElse(Option.scala:189) at com.amazonaws.services.glue.util.JDBCWrapper$.connectWithSSLAttempt(JDBCUtils.scala:1074) at com.amazonaws.services.glue.util.JDBCWrapper$.connectionProperties(JDBCUtils.scala:1120) at com.amazonaws.services.glue.util.JDBCWrapper.connectionProperties$lzycompute(JDBCUtils.scala:825) at com.amazonaws.services.glue.util.JDBCWrapper.connectionProperties(JDBCUtils.scala:825) at com.amazonaws.services.glue.util.JDBCWrapper.writeDF(JDBCUtils.scala:983) at com.amazonaws.services.glue.sinks.PostgresDataSink.writeDynamicFrame(PostgresDataSink.scala:42) at com.amazonaws.services.glue.DataSink.pyWriteDynamicFrame(DataSink.scala:73) at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
-2025-10-21T07:24:37.177Z
-at java.lang.reflect.Method.invoke(Method.java:498) at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244) at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357) at py4j.Gateway.invoke(Gateway.java:282) at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132) at py4j.commands.CallCommand.execute(CallCommand.java:79) at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:182) at py4j.ClientServerConnection.run(ClientServerConnection.java:106) at java.lang.Thread.run(Thread.java:750)
-2025-10-21T07:24:45.809Z
-Error loading data into business_entity_receivables_attribute: An error occurred while calling o2961.pyWriteDynamicFrame. : org.postgresql.util.PSQLException: FATAL: PAM authentication failed for user "xbsddevdbAuroraAppAdmin" at org.postgresql.core.v3.ConnectionFactoryImpl.doAuthentication(ConnectionFactoryImpl.java:646) at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:180) at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:235) at org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:49) at org.postgresql.jdbc.PgConnection.<init>(PgConnection.java:223) at org.postgresql.Driver.makeConnection(Driver.java:402) at org.postgresql.Driver.connect(Driver.java:261) at com.amazonaws.services.glue.util.JDBCWrapper$.$anonfun$connectionProperties$5(JDBCUtils.scala:1124) at com.amazonaws.services.glue.util.JDBCWrapper$.$anonfun$connectWithSSLAttempt$2(JDBCUtils.scala:1074) at scala.Option.getOrElse(Option.scala:189) at com.amazonaws.services.glue.util.JDBCWrapper$.$anonfun$connectWithSSLAttempt$1(JDBCUtils.scala:1074) at scala.Option.getOrElse(Option.scala:189) at com.amazonaws.services.glue.util.JDBCWrapper$.connectWithSSLAttempt(JDBCUtils.scala:1074) at com.amazonaws.services.glue.util.JDBCWrapper$.connectionProperties(JDBCUtils.scala:1120) at com.amazonaws.services.glue.util.JDBCWrapper.connectionProperties$lzycompute(JDBCUtils.scala:825) at com.amazonaws.services.glue.util.JDBCWrapper.connectionProperties(JDBCUtils.scala:825) at com.amazonaws.services.glue.util.JDBCWrapper.writeDF(JDBCUtils.scala:983) at com.amazonaws.services.glue.sinks.PostgresDataSink.writeDynamicFrame(PostgresDataSink.scala:42) at com.amazonaws.services.glue.DataSink.pyWriteDynamicFrame(DataSink.scala:73) at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.ja
-2025-10-21T07:24:45.810Z
-va:43) at java.lang.reflect.Method.invoke(Method.java:498) at py4j.reflection.MethodInvoker.invoke(MethodInvoker
+1.case creation Countinous recuritment Jikesh 
+2.Enigma contact load Jikesh
+3.integrate the api for the continous recruitment Poorna
+4.Continous recruitment ui page - Nishant
+ 
+salesforce integration (Ramsai,Srinivas, ANusha,Rakesh,Sri)
+1. ddl for recruitment activity,outcome,payment coordinates and also any model changes in the existing tables
+2. after ddl creation we need to run end to end testing(PFD,Upload, salesforce)
+3.Payment coordinates we need to write logic
+4.recruitment activity & outcome & payment coordinates - upsert we need to load this to main schema
+5.contacts,restrictions, telecommunication, address, electronic, characteristics --insert in the staging schema
+6.integrate this glue job to the step function
+7.testing & data validation in main schema 
+8.event bridge creation to run the salesforce in a scheduled time
+9. Model changes if any in the salesforce integration
+10. Full end to end testing (PFD,Upload, salesforce Ingestion & extraction)
+ 
+Ip data load - Abhishek
+ 
+UT data load to sds (Mounika B, Parimala)
+ 
+Ao Comms: (Mounika G, )
+PQC Phase-1 (Confidentiality) Transition Planning for 2026
+ 
+Farm:
