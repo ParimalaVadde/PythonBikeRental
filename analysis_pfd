@@ -49,3 +49,58 @@ Ao Comms: (Mounika G, )
 PQC Phase-1 (Confidentiality) Transition Planning for 2026
  
 Farm:
+
+
+************************************************************************
+
+Here are **two clear, well-defined Jira sub-tasks** you can create under that story:
+
+---
+
+### **Sub-task 1: Analyze UT Data and Define Integration Approach**
+
+**Description:**
+
+* Request and review a sample UT file from Andy’s team.
+* Analyze the file format, schema, and data structure.
+* Determine how the UT files will be received (frequency, location, and naming conventions).
+* Draft the initial approach for integrating UT data with the existing data pipeline.
+
+**Deliverables:**
+
+* Summary of UT data structure and ingestion method.
+* Proposed integration approach documented.
+
+**Acceptance Criteria:**
+
+* UT file structure and data flow are clearly understood.
+* Integration approach is agreed upon by the team.
+
+---
+
+### **Sub-task 2: Create and Document UT Data Integration Design**
+
+**Description:**
+
+* Create a detailed design document outlining how UT data will be loaded into SDS through the existing data pipeline.
+* Include transformations, mapping logic, and any required updates to the PFD pipeline.
+* Update Confluence with the finalized design and handle any identified production fixes if necessary.
+
+**Deliverables:**
+
+* Final design document for UT data integration.
+* Updated Confluence page with design details.
+
+**Acceptance Criteria:**
+
+* Design document reviewed and approved.
+* Confluence updated and any necessary pipeline fixes applied.
+
+---
+
+Would you like me to format them in **Jira Markdown** (so you can copy-paste directly into Jira)?
+
+
+
+
+Perform end-to-end Salesforce integration testing
