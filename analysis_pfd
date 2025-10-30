@@ -1,106 +1,259 @@
-Description
-As a developer, understand how data is coming from UT and create a design document on how an this be integrated with our existing data pipeline.
 
-Tasks:
+how to read xlsb to pandas df and spark df
 
-1. Ask Andy team to share a sample UT file
+also to spark df
+this file is present s3 path
 
-2. Understand file formats, data structure
+    transformed_characteristics,
+    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
+    s3_key="pfd_scripts/pfd_staging_pvr_test/The J.M. Smucker Company Presale Analysis 2025-10 (15641) AP_UT_v1.xlsb",
 
-3. Finalize on how will the files be received
-4. create a design document to load to sds with existing data pipeline
+file name : The J.M. Smucker Company Presale Analysis 2025-10 (15641) AP_UT_v1.xlsb
 
-5. Update confluence 
-
-6. Prod fix in PFD pipeline if occurred
-
- 
-
-Acceptance Criteria:
-
-Design document on how to consume UT data and integrate in our data pipeline
-
-
-****************************************************************************************************************************************************************************************************************
-
-
-1.case creation Countinous recuritment Jikesh 
-2.Enigma contact load Jikesh
-3.integrate the api for the continous recruitment Poorna
-4.Continous recruitment ui page - Nishant
- 
-salesforce integration (Ramsai,Srinivas, ANusha,Rakesh,Sri)
-1. ddl for recruitment activity,outcome,payment coordinates and also any model changes in the existing tables
-2. after ddl creation we need to run end to end testing(PFD,Upload, salesforce)
-3.Payment coordinates we need to write logic
-4.recruitment activity & outcome & payment coordinates - upsert we need to load this to main schema
-5.contacts,restrictions, telecommunication, address, electronic, characteristics --insert in the staging schema
-6.integrate this glue job to the step function
-7.testing & data validation in main schema 
-8.event bridge creation to run the salesforce in a scheduled time
-9. Model changes if any in the salesforce integration
-10. Full end to end testing (PFD,Upload, salesforce Ingestion & extraction)
- 
-Ip data load - Abhishek
- 
-UT data load to sds (Mounika B, Parimala)
- 
-Ao Comms: (Mounika G, )
-PQC Phase-1 (Confidentiality) Transition Planning for 2026
- 
-Farm:
-
-
-************************************************************************
-
-Here are **two clear, well-defined Jira sub-tasks** you can create under that story:
-
----
-
-### **Sub-task 1: Analyze UT Data and Define Integration Approach**
-
-**Description:**
-
-* Request and review a sample UT file from Andy’s team.
-* Analyze the file format, schema, and data structure.
-* Determine how the UT files will be received (frequency, location, and naming conventions).
-* Draft the initial approach for integrating UT data with the existing data pipeline.
-
-**Deliverables:**
-
-* Summary of UT data structure and ingestion method.
-* Proposed integration approach documented.
-
-**Acceptance Criteria:**
-
-* UT file structure and data flow are clearly understood.
-* Integration approach is agreed upon by the team.
-
----
-
-### **Sub-task 2: Create and Document UT Data Integration Design**
-
-**Description:**
-
-* Create a detailed design document outlining how UT data will be loaded into SDS through the existing data pipeline.
-* Include transformations, mapping logic, and any required updates to the PFD pipeline.
-* Update Confluence with the finalized design and handle any identified production fixes if necessary.
-
-**Deliverables:**
-
-* Final design document for UT data integration.
-* Updated Confluence page with design details.
-
-**Acceptance Criteria:**
-
-* Design document reviewed and approved.
-* Confluence updated and any necessary pipeline fixes applied.
-
----
-
-Would you like me to format them in **Jira Markdown** (so you can copy-paste directly into Jira)?
+Index	Supplier ID	Site ID	Supplier Name	Address	City	St	ZIP	Country	TIN	Supplier Contact	Phone	Email	Pay Method	Pay Term	Other Coding 1	Other Coding 2	 Supplier Count 	 Transactions 	 Amount 	 Avg Tran Size 	Universal Exclusion	Incremental Potential	Product Segmentation	Avg Spend Bands	Annual Spend Bands	MCC	MCC Description	Card Match	Card Match Level	Association Match Confidence	Second Campaign Items	Exc/Inc	Supplier Enablement Priority	Virtual Card Match Confidence	Potential Large Ticket or Tiered Interchange	Virtual Card Match	Potential Tiered Rebate Structure	Payment Preference	STP Match	Merchant Services Match	Potential Tiered Rebate Matches	Second Address Field	IP Payment Preferences 	IP Client Outreach	IP Card Acceptor	IP Flag	IP ID	IP Matched ID
+1	697545	798527	1 WORLDSYNC INC	PO BOX 7800	DETROIT	MI	48278-1341	US				cmacias@1worldsync.com	ACH	NET 45	JMS DOMESTIC	USD	 1 	 3 	 $830,246 	 $276,749 			ACH_VC_NS	Greater Than 100000	Strategic			Y	Level 2	Low				1-NOM		Yes	Standard				Standard	DEPT 781341						
+2	1943076	1565948	12M COMMERCIAL PROPERTIES LLC	4204 S PINNACLE HILLS PKWY STE 102	ROGERS	AR	72758-6027	US		MEGAN MURDOCK	1-000-636-9000	MEGAN.MURDOCK@COLLIERS.COM	ACH	IMMEDIATE	JMS DOMESTIC	USD	 1 	 12 	 $593,789 	 $49,482 		Non-card & Greater Than $100K Amount	 	10000-100000	Strategic			N	No Match	0				0			Standard				Standard							
+3	2695076	2324946	13 BOND STREET LLC	101 RODNEY ST	GLEN ROCK	NJ	07452-2105	US		DANIEL COREY	1-000-410-2014	TRUSTEECOREY@GMAIL.COM	ACH	IMMEDIATE	JMS DOMESTIC	USD	 1 	 12 	 $10,172 	 $848 		Non-card & Less Than $100K Amount	 	Less Than 2500	Small			N	No Match	0				0			Standard				Standard							
+4	2859093	2489970	150 N WACKER LLC	PO BOX 734346	CHICAGO	IL	60673-4346	US		TED CROWE	1-000-977-1110		ACH	IMMEDIATE	JMS DOMESTIC	USD	 1 	 15 	 $522,048 	 $34,803 			ACH_VC_NS	10000-100000	Strategic	7523	Parking & Garages	Y	Level 2	Medium				0			Standard				Standard							
+5	2879083	2510953	1ST STOP INC	PO BOX 175	WINCHESTER	OH	45697-0175	US		SANDY DOUGLAS	1-000-695-0318	SDOUGLAS@1STSTOPINC.COM	ACH	NET 30	JMS DOMESTIC	USD	 1 	 3 	 $88,407 	 $29,469 			ACH_VC_NS	10000-100000	Mid-size	5541	Service Stations	Y	Level 2	High				1-NOM		Yes	Standard				Standard	18856 ST RT 136						
+6	2855084	2485955	2 SECURE INC	12 E ILLINOIS ST	LEMONT	IL	60439-3608	US		HOSTESS		ACCOUNTING@2SECUREINC.COM	ACH	NET 60	JMS DOMESTIC	USD	 1 	 6 	 $15,870 	 $2,645 			Pcard1	2500-10000	Small	5992	Florists	Y	Level 2	Medium				0			Standard				Standard							
+7	1581013	1198774	24 7 FIRE PROTECTION LLC	1145 NW 850TH RD	ODESSA	MO	64076	US		JOBY CHAMBERS	1-000-940-9574	AMANDA@247FIRE.NET	ACH	NET 75	JMS DOMESTIC	USD	 1 	 3 	 $31,834 	 $10,611 			ACH_VC_NS	10000-100000	Mid-size	8999	Misc 'Professional Services	Y	Level 3	High				0	Potential Large Ticket		TR Cat1				Standard							
 
 
 
 
-Perform end-to-end Salesforce integration testing
+
+import sys
+import os
+import boto3
+import json
+import hashlib
+import uuid
+import psycopg2
+import utils as utl
+import staging_schema as ss
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from pyspark.sql import SparkSession
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue.dynamicframe import DynamicFrame
+from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, from_json, struct,coalesce,trim,upper
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType, NullType
+from pyspark.sql.utils import AnalysisException
+from datetime import datetime
+from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round, regexp_replace, size, lower
+from pyspark.sql import DataFrame
+from functools import reduce
+from pyspark.sql.functions import col, lit, when, isnan, isnull
+from pyspark.sql.functions import split, array_union, array_distinct, array
+
+
+
+## @params: [JOB_NAME]
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+
+s3 = boto3.client("s3")
+#s3.download_file(s3_bucket,ssl_cert_s3_path,local_ssl_cert_path)
+
+
+rds_client = boto3.client ("rds",region_name=ss.region)
+rds_token = rds_client.generate_db_auth_token(
+    DBHostname = ss.rds_host,
+    Port = ss.rds_port,
+    DBUsername = ss.db_user
+    )
+    
+pg_connection_options = {
+    "url" : f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
+    "user" : ss.db_user,
+    "password" : rds_token
+   # "db_table":source_table
+    }
+
+# Register the UDF
+compute_uuid_udf = udf(lambda x: utl.compute_uuid(x, ss.decimal_columns), StringType())
+
+
+def get_landing_data():
+    try:
+        # Query to fetch data
+        query = "(SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee = 'N') AS temp_table"
+
+        # Read the query result into a Spark DataFrame
+        source_df = glueContext.read.format("jdbc").options(
+                dbtable=query,
+                **pg_connection_options
+            ).load()
+
+        # Define UDFs for computing business entity ID and buying entity ID
+        
+        
+        print("printing compute uuid bussiness entity")
+        source_df = source_df.withColumn(
+                        "stg_business_entity_id",
+                        when(
+                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
+                            ).otherwise(
+                                compute_uuid_udf(struct("vendor_name_cleaned"))
+                            )
+                            )
+                
+
+        print("stg_business_entity_id column added.")
+
+
+        source_df = source_df.withColumn(
+                "stg_buying_entity",
+            compute_uuid_udf(struct("client_name"))
+                )
+    
+        print("stg_buying_entity column added.")
+
+        print("After adding the UUID columns")
+        source_df.select("stg_business_entity_id").show()
+        # Return the Spark DataFrame
+        return source_df
+
+    except Exception as e:
+        print('Error Message is:', e)
+        return None
+        
+
+def sanitize_and_add_missing_columns(df, required_columns):
+    """
+    adds missing columns with null values.
+    
+    Args:
+        df (DataFrame): The input Spark DataFrame.
+        required_columns (list): List of required column names.
+    
+    Returns:
+        DataFrame: The updated DataFrame with sanitized column names and all required columns.
+    """
+    print("required columns", required_columns)
+    print("existing columns in pfd file",  df.columns)
+    
+    
+    # : Add missing columns with null values
+    existing_columns = df.columns
+    missing_columns = [col for col in required_columns if col not in existing_columns]
+    for col in missing_columns:
+        df = df.withColumn(col, lit(None))
+    
+    return df
+
+
+def process_mapping_and_transform_data(source_df,  output_data_path):
+    """
+    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
+    """
+        
+    mapping_file = utl.read_map_file('pfd_mapping')
+    print("Reading mapping file completed")
+       
+
+    mapping_df = spark.createDataFrame(mapping_file)
+    
+    print("Converting mapping file to Dataframe completed")
+
+    # Validate mapping DataFrame
+    if mapping_df.rdd.isEmpty():
+        raise ValueError("The mapping DataFrame is empty. Please check the mapping file.")
+    if "source_column" not in mapping_df.columns or "target_column" not in mapping_df.columns:
+        raise ValueError("The mapping DataFrame does not contain the required columns: 'source_column' and 'target_column'.")
+
+    # Initialize variables
+    column_mapping = {}
+    current_date = datetime.today().strftime("%Y-%m-%d")
+
+    # Iterate through the mapping DataFrame to create the column mapping dictionary
+    for row in mapping_df.collect():
+        source_col = str(row["source_column"]).strip().lower()
+        target_col = row["target_column"]
+        column_mapping[source_col] = target_col
+
+   # print("Column Mapping Dictionary:")
+   # print(column_mapping)
+
+    # Read the input data into a Glue DynamicFrame
+    source_df.show()
+    data = source_df
+    print("data:", data.show())
+
+    # Validate input DataFrame
+    if data.rdd.isEmpty():
+      print("The input DataFrame is empty. Please check the source data.")
+        
+    print("before transforming the data")
+
+    # Rename columns in the input DataFrame using the column mapping
+    transformed_df = data.select(
+        [col(c).alias(column_mapping[c]) if c in column_mapping else col(c) for c in data.columns]
+    )
+    # Add a new column "stg_jpmc_business_entity_id" based on the condition
+    transformed_df = transformed_df.withColumn(
+        "stg_jpmc_business_entity_id",
+        when(
+            (col("client_ecid").isNotNull()) | (col("ind_jpmc") == 'Y'),
+            lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33")
+        ).otherwise(None)
+    )
+    
+    print("after transforming the data")
+
+    print("Transformed DataFrame:")
+    #transformed_df.show()
+    
+    
+    transformed_df = transformed_df.withColumn(
+            "product_segmentation_applicable",
+            concat_ws(";", 
+                array_distinct(
+                    array_union(
+                        when(col("product_segmentation_applicable").isNotNull(), 
+                            split(col("product_segmentation_applicable"), ";")).otherwise(array()),
+                        when(col("stg_codelist").isNotNull(), 
+                            split(col("stg_codelist"), ";")).otherwise(array())
+                    )
+                )
+            )
+        )
+    
+
+    # Validate transformed DataFrame
+    if transformed_df.rdd.isEmpty():
+        raise ValueError("The transformed DataFrame is empty after applying column mappings.")
+
+    # Convert the Spark DataFrame to a Glue DynamicFrame
+    #transformed_dynamic_frame = DynamicFrame.fromDF(transformed_df, glueContext, "transformed_dynamic_frame")
+
+
+    
+
+    print("Transformation and writing completed")
+    return transformed_df
+    
+    
+landing_tables= get_landing_data()
+
+# Assume `source_df` is your Spark DataFrame
+fixing_source_df = sanitize_and_add_missing_columns(landing_tables, ss.pfd_mandatory_columns)
+
+# Show the updated DataFrame
+fixing_source_df.show()
+
+    
+#landing_tables.show()
+transformed_df = process_mapping_and_transform_data(fixing_source_df, ss.output_data_path)
+
+transformed_df.show()
+
