@@ -1,191 +1,37 @@
-import boto3
-import pandas as pd
-from io import BytesIO
-from pyspark.sql import SparkSession
-import pyxlsb
+def cast_spark_to_pandas_schema(spark_df):
+    # Replace nulls in timestamp columns with a default value (e.g., pd.NaT or a specific date)
+    timestamp_columns = [column for column, dtype in spark_df.dtypes if dtype == "timestamp"]
+    integer_columns = [column for column, dtype in spark_df.dtypes if dtype == "int"]
+    boolean_columns = [column for column, dtype in spark_df.dtypes if dtype == "boolean"]  # ADD THIS LINE
 
-# Initialize S3 client
-s3 = boto3.client('s3')
+    # check the decimal columns values
+    for field in spark_df.schema.fields:
+        if isinstance(field.dataType, DecimalType) and field.dataType.scale == 18:
+            print(f"{field} is of decimal type")
+            spark_df = spark_df.withColumn(field.name, spark_df[field.name].cast(DecimalType(38, 2)))
 
-# S3 configuration
-s3_bucket = "app-id-111597-dep-id-114116-uu-id-9x0jt94siuto"
-s3_key = "pfd_scripts/pfd_staging_pvr_test/The J.M. Smucker Company Presale Analysis 2025-10 (15641) AP_UT_v1.xlsb"
+    # Convert Spark DataFrame to pandas DataFrame
+    pandas_df = spark_df.toPandas()
 
-# ============================================================================
-# METHOD 1: Read XLSB to Pandas DataFrame
-# ============================================================================
+    # Explicitly set datetime64[ns] for timestamp columns
+    for t_col in timestamp_columns:
+        pandas_df[t_col] = pandas_df[t_col].astype("datetime64[ns]", copy=False)
 
-def read_xlsb_to_pandas(s3_bucket, s3_key, sheet_name=0):
-    """
-    Read XLSB file from S3 directly into pandas DataFrame
+    # Handle nullable integer columns (Int64)
+    for column in integer_columns:
+        pandas_df[column] = pandas_df[column].astype("Int64", copy=False)
+        pandas_df[column] = pandas_df[column].replace(np.nan, None)
     
-    Args:
-        s3_bucket: S3 bucket name
-        s3_key: S3 object key (file path)
-        sheet_name: Sheet name or index (default: 0 for first sheet)
-    
-    Returns:
-        pandas DataFrame
-    """
-    try:
-        # Download file from S3 to memory
-        response = s3.get_object(Bucket=s3_bucket, Key=s3_key)
-        file_content = response['Body'].read()
-        
-        # Read XLSB file using pyxlsb
-        with pyxlsb.open_workbook(BytesIO(file_content)) as wb:
-            # Get sheet names
-            sheet_names = wb.sheets
-            print(f"Available sheets: {sheet_names}")
-            
-            # Determine which sheet to read
-            if isinstance(sheet_name, int):
-                target_sheet = sheet_names[sheet_name]
-            else:
-                target_sheet = sheet_name
-            
-            # Read the sheet
-            with wb.get_sheet(target_sheet) as sheet:
-                data = []
-                for row in sheet.rows():
-                    data.append([cell.v for cell in row])
-                
-                # Create DataFrame (first row as header)
-                if data:
-                    df = pd.DataFrame(data[1:], columns=data[0])
-                else:
-                    df = pd.DataFrame()
-        
-        print(f"Successfully loaded {len(df)} rows from XLSB file")
-        return df
-    
-    except Exception as e:
-        print(f"Error reading XLSB file: {e}")
-        raise
+    # ADD THIS SECTION: Handle nullable boolean columns
+    for column in boolean_columns:
+        # Convert to nullable boolean dtype that supports NA/None
+        pandas_df[column] = pandas_df[column].astype("boolean", copy=False)
+        # Replace pd.NA with None for consistency
+        pandas_df[column] = pandas_df[column].apply(lambda x: None if pd.isna(x) else x)
 
+    # Replace NaT with None for datetime columns
+    datetime_columns = pandas_df.select_dtypes(include=["datetime64[ns]"]).columns
+    for column in datetime_columns:
+        pandas_df[column] = pandas_df[column].apply(lambda x: None if pd.isna(x) else x)
 
-# Alternative: Using openpyxl after conversion
-def read_xlsb_to_pandas_alt(s3_bucket, s3_key, sheet_name=0):
-    """
-    Alternative method: Download to temp file and use pandas read_excel
-    Requires: pip install pyxlsb
-    """
-    import tempfile
-    import os
-    
-    try:
-        # Create temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsb') as tmp_file:
-            tmp_path = tmp_file.name
-            
-        # Download from S3
-        s3.download_file(s3_bucket, s3_key, tmp_path)
-        
-        # Read with pandas (requires pyxlsb engine)
-        df = pd.read_excel(tmp_path, sheet_name=sheet_name, engine='pyxlsb')
-        
-        # Clean up
-        os.remove(tmp_path)
-        
-        print(f"Successfully loaded {len(df)} rows from XLSB file")
-        return df
-    
-    except Exception as e:
-        print(f"Error reading XLSB file: {e}")
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
-        raise
-
-
-# ============================================================================
-# METHOD 2: Read XLSB to Spark DataFrame
-# ============================================================================
-
-def read_xlsb_to_spark(s3_bucket, s3_key, spark, sheet_name=0):
-    """
-    Read XLSB file from S3 into Spark DataFrame
-    
-    Args:
-        s3_bucket: S3 bucket name
-        s3_key: S3 object key (file path)
-        spark: SparkSession object
-        sheet_name: Sheet name or index (default: 0 for first sheet)
-    
-    Returns:
-        Spark DataFrame
-    """
-    try:
-        # First read to pandas
-        pandas_df = read_xlsb_to_pandas(s3_bucket, s3_key, sheet_name)
-        
-        # Convert pandas to Spark DataFrame
-        spark_df = spark.createDataFrame(pandas_df)
-        
-        print(f"Successfully converted to Spark DataFrame with {spark_df.count()} rows")
-        return spark_df
-    
-    except Exception as e:
-        print(f"Error converting to Spark DataFrame: {e}")
-        raise
-
-
-# ============================================================================
-# USAGE EXAMPLE
-# ============================================================================
-
-if __name__ == "__main__":
-    # Initialize Spark (if using Spark)
-    spark = SparkSession.builder \
-        .appName("XLSB Reader") \
-        .getOrCreate()
-    
-    # Read to Pandas
-    print("Reading XLSB to Pandas DataFrame...")
-    pandas_df = read_xlsb_to_pandas(s3_bucket, s3_key, sheet_name=0)
-    print(pandas_df.head())
-    print(f"Pandas DataFrame shape: {pandas_df.shape}")
-    
-    # Read to Spark
-    print("\nReading XLSB to Spark DataFrame...")
-    spark_df = read_xlsb_to_spark(s3_bucket, s3_key, spark, sheet_name=0)
-    spark_df.show(5)
-    print(f"Spark DataFrame count: {spark_df.count()}")
-    
-    # Clean column names (remove leading/trailing spaces)
-    spark_df = spark_df.select([
-        F.col(c).alias(c.strip()) for c in spark_df.columns
-    ])
-    
-    spark.stop()
-
-
-# ============================================================================
-# INTEGRATION WITH YOUR EXISTING CODE
-# ============================================================================
-
-def integrate_with_existing_code():
-    """
-    Example of how to integrate with your existing code
-    """
-    # Your existing imports and setup...
-    from pyspark.sql import functions as F
-    
-    # Read XLSB file from S3
-    xlsb_s3_bucket = "app-id-111597-dep-id-114116-uu-id-9x0jt94siuto"
-    xlsb_s3_key = "pfd_scripts/pfd_staging_pvr_test/The J.M. Smucker Company Presale Analysis 2025-10 (15641) AP_UT_v1.xlsb"
-    
-    # Read to Spark DataFrame
-    xlsb_spark_df = read_xlsb_to_spark(xlsb_s3_bucket, xlsb_s3_key, spark, sheet_name=0)
-    
-    # Clean column names
-    xlsb_spark_df = xlsb_spark_df.select([
-        F.col(c).alias(c.strip().lower().replace(" ", "_")) 
-        for c in xlsb_spark_df.columns
-    ])
-    
-    # Now you can use it with your existing functions
-    # For example:
-    # fixed_df = sanitize_and_add_missing_columns(xlsb_spark_df, ss.pfd_mandatory_columns)
-    # transformed_df = process_mapping_and_transform_data(fixed_df, ss.output_data_path)
-    
-    return xlsb_spark_df
+    return pandas_df
