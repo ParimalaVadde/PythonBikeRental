@@ -1,10 +1,10 @@
 def cast_spark_to_pandas_schema(spark_df):
-    # Replace nulls in timestamp columns with a default value (e.g., pd.NaT or a specific date)
+    # Identify column types
     timestamp_columns = [column for column, dtype in spark_df.dtypes if dtype == "timestamp"]
     integer_columns = [column for column, dtype in spark_df.dtypes if dtype == "int"]
-    boolean_columns = [column for column, dtype in spark_df.dtypes if dtype == "boolean"]  # ADD THIS LINE
-
-    # check the decimal columns values
+    boolean_columns = [column for column, dtype in spark_df.dtypes if dtype == "boolean"]
+    
+    # Check the decimal columns values
     for field in spark_df.schema.fields:
         if isinstance(field.dataType, DecimalType) and field.dataType.scale == 18:
             print(f"{field} is of decimal type")
@@ -13,21 +13,21 @@ def cast_spark_to_pandas_schema(spark_df):
     # Convert Spark DataFrame to pandas DataFrame
     pandas_df = spark_df.toPandas()
 
-    # Explicitly set datetime64[ns] for timestamp columns
+    # Handle timestamp columns
     for t_col in timestamp_columns:
         pandas_df[t_col] = pandas_df[t_col].astype("datetime64[ns]", copy=False)
 
-    # Handle nullable integer columns (Int64)
+    # Handle nullable integer columns
     for column in integer_columns:
         pandas_df[column] = pandas_df[column].astype("Int64", copy=False)
         pandas_df[column] = pandas_df[column].replace(np.nan, None)
     
-    # ADD THIS SECTION: Handle nullable boolean columns
+    # Handle boolean columns - PRESERVE NULL as None, not False
     for column in boolean_columns:
-        # Convert to nullable boolean dtype that supports NA/None
-        pandas_df[column] = pandas_df[column].astype("boolean", copy=False)
-        # Replace pd.NA with None for consistency
-        pandas_df[column] = pandas_df[column].apply(lambda x: None if pd.isna(x) else x)
+        # Keep as object type to properly support None
+        pandas_df[column] = pandas_df[column].apply(
+            lambda x: None if pd.isna(x) or x is None else bool(x)
+        )
 
     # Replace NaT with None for datetime columns
     datetime_columns = pandas_df.select_dtypes(include=["datetime64[ns]"]).columns
