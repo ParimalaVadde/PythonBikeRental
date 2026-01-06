@@ -100,3 +100,62 @@ if records_to_insert.count() > 0:
             logger.info(f"INSERT - Column {col} unique values: {insert_pd[col].unique()}")
     
     # Rest of insert code continues...
+
+
+**************************************
+
+upsert
+
+# Prepare the parameter list for all rows
+params_list = []
+for _, row in update_pd.iterrows():
+    params = []
+    # SET values
+    for col in update_pd.columns:
+        if col not in compare_columns and column_mapping.get(col, col) not in primary_keys and col != load_flag_column and col != "created_by" and col != "created_date":
+            value = row[col]
+            # CRITICAL: Explicitly handle boolean columns to preserve None
+            if col in boolean_columns:
+                if value is None or pd.isna(value):
+                    params.append(None)
+                else:
+                    params.append(bool(value))
+            else:
+                params.append(value)
+    params.append(row["created_by"])
+    updated_date = datetime.now()
+    dt_with_milliseconds = updated_date.replace(microsecond=(updated_date.microsecond // 1000) * 1000)
+    params.append(dt_with_milliseconds)
+    # WHERE values
+    for col in compare_columns:
+        params.append(row[col])
+    params_list.append(tuple(params))
+
+*************************************
+
+insert
+# Prepare the values for all rows
+values = []
+for _, row in insert_pd.iterrows():
+    params = []
+    for col in insert_pd.columns:
+        if col != load_flag_column:
+            value = row[col]
+            # CRITICAL: Explicitly handle boolean columns to preserve None
+            if col in boolean_columns:
+                if value is None or pd.isna(value):
+                    params.append(None)
+                else:
+                    params.append(bool(value))
+            else:
+                params.append(value)
+    # Add audit fields
+    if "is_active" not in insert_pd.columns:
+        params.append(True)
+    if "last_updated_by" not in insert_pd.columns:
+        params.append(row["created_by"])
+    if "last_updated_date" not in insert_pd.columns:
+        updated_date = datetime.now()
+        dt_with_milliseconds = updated_date.replace(microsecond=(updated_date.microsecond // 1000) * 1000)
+        params.append(dt_with_milliseconds)
+    values.append(tuple(params))
