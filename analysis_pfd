@@ -462,7 +462,15 @@ def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns,
                     # SET values
                     for col in update_pd.columns:
                         if col not in compare_columns and column_mapping.get(col, col) not in primary_keys and col != load_flag_column and col != "created_by" and col != "created_date":
-                            params.append(row[col])
+                            value = row[col]
+                            # CRITICAL: Explicitly handle boolean columns to preserve None
+                            if col in boolean_columns:
+                                if value is None or pd.isna(value):
+                                    params.append(None)
+                                else:
+                                    params.append(bool(value))
+                            else:
+                                params.append(value)
                     params.append(row["created_by"])
                     updated_date = datetime.now()
                     dt_with_milliseconds = updated_date.replace(microsecond=(updated_date.microsecond // 1000) * 1000)
@@ -593,7 +601,15 @@ def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns,
                     params = []
                     for col in insert_pd.columns:
                         if col != load_flag_column:
-                            params.append(row[col])
+                            value = row[col]
+                            # CRITICAL: Explicitly handle boolean columns to preserve None
+                            if col in boolean_columns:
+                                if value is None or pd.isna(value):
+                                    params.append(None)
+                                else:
+                                    params.append(bool(value))
+                            else:
+                                params.append(value)
                     # Add audit fields
                     if "is_active" not in insert_pd.columns:
                         params.append(True)
