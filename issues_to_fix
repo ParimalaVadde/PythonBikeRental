@@ -4,6 +4,8 @@ def cast_spark_to_pandas_schema(spark_df):
     integer_columns = [column for column, dtype in spark_df.dtypes if dtype == "int"]
     boolean_columns = [column for column, dtype in spark_df.dtypes if dtype == "boolean"]
     
+    logger.info(f"Boolean columns identified: {boolean_columns}")
+    
     # Check the decimal columns values
     for field in spark_df.schema.fields:
         if isinstance(field.dataType, DecimalType) and field.dataType.scale == 18:
@@ -12,6 +14,8 @@ def cast_spark_to_pandas_schema(spark_df):
 
     # Convert Spark DataFrame to pandas DataFrame
     pandas_df = spark_df.toPandas()
+    
+    logger.info(f"Data types after toPandas: {pandas_df.dtypes}")
 
     # Handle timestamp columns
     for t_col in timestamp_columns:
@@ -22,12 +26,13 @@ def cast_spark_to_pandas_schema(spark_df):
         pandas_df[column] = pandas_df[column].astype("Int64", copy=False)
         pandas_df[column] = pandas_df[column].replace(np.nan, None)
     
-    # Handle boolean columns - PRESERVE NULL as None, not False
+    # Handle boolean columns - DO NOT convert, keep as is but replace NaN with None
     for column in boolean_columns:
-        # Keep as object type to properly support None
-        pandas_df[column] = pandas_df[column].apply(
-            lambda x: None if pd.isna(x) or x is None else bool(x)
-        )
+        logger.info(f"Processing boolean column: {column}")
+        logger.info(f"Unique values before: {pandas_df[column].unique()}")
+        # Don't use astype - just replace NaN/None
+        pandas_df[column] = pandas_df[column].replace({np.nan: None})
+        logger.info(f"Unique values after: {pandas_df[column].unique()}")
 
     # Replace NaT with None for datetime columns
     datetime_columns = pandas_df.select_dtypes(include=["datetime64[ns]"]).columns
@@ -35,3 +40,63 @@ def cast_spark_to_pandas_schema(spark_df):
         pandas_df[column] = pandas_df[column].apply(lambda x: None if pd.isna(x) else x)
 
     return pandas_df
+
+
+
+
+******************
+
+# Process bulk update records
+if records_to_update.count() > 0:
+    # Get boolean columns BEFORE conversion
+    boolean_columns = [column for column, dtype in records_to_update.dtypes if dtype == "boolean"]
+    logger.info(f"Boolean columns in update: {boolean_columns}")
+    
+    # Convert to pandas for row-by-row processing with psycopg2
+    update_pd = cast_spark_to_pandas_schema(records_to_update)
+    
+    # CRITICAL: Store boolean values BEFORE astype(object)
+    boolean_values = {}
+    for col in boolean_columns:
+        if col in update_pd.columns:
+            boolean_values[col] = update_pd[col].copy()
+    
+    update_pd = update_pd.astype(object).where(pd.notna(update_pd), None)
+    update_pd = update_pd.apply(lambda x: None if isinstance(x, str) and x.strip().lower() == "nan" else x)
+    update_pd = update_pd.replace(r'^\s*$', None, regex=True)
+    update_pd = update_pd.astype(object).where(pd.notna(update_pd), None)
+    
+    # CRITICAL: Restore boolean columns with proper None handling
+    for col in boolean_columns:
+        if col in update_pd.columns:
+            update_pd[col] = boolean_values[col].replace({np.nan: None})
+            logger.info(f"UPDATE - Column {col} unique values: {update_pd[col].unique()}")
+    
+    # Rest of update code continues...
+
+
+**************************
+
+# Process each insert record
+if records_to_insert.count() > 0:
+    # Get boolean columns BEFORE conversion
+    boolean_columns = [column for column, dtype in records_to_insert.dtypes if dtype == "boolean"]
+    logger.info(f"Boolean columns in insert: {boolean_columns}")
+    
+    insert_pd = cast_spark_to_pandas_schema(records_to_insert)
+    
+    # CRITICAL: Store boolean values BEFORE astype(object)
+    boolean_values = {}
+    for col in boolean_columns:
+        if col in insert_pd.columns:
+            boolean_values[col] = insert_pd[col].copy()
+    
+    insert_pd = insert_pd.astype(object).where(pd.notna(insert_pd), None)
+    
+    # CRITICAL: Restore boolean columns with proper None handling
+    for col in boolean_columns:
+        if col in insert_pd.columns:
+            insert_pd[col] = boolean_values[col].replace({np.nan: None})
+            logger.info(f"INSERT - Column {col} unique values: {insert_pd[col].unique()}")
+    
+    # Rest of insert code continues...
