@@ -1,259 +1,771 @@
-
-how to read xlsb to pandas df and spark df
-
-also to spark df
-this file is present s3 path
-
-    transformed_characteristics,
-    s3_bucket="app-id-111597-dep-id-114116-uu-id-9x0jt94siuto",
-    s3_key="pfd_scripts/pfd_staging_pvr_test/The J.M. Smucker Company Presale Analysis 2025-10 (15641) AP_UT_v1.xlsb",
-
-file name : The J.M. Smucker Company Presale Analysis 2025-10 (15641) AP_UT_v1.xlsb
-
-Index	Supplier ID	Site ID	Supplier Name	Address	City	St	ZIP	Country	TIN	Supplier Contact	Phone	Email	Pay Method	Pay Term	Other Coding 1	Other Coding 2	 Supplier Count 	 Transactions 	 Amount 	 Avg Tran Size 	Universal Exclusion	Incremental Potential	Product Segmentation	Avg Spend Bands	Annual Spend Bands	MCC	MCC Description	Card Match	Card Match Level	Association Match Confidence	Second Campaign Items	Exc/Inc	Supplier Enablement Priority	Virtual Card Match Confidence	Potential Large Ticket or Tiered Interchange	Virtual Card Match	Potential Tiered Rebate Structure	Payment Preference	STP Match	Merchant Services Match	Potential Tiered Rebate Matches	Second Address Field	IP Payment Preferences 	IP Client Outreach	IP Card Acceptor	IP Flag	IP ID	IP Matched ID
-1	697545	798527	1 WORLDSYNC INC	PO BOX 7800	DETROIT	MI	48278-1341	US				cmacias@1worldsync.com	ACH	NET 45	JMS DOMESTIC	USD	 1 	 3 	 $830,246 	 $276,749 			ACH_VC_NS	Greater Than 100000	Strategic			Y	Level 2	Low				1-NOM		Yes	Standard				Standard	DEPT 781341						
-2	1943076	1565948	12M COMMERCIAL PROPERTIES LLC	4204 S PINNACLE HILLS PKWY STE 102	ROGERS	AR	72758-6027	US		MEGAN MURDOCK	1-000-636-9000	MEGAN.MURDOCK@COLLIERS.COM	ACH	IMMEDIATE	JMS DOMESTIC	USD	 1 	 12 	 $593,789 	 $49,482 		Non-card & Greater Than $100K Amount	 	10000-100000	Strategic			N	No Match	0				0			Standard				Standard							
-3	2695076	2324946	13 BOND STREET LLC	101 RODNEY ST	GLEN ROCK	NJ	07452-2105	US		DANIEL COREY	1-000-410-2014	TRUSTEECOREY@GMAIL.COM	ACH	IMMEDIATE	JMS DOMESTIC	USD	 1 	 12 	 $10,172 	 $848 		Non-card & Less Than $100K Amount	 	Less Than 2500	Small			N	No Match	0				0			Standard				Standard							
-4	2859093	2489970	150 N WACKER LLC	PO BOX 734346	CHICAGO	IL	60673-4346	US		TED CROWE	1-000-977-1110		ACH	IMMEDIATE	JMS DOMESTIC	USD	 1 	 15 	 $522,048 	 $34,803 			ACH_VC_NS	10000-100000	Strategic	7523	Parking & Garages	Y	Level 2	Medium				0			Standard				Standard							
-5	2879083	2510953	1ST STOP INC	PO BOX 175	WINCHESTER	OH	45697-0175	US		SANDY DOUGLAS	1-000-695-0318	SDOUGLAS@1STSTOPINC.COM	ACH	NET 30	JMS DOMESTIC	USD	 1 	 3 	 $88,407 	 $29,469 			ACH_VC_NS	10000-100000	Mid-size	5541	Service Stations	Y	Level 2	High				1-NOM		Yes	Standard				Standard	18856 ST RT 136						
-6	2855084	2485955	2 SECURE INC	12 E ILLINOIS ST	LEMONT	IL	60439-3608	US		HOSTESS		ACCOUNTING@2SECUREINC.COM	ACH	NET 60	JMS DOMESTIC	USD	 1 	 6 	 $15,870 	 $2,645 			Pcard1	2500-10000	Small	5992	Florists	Y	Level 2	Medium				0			Standard				Standard							
-7	1581013	1198774	24 7 FIRE PROTECTION LLC	1145 NW 850TH RD	ODESSA	MO	64076	US		JOBY CHAMBERS	1-000-940-9574	AMANDA@247FIRE.NET	ACH	NET 75	JMS DOMESTIC	USD	 1 	 3 	 $31,834 	 $10,611 			ACH_VC_NS	10000-100000	Mid-size	8999	Misc 'Professional Services	Y	Level 3	High				0	Potential Large Ticket		TR Cat1				Standard							
-
-
-
-
-
 import sys
-import os
-import boto3
-import json
-import hashlib
-import uuid
-import psycopg2
-import utils as utl
-import staging_schema as ss
+import logging
+from datetime import date,datetime
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
-from pyspark.sql import SparkSession
 from awsglue.context import GlueContext
 from awsglue.job import Job
-from awsglue.dynamicframe import DynamicFrame
-from pyspark.sql.functions import col, explode, lit, when, udf, to_date, current_date, from_json, struct,coalesce,trim,upper
+import boto3
+import psycopg2
+from psycopg2 import sql
+from psycopg2.extras import execute_values
+from psycopg2.extras import execute_batch
+import pandas as pd
+import numpy as np
 from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType, IntegerType, MapType, NullType
-from pyspark.sql.utils import AnalysisException
-from datetime import datetime
-from pyspark.sql.functions import concat_ws,current_timestamp,broadcast,round, regexp_replace, size, lower
-from pyspark.sql import DataFrame
+from pyspark.sql.functions import lit
+from pyspark.sql.functions import col
+from pyspark.sql.types import BooleanType, StringType, DateType,DecimalType
 from functools import reduce
-from pyspark.sql.functions import col, lit, when, isnan, isnull
-from pyspark.sql.functions import split, array_union, array_distinct, array
+from operator import and_
+import payload as ss  # Import sensitive configuration
+from io import StringIO
+from functools import reduce
+import time
 
-
-
-## @params: [JOB_NAME]
+# Initialize Spark and Glue contexts
 args = getResolvedOptions(sys.argv, ['JOB_NAME'])
-
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
 
+# Initialize logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-s3 = boto3.client("s3")
-#s3.download_file(s3_bucket,ssl_cert_s3_path,local_ssl_cert_path)
-
-
-rds_client = boto3.client ("rds",region_name=ss.region)
-rds_token = rds_client.generate_db_auth_token(
-    DBHostname = ss.rds_host,
-    Port = ss.rds_port,
-    DBUsername = ss.db_user
-    )
-    
-pg_connection_options = {
-    "url" : f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require&sslrootcert={ss.ssl_cert_s3_path}",
-    "user" : ss.db_user,
-    "password" : rds_token
-   # "db_table":source_table
-    }
-
-# Register the UDF
-compute_uuid_udf = udf(lambda x: utl.compute_uuid(x, ss.decimal_columns), StringType())
-
-
-def get_landing_data():
+def get_db_connection():
+    """
+    Establishes a PostgreSQL connection using AWS RDS authentication.
+    """
     try:
-        # Query to fetch data
-        query = "(SELECT DISTINCT * FROM sds_landing.analysis_pfd WHERE filter_employee = 'N') AS temp_table"
-
-        # Read the query result into a Spark DataFrame
-        source_df = glueContext.read.format("jdbc").options(
-                dbtable=query,
-                **pg_connection_options
-            ).load()
-
-        # Define UDFs for computing business entity ID and buying entity ID
+        rds_client = boto3.client("rds", region_name=ss.region)
         
+        # Generate database authentication token
+        rds_token = rds_client.generate_db_auth_token(
+            DBHostname=ss.rds_host,
+            Port=ss.rds_port,
+            DBUsername=ss.db_user
+        )
         
-        print("printing compute uuid bussiness entity")
-        source_df = source_df.withColumn(
-                        "stg_business_entity_id",
-                        when(
-                            col("sds_supplier_id").isNotNull(), col("sds_supplier_id")
-                            ).otherwise(
-                                compute_uuid_udf(struct("vendor_name_cleaned"))
-                            )
-                            )
-                
-
-        print("stg_business_entity_id column added.")
-
-
-        source_df = source_df.withColumn(
-                "stg_buying_entity",
-            compute_uuid_udf(struct("client_name"))
-                )
-    
-        print("stg_buying_entity column added.")
-
-        print("After adding the UUID columns")
-        source_df.select("stg_business_entity_id").show()
-        # Return the Spark DataFrame
-        return source_df
-
+        # PostgreSQL connection details
+        pg_connection = psycopg2.connect(
+            host=ss.rds_host,
+            port=ss.rds_port,
+            dbname=ss.db_name,
+            user=ss.db_user,
+            password=rds_token
+        )
+        
+        logger.info("Successfully established database connection")
+        return pg_connection
     except Exception as e:
-        print('Error Message is:', e)
-        return None
-        
+        logger.error(f"Error establishing database connection: {e}")
+        raise
 
-def sanitize_and_add_missing_columns(df, required_columns):
+def get_jdbc_url():
     """
-    adds missing columns with null values.
-    
-    Args:
-        df (DataFrame): The input Spark DataFrame.
-        required_columns (list): List of required column names.
-    
-    Returns:
-        DataFrame: The updated DataFrame with sanitized column names and all required columns.
+    Returns a JDBC URL for PostgreSQL connection.
     """
-    print("required columns", required_columns)
-    print("existing columns in pfd file",  df.columns)
+    rds_client = boto3.client("rds", region_name=ss.region)
     
-    
-    # : Add missing columns with null values
-    existing_columns = df.columns
-    missing_columns = [col for col in required_columns if col not in existing_columns]
-    for col in missing_columns:
-        df = df.withColumn(col, lit(None))
-    
-    return df
-
-
-def process_mapping_and_transform_data(source_df,  output_data_path):
-    """
-    Reads a mapping file and input data, applies column transformations, and writes the transformed data to S3.
-    """
-        
-    mapping_file = utl.read_map_file('pfd_mapping')
-    print("Reading mapping file completed")
-       
-
-    mapping_df = spark.createDataFrame(mapping_file)
-    
-    print("Converting mapping file to Dataframe completed")
-
-    # Validate mapping DataFrame
-    if mapping_df.rdd.isEmpty():
-        raise ValueError("The mapping DataFrame is empty. Please check the mapping file.")
-    if "source_column" not in mapping_df.columns or "target_column" not in mapping_df.columns:
-        raise ValueError("The mapping DataFrame does not contain the required columns: 'source_column' and 'target_column'.")
-
-    # Initialize variables
-    column_mapping = {}
-    current_date = datetime.today().strftime("%Y-%m-%d")
-
-    # Iterate through the mapping DataFrame to create the column mapping dictionary
-    for row in mapping_df.collect():
-        source_col = str(row["source_column"]).strip().lower()
-        target_col = row["target_column"]
-        column_mapping[source_col] = target_col
-
-   # print("Column Mapping Dictionary:")
-   # print(column_mapping)
-
-    # Read the input data into a Glue DynamicFrame
-    source_df.show()
-    data = source_df
-    print("data:", data.show())
-
-    # Validate input DataFrame
-    if data.rdd.isEmpty():
-      print("The input DataFrame is empty. Please check the source data.")
-        
-    print("before transforming the data")
-
-    # Rename columns in the input DataFrame using the column mapping
-    transformed_df = data.select(
-        [col(c).alias(column_mapping[c]) if c in column_mapping else col(c) for c in data.columns]
-    )
-    # Add a new column "stg_jpmc_business_entity_id" based on the condition
-    transformed_df = transformed_df.withColumn(
-        "stg_jpmc_business_entity_id",
-        when(
-            (col("client_ecid").isNotNull()) | (col("ind_jpmc") == 'Y'),
-            lit("2d35a04a-5fdf-50d5-7750-c1c7621ddc33")
-        ).otherwise(None)
+    # Generate database authentication token
+    rds_token = rds_client.generate_db_auth_token(
+        DBHostname=ss.rds_host,
+        Port=ss.rds_port,
+        DBUsername=ss.db_user
     )
     
-    print("after transforming the data")
+    return f"jdbc:postgresql://{ss.rds_host}:{ss.rds_port}/{ss.db_name}?sslmode=require", ss.db_user, rds_token
 
-    print("Transformed DataFrame:")
-    #transformed_df.show()
-    
-    
-    transformed_df = transformed_df.withColumn(
-            "product_segmentation_applicable",
-            concat_ws(";", 
-                array_distinct(
-                    array_union(
-                        when(col("product_segmentation_applicable").isNotNull(), 
-                            split(col("product_segmentation_applicable"), ";")).otherwise(array()),
-                        when(col("stg_codelist").isNotNull(), 
-                            split(col("stg_codelist"), ";")).otherwise(array())
-                    )
-                )
-            )
+def get_primary_keys(schema_name, table_name):
+    """
+    Retrieves primary key columns for the specified table.
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = """
+        SELECT a.attname
+        FROM pg_index i
+        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE i.indrelid = '{}.{}'::regclass AND i.indisprimary;
+        """.format(schema_name, table_name)
+        
+        cursor.execute(query)
+        primary_keys = [row[0] for row in cursor.fetchall()]
+        
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"Primary keys for {schema_name}.{table_name}: {primary_keys}")
+        return primary_keys
+    except Exception as e:
+        logger.error(f"Error retrieving primary keys: {e}")
+        raise
+
+
+def get_table_columns_psycopg2(schema, table):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = %s AND table_name = %s
+        ORDER BY ordinal_position
+    """, (schema, table))
+    columns = [row[0] for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    return columns
+
+def read_data_from_s3(s3_path):
+    """
+    Reads data from an S3 location into a Spark DataFrame.
+    If s3_path is None, reads from a staging table.
+    """
+    try:
+        df = spark.read.option("header", "true").option("inferSchema", "true").csv(s3_path)
+        logger.info(f"Successfully read data from {s3_path}")
+        return df
+    except Exception as e:
+        logger.error(f"Error reading data from S3: {e}")
+        raise
+
+def clean_dataframe(df):
+    """
+    Cleans the DataFrame by handling null values and empty strings.
+    """
+    # Replace empty strings and whitespace-only strings with nulls
+    for col_name in df.columns:
+        df = df.withColumn(
+            col_name,
+            F.when(
+                (F.col(col_name).isNotNull()) & 
+                (F.trim(F.col(col_name)) == ""), 
+                F.lit(None)
+            ).otherwise(F.col(col_name))
+        )
+        
+        # Replace "nan" strings with nulls (case-insensitive)
+        df = df.withColumn(
+            col_name,
+            F.when(
+                (F.col(col_name).isNotNull()) & 
+                (F.lower(F.trim(F.col(col_name))) == "nan"), 
+                F.lit(None)
+            ).otherwise(F.col(col_name))
         )
     
+    logger.info("DataFrame cleaning completed")
+    return df
 
-    # Validate transformed DataFrame
-    if transformed_df.rdd.isEmpty():
-        raise ValueError("The transformed DataFrame is empty after applying column mappings.")
+def read_existing_records(schema_name, table_name, compare_columns, mapped_columns, df_values):
+    """
+    Reads existing records from PostgreSQL based on comparison columns.
+    Uses IN clause with values from the DataFrame instead of a JOIN.
+    """
+    try:
+        # Get JDBC connection parameters
+        jdbc_url, user, password = get_jdbc_url()
+        
+        # Map the compare columns from DataFrame to DB columns
+        db_columns = [mapped_columns.get(col, col) for col in compare_columns]
+        logger.info(f"db_columns {db_columns}")
+        
+        # # Collect distinct values for each comparison column
+        # value_lists = {}
+        # for col in compare_columns:
+        #     # Convert Spark DataFrame column to a list of values
+        #     values = [row[col] for row in df_values.select(col).distinct().collect()]
+        #     value_lists[col] = values
+        #     logger.info(f"Collected {len(values)} distinct values for column {col}")
+        
+        # Build WHERE conditions for each comparison column
+        where_conditions = []
+        for i, col in enumerate(compare_columns):
+            db_col = mapped_columns.get(col, col)
+            # Convert Spark DataFrame column to a list of values
+            values = [row[col] for row in df_values.select(col).distinct().collect()]
+            # values = value_lists[col]
+            
+            # Handle NULL values separately
+            non_null_values = [val for val in values if val is not None and val!='none']
+            has_nulls = len(non_null_values) < len(values)
+            
+            if non_null_values:
+                # Format values appropriately based on their type
+                formatted_values = []
+                for val in non_null_values:
+                    if isinstance(val, str):
+                        # Escape single quotes properly
+                        escaped_val = val.replace("'", "''")
+                        formatted_values.append(f"'{escaped_val}'")
+                    elif isinstance(val, bool):
+                        formatted_values.append(str(val).lower())
+                    elif val is None:
+                        continue  # Skip nulls here, handled separately
+                    else:
+                        formatted_values.append(str(val))
+                
+                in_clause = f"{db_col} IN ({', '.join(formatted_values)})"
+                if has_nulls:
+                    where_conditions.append(f"({in_clause} OR {db_col} IS NULL)")
+                else:
+                    where_conditions.append(in_clause)
+            elif has_nulls:
+                where_conditions.append(f"{db_col} IS NULL")
+        
+        # Construct the full SQL query
+        where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+        query = f"SELECT * FROM {schema_name}.{table_name} WHERE {where_clause}"
+        
+        # logger.info(f"Executing query: {query}")
+        
+        # Execute the query
+        existing_records = spark.read.format("jdbc").options(
+            url=jdbc_url,
+            query=query,
+            user=user,
+            password=password
+        ).load()
+        
+        logger.info(f"Retrieved {existing_records.count()} existing records")
+        return existing_records
+    except Exception as e:
+        logger.error(f"Error reading existing records: {e}")
+        raise
 
-    # Convert the Spark DataFrame to a Glue DynamicFrame
-    #transformed_dynamic_frame = DynamicFrame.fromDF(transformed_df, glueContext, "transformed_dynamic_frame")
+def cast_spark_to_pandas_schema(spark_df):
+    # Identify column types
+    timestamp_columns = [column for column, dtype in spark_df.dtypes if dtype == "timestamp"]
+    integer_columns = [column for column, dtype in spark_df.dtypes if dtype == "int"]
+    boolean_columns = [column for column, dtype in spark_df.dtypes if dtype == "boolean"]
+    
+    logger.info(f"Boolean columns identified: {boolean_columns}")
+    
+    # Check the decimal columns values
+    for field in spark_df.schema.fields:
+        if isinstance(field.dataType, DecimalType) and field.dataType.scale == 18:
+            print(f"{field} is of decimal type")
+            spark_df = spark_df.withColumn(field.name, spark_df[field.name].cast(DecimalType(38, 2)))
 
+    # Convert Spark DataFrame to pandas DataFrame
+    pandas_df = spark_df.toPandas()
+    
+    logger.info(f"Data types after toPandas: {pandas_df.dtypes}")
+
+    # Handle timestamp columns
+    for t_col in timestamp_columns:
+        pandas_df[t_col] = pandas_df[t_col].astype("datetime64[ns]", copy=False)
+
+    # Handle nullable integer columns
+    for column in integer_columns:
+        pandas_df[column] = pandas_df[column].astype("Int64", copy=False)
+        pandas_df[column] = pandas_df[column].replace(np.nan, None)
+    
+    # Handle boolean columns - DO NOT convert, keep as is but replace NaN with None
+    for column in boolean_columns:
+        logger.info(f"Processing boolean column: {column}")
+        logger.info(f"Unique values before: {pandas_df[column].unique()}")
+        # Don't use astype - just replace NaN/None
+        pandas_df[column] = pandas_df[column].replace({np.nan: None})
+        logger.info(f"Unique values after: {pandas_df[column].unique()}")
+
+    # Replace NaT with None for datetime columns
+    datetime_columns = pandas_df.select_dtypes(include=["datetime64[ns]"]).columns
+    for column in datetime_columns:
+        pandas_df[column] = pandas_df[column].apply(lambda x: None if pd.isna(x) else x)
+
+    return pandas_df
 
     
 
-    print("Transformation and writing completed")
-    return transformed_df
-    
-    
-landing_tables= get_landing_data()
+def sync_dataframe_with_postgresql(df, schema_name, table_name, compare_columns, column_mapping, load_flag_column):
+    """
+    Syncs a PySpark DataFrame with a PostgreSQL table by performing insert or update operations
+    based on the load_flag column.
+    """
+    try:
+        # Clean the DataFrame
+        df = clean_dataframe(df)
+        logger.info("cleaned data")
+        
+        # Get primary keys
+        primary_keys = get_primary_keys(schema_name, table_name)
+        logger.info(f"displaying primary_keys : {primary_keys}")
+        
+        # Apply column mapping
+        if column_mapping is None:
+            column_mapping = {}
+        mapped_columns = {col: column_mapping.get(col, col) for col in df.columns}
 
-# Assume `source_df` is your Spark DataFrame
-fixing_source_df = sanitize_and_add_missing_columns(landing_tables, ss.pfd_mandatory_columns)
+        # print("Mapped_Columns........",mapped_columns)
+        # Create reverse mapping (from DB to DataFrame columns)
+        reverse_mapping = {v: k for k, v in column_mapping.items()}
+        logger.info(f"displaying reverse mapping: {reverse_mapping}")
+        
+        table_columns = get_table_columns_psycopg2(schema_name, table_name)
+        
+        logger.info(f"Main table columns list {table_columns}")
+        
+        valid_columns = [
+        col for col in df.columns
+        if col == load_flag_column or  # Always include the load_flag_column
+        col in compare_columns or      # Always include columns used for comparison
+        (mapped_columns.get(col) and mapped_columns[col] in table_columns)  # Include mapped columns that exist in the table
+        ]
+        
+        print("Valid Columns:", valid_columns)  
+        
+        df = df.select(*valid_columns)
+        # df.show()
+        
+        
+        
 
-# Show the updated DataFrame
-fixing_source_df.show()
+            
+        # Process updates (load_flag = 'U')
+        update_records = df.filter(F.upper(F.col(load_flag_column)) == "U")
+        # logger.info(f"update_records: {update_records}")
+        
+        # Process inserts (load_flag = 'I')
+        insert_records = df.filter(F.upper(F.col(load_flag_column)) == "I")
+        # logger.info(f"insert_records: {insert_records}")
+        
+        # Collect mismatched records
+        mismatched_records = df.filter(
+            (F.col(load_flag_column).isNull()) | 
+            ((F.upper(F.col(load_flag_column)) != "U") & (F.upper(F.col(load_flag_column)) != "I"))
+        )
+        logger.info(f"mismatched_records: {mismatched_records}")
+        
+        # Handle updates
+        if update_records.count() > 0:
+            logger.info("Processing update records")
+            
+            # Extract the comparison values
+            compare_values = update_records.select(*compare_columns)
+            logger.info(f"compare_values : {compare_values}")
+            logger.info(f"parameters: {schema_name,table_name,compare_columns,column_mapping,compare_values}")
+            # Check for existing records
+            existing_records = read_existing_records(
+                schema_name, table_name, compare_columns, column_mapping, compare_values
+            )
+            
+            logger.info(f"Existing records in main {existing_records}")
 
-    
-#landing_tables.show()
-transformed_df = process_mapping_and_transform_data(fixing_source_df, ss.output_data_path)
+            
+            # Create a temporary view for the update records
+            update_records.createOrReplaceTempView("update_records")
+            existing_records.createOrReplaceTempView("existing_records")
+            
+            ur = update_records.alias("ur")
+            er = existing_records.alias("er")
+            
+            # Get the actual records to update by joining with existing records
+            update_conditions = []
+            for col in compare_columns:
+                db_col = column_mapping.get(col, col)
+                df_col = reverse_mapping.get(db_col, db_col)
+                update_conditions.append(ur[col].eqNullSafe(er[db_col])) # To handle null values in Join
+                # update_conditions.append(f"ur.{col} = er.{db_col}")
+            
+            join_update_condition = reduce(and_, update_conditions)
+            
+            logger.info(f"update_conditions: {update_conditions}")
 
-transformed_df.show()
+            records_to_update = ur.join(
+                er,
+                on=join_update_condition,
+                how="inner"
+            ).select("ur.*")
+            # records_to_update = spark.sql(f"""
+            #     SELECT ur.* 
+            #     FROM update_records ur
+            #     JOIN existing_records er ON {' AND '.join(update_conditions)}
+            # """)
+            
+            logger.info(f"Reords to be updated {records_to_update.show()}")
+            
+            # Validate primary key column name
+            valid_columns = existing_records.columns  # existing_records is a Spark DataFrame
+            if primary_keys[0] not in valid_columns:
+                raise ValueError(f"Invalid primary key column: {primary_keys[0]}")
 
+            # Get records that should be updated but don't exist
+            records_not_found = ur.join(
+                er,
+                on=join_update_condition,
+                how="left"
+            ).filter(er[primary_keys[0]].isNull()).select("ur.*")
+            # records_not_found = spark.sql(f"""
+            #     SELECT ur.* 
+            #     FROM update_records ur
+            #     LEFT JOIN existing_records er ON {' AND '.join(update_conditions)}
+            #     WHERE er.{primary_keys[0]} IS NULL
+            # """)
+            
+            # Add records not found to mismatched records
+            mismatched_records = mismatched_records.union(records_not_found)
+            
+            # Process bulk update records
+            # Process bulk update records
+            if records_to_update.count() > 0:
+                # Get boolean columns BEFORE conversion
+                boolean_columns = [column for column, dtype in records_to_update.dtypes if dtype == "boolean"]
+                logger.info(f"Boolean columns in update: {boolean_columns}")
+                
+                # Convert to pandas for row-by-row processing with psycopg2
+                update_pd = cast_spark_to_pandas_schema(records_to_update)
+                
+                # CRITICAL: Store boolean values BEFORE astype(object)
+                boolean_values = {}
+                for col in boolean_columns:
+                    if col in update_pd.columns:
+                        boolean_values[col] = update_pd[col].copy()
+                
+                update_pd = update_pd.astype(object).where(pd.notna(update_pd), None)
+                update_pd = update_pd.apply(lambda x: None if isinstance(x, str) and x.strip().lower() == "nan" else x)
+                update_pd = update_pd.replace(r'^\s*$', None, regex=True)
+                update_pd = update_pd.astype(object).where(pd.notna(update_pd), None)
+                
+                # CRITICAL: Restore boolean columns with proper None handling
+                for col in boolean_columns:
+                    if col in update_pd.columns:
+                        update_pd[col] = boolean_values[col].replace({np.nan: None})
+                        logger.info(f"UPDATE - Column {col} unique values: {update_pd[col].unique()}")               
+                
+                # Prepare SET and WHERE columns
+                set_columns = []
+                for col in update_pd.columns:
+                    if col not in compare_columns and column_mapping.get(col, col) not in primary_keys and col != load_flag_column and col != "created_by" and col != "created_date":
+                        db_col = column_mapping.get(col, col)
+                        set_columns.append(db_col)
+                set_columns += ["last_updated_by", "last_updated_date"]
+            
+                # Prepare the update query
+                set_clause = ", ".join([f"{col} = %s" for col in set_columns])
+                where_clause = " AND ".join([f"{column_mapping.get(col, col)} = %s" for col in compare_columns])
+                update_query = f"""
+                    UPDATE {schema_name}.{table_name}
+                    SET {set_clause}
+                    WHERE {where_clause}
+                """
+            
+                # Prepare the parameter list for all rows
+                params_list = []
+                for _, row in update_pd.iterrows():
+                    params = []
+                    # SET values
+                    for col in update_pd.columns:
+                        if col not in compare_columns and column_mapping.get(col, col) not in primary_keys and col != load_flag_column and col != "created_by" and col != "created_date":
+                            params.append(row[col])
+                    params.append(row["created_by"])
+                    updated_date = datetime.now()
+                    dt_with_milliseconds = updated_date.replace(microsecond=(updated_date.microsecond // 1000) * 1000)
+                    params.append(dt_with_milliseconds)
+                    # WHERE values
+                    for col in compare_columns:
+                        params.append(row[col])
+                    params_list.append(tuple(params))
+            
+                # Prepare the connection
+                conn = get_db_connection()
+                logger.info(f"db connection: {conn}")
+                cursor = conn.cursor()
+                
+                # Batch update (Increasing page_size to further 2000 may increase performace)
+                execute_batch(cursor, update_query, params_list, page_size=1000)
+                cursor.close()
+                start_time = time.time()
+                conn.commit()
+                end_time = time.time()
+                transaction_time = end_time - start_time
+                logger.info(f"Transaction time for {table_name}: {transaction_time:.2f} seconds")
+                conn.close()
+                logger.info(f"Updated {records_to_update.count()} records")
+            
+        
+        # Handle inserts
+        if insert_records.count() > 0:
+            logger.info("Processing insert records")
+            
+            # Extract the comparison values
+            compare_values = insert_records.select(*compare_columns)
+            
+            # Check for existing records
+            existing_records = read_existing_records(
+                schema_name, table_name, compare_columns, column_mapping, compare_values
+            )
+            
+            # Create a temporary view for the insert records
+            insert_records.createOrReplaceTempView("insert_records")
+            existing_records.createOrReplaceTempView("existing_records")
+            
+            ir = insert_records.alias("ir")
+            er = existing_records.alias("er")
+
+            # Get the actual records to insert by excluding existing records
+            insert_conditions = []
+            for col in compare_columns:
+                db_col = column_mapping.get(col, col)
+                df_col = reverse_mapping.get(db_col, db_col)
+                # insert_conditions.append(f"ir.{col} = er.{db_col}")
+                insert_conditions.append(ir[col].eqNullSafe(er[db_col]))       
+
+            join_insert_condition = reduce(and_, insert_conditions)    
+
+            if primary_keys[0] not in existing_records.columns:
+                raise ValueError(f"Invalid primary key column: {primary_keys[0]}")
+            
+            records_to_insert = ir.join(er,
+                on=join_insert_condition,
+                how="left"
+            ).filter(er[primary_keys[0]].isNull()).select("ir.*")
+            
+            logger.info(f"Records to insert {records_to_insert.count()}")
+
+            # records_to_insert = spark.sql(f"""
+            #     SELECT ir.* 
+            #     FROM insert_records ir
+            #     LEFT JOIN existing_records er ON {' AND '.join(insert_conditions)}
+            #     WHERE er.{primary_keys[0]} IS NULL
+            # """)
+
+             
+            # Get records that already exist but marked for insert
+            records_already_exist = ir.join(er,
+                on=join_insert_condition,
+                how="inner"
+            ).select("ir.*")
+            # records_already_exist = spark.sql(f"""
+            #     SELECT ir.* 
+            #     FROM insert_records ir
+            #     JOIN existing_records er ON {' AND '.join(insert_conditions)}
+            # """)
+            
+            # Add records that already exist to mismatched records
+            mismatched_records = mismatched_records.union(records_already_exist)
+            
+            # Process each insert record
+            if records_to_insert.count() > 0:
+                # Get boolean columns BEFORE conversion
+                boolean_columns = [column for column, dtype in records_to_insert.dtypes if dtype == "boolean"]
+                logger.info(f"Boolean columns in insert: {boolean_columns}")
+                
+                insert_pd = cast_spark_to_pandas_schema(records_to_insert)
+                
+                # CRITICAL: Store boolean values BEFORE astype(object)
+                boolean_values = {}
+                for col in boolean_columns:
+                    if col in insert_pd.columns:
+                        boolean_values[col] = insert_pd[col].copy()
+                
+                insert_pd = insert_pd.astype(object).where(pd.notna(insert_pd), None)
+                
+                # CRITICAL: Restore boolean columns with proper None handling
+                for col in boolean_columns:
+                    if col in insert_pd.columns:
+                        insert_pd[col] = boolean_values[col].replace({np.nan: None})
+                        logger.info(f"INSERT - Column {col} unique values: {insert_pd[col].unique()}")                
+                
+
+                # Prepare columns and values
+                column_names = []
+                for col in insert_pd.columns:
+                    if col != load_flag_column:
+                        db_col = column_mapping.get(col, col)
+                        column_names.append(db_col)
+                # Add audit fields if not already present
+                if "is_active" not in column_names:
+                    column_names.append("is_active")
+                if "last_updated_by" not in column_names:
+                    column_names.append("last_updated_by")
+                if "last_updated_date" not in column_names:
+                    column_names.append("last_updated_date")
+            
+                # Prepare the values for all rows
+                values = []
+                for _, row in insert_pd.iterrows():
+                    params = []
+                    for col in insert_pd.columns:
+                        if col != load_flag_column:
+                            params.append(row[col])
+                    # Add audit fields
+                    if "is_active" not in insert_pd.columns:
+                        params.append(True)
+                    if "last_updated_by" not in insert_pd.columns:
+                        params.append(row["created_by"])
+                    if "last_updated_date" not in insert_pd.columns:
+                        updated_date = datetime.now()
+                        dt_with_milliseconds = updated_date.replace(microsecond=(updated_date.microsecond // 1000) * 1000)
+                        params.append(dt_with_milliseconds)
+                    values.append(tuple(params))
+            
+                insert_query = f"""
+                INSERT INTO {schema_name}.{table_name} ({', '.join(column_names)})
+                VALUES %s
+                """
+                
+                # Prepare the connection
+                conn = get_db_connection()
+                logger.info(f"db connection: {conn}")
+                cursor = conn.cursor()
+                
+                # To have bulk inserts
+                execute_values(cursor, insert_query, values)
+                logger.info(f"Inserted {records_to_insert.count()} records")
+                cursor.close()
+                start_time = time.time()
+                conn.commit()
+                end_time = time.time()
+                transaction_time = end_time - start_time
+                logger.info(f"Transaction time for {table_name}: {transaction_time:.2f} seconds")
+                conn.close()
+                logger.info(f"Inserted {records_to_insert.count()} records")
+
+        # Handle mismatched records
+        if mismatched_records.count() > 0:
+            logger.info(f"Found {mismatched_records.count()} mismatched records")
+            logger.info(f"s3 bucket name : {ss.s3_bucket}")
+            # mismatched_path = "s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/mismatched_records/"
+
+            current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            key = f"mismatch_records/mismatched_records_{table_name}_{current_datetime}.csv"
+            
+            # Convert mismatched records to Pandas DataFrame
+            mismatched_pd = mismatched_records.toPandas()
+            csv_buffer = StringIO()
+            mismatched_pd.to_csv(csv_buffer, index=False)
+
+            # Upload the CSV file to S3 using Boto3
+            s3 = boto3.client("s3")
+            bucket_name = ss.s3_bucket
+            s3.put_object(Bucket=bucket_name, Key=key, Body=csv_buffer.getvalue())
+
+            logger.info(f"Mismatched records written to s3://{bucket_name}/{key} using Boto3")
+
+        # Close the connection
+        # conn.close()
+        
+        return {
+            "total_records": df.count(),
+            "updated_records": update_records.count() if 'update_records' in locals() else 0,
+            "inserted_records": insert_records.count() if 'insert_records' in locals() else 0,
+            "mismatched_records": mismatched_records.count()
+        }
+    except Exception as e:
+        logger.error(f"Error in sync_dataframe_with_postgresql: {e}")
+        raise
+def truncate_tables(rds_host, rds_port, db_name, db_user, rds_token, ssl_cert_s3_path):
+    connection = None
+    cursor = None
+
+    try:
+        # Establish a connection to the database
+        connection = psycopg2.connect(
+            host=rds_host,
+            port=rds_port,
+            database=db_name,
+            user=db_user,
+            password=rds_token,
+            sslmode="require",
+            sslrootcert=ssl_cert_s3_path
+        )
+        cursor = connection.cursor()
+
+        # Fetch all table names in the schema
+        selecting_tables = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'sds_staging'"
+        cursor.execute(selecting_tables)
+        tables = [row[0] for row in cursor.fetchall()]  # Fetch all rows and extract table names
+        print("Tables to truncate:", tables)
+
+        # Truncate each table
+        for table in tables:
+            #truncate_query = f'TRUNCATE TABLE sds_staging.{table} CASCADE'
+
+            truncate_query = sql.SQL("TRUNCATE TABLE {}.{} CASCADE").format(
+                sql.Identifier('sds_staging'),  # Schema name
+                sql.Identifier(table)  # Table name
+            )
+
+            cursor.execute(truncate_query)
+            print(f"Truncated table: sds_staging.{table}")
+
+        # Commit the transaction
+        connection.commit()
+        print("All tables in the schema have been truncated successfully.")
+
+    except Exception as e:
+        print(f"Error truncating tables: {e}")
+        if connection:
+            connection.rollback()  # Rollback the transaction on error
+
+    finally:
+        # Close the cursor and connection if they were created
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+
+
+
+# def main():
+#     """
+#     Main function to orchestrate the data synchronization process.
+#     """
+#     try:
+#         # Get job name from arguments
+#         job_args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+        
+#         # Define parameters directly in the code
+#         schema_name = "sds_main"
+#         table_name = "business_entity_characteristics"
+#         compare_columns = ["stg_business_entity_id", "characteristic_type"]
+#         column_mapping = {  # Map only the mismatched column
+#             "stg_business_entity_id": "business_entity_id"
+#         }
+#         load_flag_column = "load_flag"
+        
+#         # # Option 1: Read from S3
+#         # #s3_path = f"s3://{ss.s3_bucket}/card_revenues/card_revenues.csv"
+#         # s3_path = "s3://app-id-111597-dep-id-114116-uu-id-by081rbjj1vo/upsert/card_revenues.csv"
+#         # df = read_data_from_s3(s3_path)
+        
+#         full_table_name = f"sds_staging.\"{table_name}\""
+#         jdbc_url, user, password = get_jdbc_url()
+#         df = spark.read.format("jdbc").options(
+#             url=jdbc_url,
+#             dbtable=full_table_name,
+#             user=user,
+#             password=password
+#         ).load()
+        
+#         logger.info(f"successfully read data from staging table {table_name}")
+        
+#         df = df.withColumn("load_flag",lit("U"))
+        
+#         logger.info(f"Data read successfully with {df.count()} rows")
+        
+#         # Call the sync function
+#         result = sync_dataframe_with_postgresql(
+#             df=df,
+#             schema_name=schema_name,
+#             table_name=table_name,
+#             compare_columns=compare_columns,
+#             column_mapping=column_mapping,
+#             load_flag_column=load_flag_column
+#         )
+        
+#         logger.info(f"Sync operation completed: {result}")
+        
+#     except Exception as e:
+#         logger.error(f"Error in main function: {e}")
+#         raise
+
+# if __name__ == "__main__":
+#     main()
